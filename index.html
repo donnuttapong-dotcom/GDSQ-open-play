@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PICKLEBALL SYSTEMS HUB - ALPHA 02</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            tactical: '#1a1d20',
+            panel: '#23272b',
+            panel2: '#2b3035',
+            cyberOrange: '#ff6a00',
+            neonLime: '#b6ff00',
+            steel: '#88929c'
+          },
+          boxShadow: {
+            glowOrange: '0 0 24px rgba(255,106,0,.35)',
+            glowLime: '0 0 24px rgba(182,255,0,.30)'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg: #1a1d20;
+      --panel: #23272b;
+      --panel-2: #2b3035;
+      --line: rgba(255,255,255,.12);
+      --orange: #ff6a00;
+      --lime: #b6ff00;
+      --muted: #88929c;
+    }
+    html { background: var(--bg); }
+    body {
+      min-height: 100vh;
+      color: #f5f7fa;
+      background:
+        radial-gradient(circle at 15% 10%, rgba(255,106,0,.12), transparent 24rem),
+        radial-gradient(circle at 85% 18%, rgba(182,255,0,.10), transparent 25rem),
+        linear-gradient(135deg, #121416 0%, #1a1d20 45%, #202428 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    [x-cloak] { display: none !important; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    .chamfer {
+      clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+    }
+    .chamfer-lg {
+      clip-path: polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px);
+    }
+    .hazard {
+      background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.12) 0 8px, rgba(255,255,255,0) 8px 16px);
+    }
+    .scanlines::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(to bottom, rgba(255,255,255,.025) 0 1px, transparent 1px 5px);
+      mix-blend-mode: overlay;
+      z-index: 1;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+    .btn {
+      clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+      transition: transform .15s ease, filter .15s ease, opacity .15s ease;
+    }
+    .btn:active { transform: scale(.985); }
+    .poster-frame {
+      min-height: 170px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,0)),
+        repeating-linear-gradient(135deg, rgba(255,255,255,.08) 0 8px, rgba(255,255,255,0) 8px 18px),
+        linear-gradient(135deg, #252b30, #121416);
+    }
+    .status-dot { width: .58rem; height: .58rem; border-radius: 999px; display: inline-block; }
+    .power-bar {
+      height: .68rem;
+      background: rgba(255,255,255,.10);
+      overflow: hidden;
+      clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+    }
+    .power-fill {
+      height: 100%;
+      background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.25) 0 6px, rgba(255,255,255,0) 6px 12px);
+    }
+    .table-head {
+      background:
+        repeating-linear-gradient(135deg, rgba(255,255,255,.11) 0 8px, transparent 8px 16px),
+        rgba(255,255,255,.05);
+    }
+    .scrollbar-thin::-webkit-scrollbar { height: 6px; width: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 999px; }
+  </style>
+</head>
+<body class="scanlines" x-data="pickleballHub()" x-init="init()" :lang="lang">
+  <div class="relative z-10 min-h-screen">
+    <header class="sticky top-0 z-40 border-b border-white/10 bg-tactical/90 backdrop-blur-xl">
+      <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6">
+        <button @click="go('hub')" class="group flex min-w-0 items-center gap-3 text-left">
+          <div class="chamfer flex h-11 w-11 shrink-0 items-center justify-center border border-cyberOrange/50 bg-cyberOrange/15 shadow-glowOrange">
+            <span class="mono text-lg font-black text-cyberOrange">PB</span>
+          </div>
+          <div class="min-w-0">
+            <h1 class="truncate text-sm font-black tracking-widest text-white md:text-lg">PICKLEBALL SYSTEMS HUB</h1>
+            <p class="mono truncate text-[10px] uppercase tracking-[.28em] text-steel">ALPHA 02 · FAIR OPEN PLAY ENGINE</p>
+          </div>
+        </button>
+
+        <div class="flex shrink-0 items-center gap-2">
+          <button @click="toggleLang()" class="btn border border-white/15 bg-white/10 px-3 py-2 text-xs font-black tracking-widest hover:bg-white/15">
+            <span x-text="lang === 'th' ? 'TH / EN' : 'EN / TH'"></span>
+          </button>
+          <button @click="go('queue')" class="btn hidden border border-neonLime/40 bg-neonLime/10 px-3 py-2 text-xs font-black text-neonLime md:block" x-show="activeEventId">
+            <span x-text="t('fieldMode')"></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-5 md:px-6 md:py-8">
+      <section class="mb-5 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+        <div>
+          <div class="mb-2 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-steel">
+            <span class="status-dot bg-neonLime shadow-glowLime"></span>
+            <span x-text="t('freeLocal')"></span>
+          </div>
+          <h2 class="text-2xl font-black tracking-tight md:text-4xl" x-text="pageTitle()"></h2>
+          <p class="mt-2 max-w-3xl text-sm leading-relaxed text-steel md:text-base" x-text="pageSubtitle()"></p>
+        </div>
+
+        <nav class="scrollbar-thin flex gap-2 overflow-x-auto pb-1 md:justify-end">
+          <button @click="go('hub')" :class="navClass('hub')" class="btn shrink-0 px-4 py-3 text-xs font-black tracking-widest" x-text="t('navEvents')"></button>
+          <button @click="go('onboarding')" :class="navClass('onboarding')" class="btn shrink-0 px-4 py-3 text-xs font-black tracking-widest" x-text="t('navPlayers')"></button>
+          <button @click="go('queue')" :class="navClass('queue')" class="btn shrink-0 px-4 py-3 text-xs font-black tracking-widest" x-text="t('navCourt')"></button>
+          <button @click="go('leaderboard')" :class="navClass('leaderboard')" class="btn shrink-0 px-4 py-3 text-xs font-black tracking-widest" x-text="t('navStats')"></button>
+        </nav>
+      </section>
+
+      <section x-show="view === 'hub'" x-cloak>
+        <div class="grid gap-4 md:grid-cols-3">
+          <template x-for="event in events" :key="event.id">
+            <article class="chamfer-lg overflow-hidden border border-white/10 bg-panel/90 shadow-2xl">
+              <div class="poster-frame chamfer relative m-3 overflow-hidden border border-white/10 p-4" :class="event.status === 'live' ? 'shadow-glowLime' : ''">
+                <div class="absolute inset-x-0 top-0 h-6 hazard opacity-60"></div>
+                <div class="absolute bottom-3 right-3 text-right">
+                  <div class="mono text-5xl font-black tracking-tighter" :class="event.accent === 'orange' ? 'text-cyberOrange' : 'text-neonLime'" x-text="event.code"></div>
+                  <div class="mono text-[10px] uppercase tracking-[.35em] text-white/60">OPEN PLAY</div>
+                </div>
+                <div class="relative z-10 inline-flex items-center gap-2 border border-white/10 bg-black/30 px-3 py-1 text-xs font-black uppercase tracking-widest">
+                  <span class="status-dot" :class="event.status === 'live' ? 'bg-neonLime' : event.status === 'upcoming' ? 'bg-cyberOrange' : 'bg-steel'"></span>
+                  <span x-text="statusLabel(event.status)"></span>
+                </div>
+              </div>
+              <div class="space-y-4 p-4 pt-1">
+                <div>
+                  <h3 class="text-xl font-black uppercase tracking-wide" x-text="event.title"></h3>
+                  <p class="mt-2 text-sm text-steel" x-text="event.dateTime[lang]"></p>
+                  <p class="text-sm text-steel" x-text="event.venue"></p>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div class="border border-white/10 bg-white/5 p-2">
+                    <div class="mono text-lg font-black" x-text="countEventQueue(event.id)"></div>
+                    <div class="text-steel" x-text="t('waiting')"></div>
+                  </div>
+                  <div class="border border-white/10 bg-white/5 p-2">
+                    <div class="mono text-lg font-black" x-text="countEventMatches(event.id)"></div>
+                    <div class="text-steel" x-text="t('matches')"></div>
+                  </div>
+                  <div class="border border-white/10 bg-white/5 p-2">
+                    <div class="mono text-lg font-black" x-text="countEventPlayers(event.id)"></div>
+                    <div class="text-steel" x-text="t('players')"></div>
+                  </div>
+                </div>
+                <button @click="selectEvent(event.id)" class="btn w-full border border-neonLime/40 bg-neonLime/15 px-4 py-3 text-sm font-black uppercase tracking-widest text-neonLime hover:bg-neonLime/20">
+                  <span x-text="t('joinEvent')"></span>
+                </button>
+              </div>
+            </article>
+          </template>
+        </div>
+
+        <div class="chamfer-lg mt-5 border border-white/10 bg-panel/70 p-4 md:p-6">
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <h3 class="text-lg font-black uppercase tracking-widest" x-text="t('systemRulesTitle')"></h3>
+            <div class="h-4 flex-1 hazard opacity-40"></div>
+          </div>
+          <div class="grid gap-3 text-sm text-steel md:grid-cols-4">
+            <div class="border border-white/10 bg-white/5 p-3"><b class="text-white" x-text="t('rule1Head')"></b><br><span x-text="t('rule1')"></span></div>
+            <div class="border border-white/10 bg-white/5 p-3"><b class="text-white" x-text="t('rule2Head')"></b><br><span x-text="t('rule2')"></span></div>
+            <div class="border border-white/10 bg-white/5 p-3"><b class="text-white" x-text="t('rule3Head')"></b><br><span x-text="t('rule3')"></span></div>
+            <div class="border border-white/10 bg-white/5 p-3"><b class="text-white" x-text="t('rule4Head')"></b><br><span x-text="t('rule4')"></span></div>
+          </div>
+        </div>
+      </section>
+
+      <section x-show="view === 'onboarding'" x-cloak>
+        <div class="grid gap-5 lg:grid-cols-[420px_1fr]">
+          <aside class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <h3 class="font-black uppercase tracking-widest" x-text="t('registeredPlayers')"></h3>
+              <button @click="seedDemoPlayers()" class="btn border border-white/10 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-white/15" x-text="t('loadDemo')"></button>
+            </div>
+            <div class="space-y-2" x-show="players.length">
+              <template x-for="player in playersSortedByName()" :key="player.id">
+                <button @click="editPlayer(player.id)" class="chamfer flex w-full items-center justify-between gap-3 border border-white/10 bg-white/5 p-3 text-left hover:border-neonLime/40 hover:bg-neonLime/5">
+                  <div class="min-w-0">
+                    <div class="truncate font-black" x-text="player.nickname"></div>
+                    <div class="text-xs text-steel"><span x-text="levelName(player)"></span> · <span class="mono" x-text="player.rating"></span> ELO</div>
+                  </div>
+                  <div class="mono text-xs font-black text-neonLime" x-text="formatPower(player)"></div>
+                </button>
+              </template>
+            </div>
+            <div x-show="!players.length" class="border border-dashed border-white/15 p-5 text-center text-sm text-steel" x-text="t('noPlayersYet')"></div>
+          </aside>
+
+          <div class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
+            <div class="mb-5 grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+              <div>
+                <h3 class="text-xl font-black uppercase tracking-widest" x-text="editingProfileId ? t('retestPlayer') : t('newPlayerSetup')"></h3>
+                <p class="mt-1 text-sm text-steel" x-text="t('onboardingHint')"></p>
+              </div>
+              <button @click="resetForm()" class="btn border border-cyberOrange/40 bg-cyberOrange/10 px-4 py-3 text-xs font-black uppercase tracking-widest text-cyberOrange" x-text="t('clearForm')"></button>
+            </div>
+
+            <div class="grid gap-3 md:grid-cols-2">
+              <label class="block">
+                <span class="mb-1 block text-xs font-black uppercase tracking-widest text-steel" x-text="t('nickname')"></span>
+                <input x-model.trim="form.nickname" class="chamfer w-full border border-white/10 bg-black/25 px-4 py-3 font-bold outline-none focus:border-neonLime/50" :placeholder="t('nicknamePlaceholder')" />
+              </label>
+              <label class="block">
+                <span class="mb-1 block text-xs font-black uppercase tracking-widest text-steel" x-text="t('selfRating')"></span>
+                <select x-model.number="form.selfRating" class="chamfer w-full border border-white/10 bg-black/25 px-4 py-3 font-bold outline-none focus:border-neonLime/50">
+                  <option value="2">2.0 · Beginner / New Player</option>
+                  <option value="2.5">2.5 · Social Beginner</option>
+                  <option value="3">3.0 · Social Player</option>
+                  <option value="3.5">3.5 · Strong Social</option>
+                  <option value="4">4.0 · Advanced Club</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="mt-5 grid gap-3">
+              <template x-for="(q, index) in questions" :key="q.id">
+                <div class="chamfer border border-white/10 bg-white/5 p-3 md:p-4">
+                  <div class="mb-3 flex items-start gap-3">
+                    <div class="chamfer flex h-9 w-11 shrink-0 items-center justify-center border text-sm font-black" :class="index < 5 ? 'border-cyberOrange/50 bg-cyberOrange/10 text-cyberOrange' : 'border-neonLime/50 bg-neonLime/10 text-neonLime'" x-text="String(index + 1).padStart(2,'0')"></div>
+                    <div>
+                      <div class="text-[10px] font-black uppercase tracking-widest" :class="index < 5 ? 'text-cyberOrange' : 'text-neonLime'" x-text="index < 5 ? 'TECHNICAL AXIS' : 'TACTICAL / PHYSICAL AXIS'"></div>
+                      <p class="font-bold" x-text="q.text[lang]"></p>
+                    </div>
+                  </div>
+                  <div class="grid gap-2 md:grid-cols-2">
+                    <template x-for="option in q.options" :key="option.value">
+                      <label class="chamfer cursor-pointer border p-3 text-sm transition" :class="form.answers[q.id] === option.value ? 'border-neonLime/60 bg-neonLime/10 text-white' : 'border-white/10 bg-black/15 text-steel hover:border-white/25'">
+                        <input type="radio" class="sr-only" :name="q.id" :value="option.value" x-model.number="form.answers[q.id]" />
+                        <span class="mono mr-2 font-black" x-text="option.value"></span>
+                        <span x-text="option.label[lang]"></span>
+                      </label>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <div class="mt-5 grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+              <div class="grid gap-3 md:grid-cols-3">
+                <div class="border border-white/10 bg-black/20 p-3">
+                  <div class="text-xs text-steel" x-text="t('techScore')"></div>
+                  <div class="mono text-2xl font-black text-cyberOrange" x-text="previewScore('tech')"></div>
+                </div>
+                <div class="border border-white/10 bg-black/20 p-3">
+                  <div class="text-xs text-steel" x-text="t('tactScore')"></div>
+                  <div class="mono text-2xl font-black text-neonLime" x-text="previewScore('tact')"></div>
+                </div>
+                <div class="border border-white/10 bg-black/20 p-3">
+                  <div class="text-xs text-steel" x-text="t('initialElo')"></div>
+                  <div class="mono text-2xl font-black" x-text="previewElo()"></div>
+                </div>
+              </div>
+              <button @click="savePlayerProfile()" class="btn border border-neonLime/50 bg-neonLime/15 px-6 py-4 text-sm font-black uppercase tracking-widest text-neonLime shadow-glowLime hover:bg-neonLime/20" x-text="editingProfileId ? t('saveRetest') : t('createProfile')"></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section x-show="view === 'queue'" x-cloak>
+        <div x-show="!activeEventId" class="chamfer-lg border border-cyberOrange/40 bg-cyberOrange/10 p-5 text-cyberOrange">
+          <b x-text="t('selectEventFirst')"></b>
+        </div>
+
+        <div x-show="activeEventId" class="grid gap-5 xl:grid-cols-[400px_1fr]">
+          <aside class="space-y-5">
+            <div class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
+              <div class="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h3 class="text-xl font-black uppercase tracking-widest" x-text="activeEvent()?.title"></h3>
+                  <p class="text-sm text-steel" x-text="activeEvent()?.dateTime[lang]"></p>
+                  <p class="text-sm text-steel" x-text="activeEvent()?.venue"></p>
+                </div>
+                <span class="chamfer border px-3 py-1 text-xs font-black uppercase tracking-widest" :class="activeEvent()?.status === 'live' ? 'border-neonLime/40 bg-neonLime/10 text-neonLime' : 'border-cyberOrange/40 bg-cyberOrange/10 text-cyberOrange'" x-text="statusLabel(activeEvent()?.status)"></span>
+              </div>
+
+              <div class="grid grid-cols-3 gap-2 text-center">
+                <div class="border border-white/10 bg-black/20 p-3">
+                  <div class="mono text-2xl font-black" x-text="eventQueues().filter(q => q.status === 'waiting').length"></div>
+                  <div class="text-xs text-steel" x-text="t('waiting')"></div>
+                </div>
+                <div class="border border-white/10 bg-black/20 p-3">
+                  <div class="mono text-2xl font-black" x-text="activeMatches().length"></div>
+                  <div class="text-xs text-steel" x-text="t('liveGames')"></div>
+                </div>
+                <div class="border border-white/10 bg-black/20 p-3">
+                  <div class="mono text-2xl font-black" x-text="confirmedMatches().length"></div>
+                  <div class="text-xs text-steel" x-text="t('confirmed')"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
+              <h3 class="mb-3 font-black uppercase tracking-widest" x-text="t('selfService')"></h3>
+              <label class="block">
+                <span class="mb-1 block text-xs font-black uppercase tracking-widest text-steel" x-text="t('choosePlayer')"></span>
+                <select x-model="selectedPlayerId" class="chamfer w-full border border-white/10 bg-black/25 px-4 py-3 font-bold outline-none focus:border-neonLime/50">
+                  <option value="" x-text="t('selectPlayer')"></option>
+                  <template x-for="player in playersSortedByName()" :key="player.id">
+                    <option :value="player.id" x-text="player.nickname + ' · ' + levelName(player) + ' · ' + player.rating + ' ELO'"></option>
+                  </template>
+                </select>
+              </label>
+              <div class="mt-3 grid grid-cols-2 gap-2">
+                <button @click="joinQueue()" class="btn border border-neonLime/50 bg-neonLime/15 px-4 py-3 text-xs font-black uppercase tracking-widest text-neonLime" x-text="t('joinQueue')"></button>
+                <button @click="pauseQueue()" class="btn border border-cyberOrange/50 bg-cyberOrange/15 px-4 py-3 text-xs font-black uppercase tracking-widest text-cyberOrange" x-text="t('pause')"></button>
+              </div>
+              <button @click="go('onboarding')" class="btn mt-2 w-full border border-white/10 bg-white/10 px-4 py-3 text-xs font-black uppercase tracking-widest hover:bg-white/15" x-text="t('addNewPlayer')"></button>
+            </div>
+
+            <div class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
+              <div class="mb-3 flex items-center justify-between gap-3">
+                <h3 class="font-black uppercase tracking-widest" x-text="t('waitingList')"></h3>
+                <button @click="matchNextGame()" class="btn border border-neonLime/50 bg-neonLime/15 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-neonLime shadow-glowLime" x-text="t('matchNext')"></button>
+              </div>
+              <div class="space-y-2">
+                <template x-for="(entry, index) in eventQueues()" :key="entry.playerId">
+                  <div class="chamfer flex items-center justify-between gap-2 border border-white/10 p-3" :class="entry.status === 'waiting' ? 'bg-white/5' : 'bg-cyberOrange/5 opacity-70'">
+                    <div class="flex min-w-0 items-center gap-3">
+                      <div class="mono flex h-9 w-9 shrink-0 items-center justify-center border border-white/10 bg-black/20 font-black" x-text="index + 1"></div>
+                      <div class="min-w-0">
+                        <div class="truncate font-black" x-text="getPlayer(entry.playerId)?.nickname || 'Unknown'"></div>
+                        <div class="text-xs text-steel"><span x-text="levelName(getPlayer(entry.playerId))"></span> · <span class="mono" x-text="getPlayer(entry.playerId)?.rating || '-' "></span> ELO</div>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="chamfer border px-2 py-1 text-[10px] font-black uppercase tracking-widest" :class="entry.status === 'waiting' ? 'border-neonLime/40 text-neonLime' : 'border-cyberOrange/40 text-cyberOrange'" x-text="entry.status"></span>
+                      <button @click="removeFromQueue(entry.playerId)" class="text-xs font-black text-steel hover:text-white">✕</button>
+                    </div>
+                  </div>
+                </template>
+                <div x-show="!eventQueues().length" class="border border-dashed border-white/15 p-5 text-center text-sm text-steel" x-text="t('emptyQueue')"></div>
+              </div>
+            </div>
+          </aside>
+
+          <div class="space-y-5">
+            <div class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
+              <div class="mb-4 flex items-center justify-between gap-3">
+                <h3 class="text-lg font-black uppercase tracking-widest" x-text="t('currentMatches')"></h3>
+                <div class="h-4 flex-1 hazard opacity-40"></div>
+              </div>
+
+              <div class="grid gap-4">
+                <template x-for="match in eventMatches().filter(m => m.status !== 'confirmed')" :key="match.id">
+                  <div class="chamfer-lg border border-white/10 bg-black/20 p-4">
+                    <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <div class="mono text-xs uppercase tracking-widest text-steel" x-text="t('matchId') + ' ' + shortId(match.id)"></div>
+                        <div class="text-sm text-steel" x-text="formatDateTime(match.createdAt)"></div>
+                      </div>
+                      <span class="chamfer border px-3 py-1 text-xs font-black uppercase tracking-widest" :class="match.status === 'active' ? 'border-neonLime/40 text-neonLime' : 'border-cyberOrange/40 text-cyberOrange'" x-text="match.status === 'active' ? t('active') : t('pendingVerification')"></span>
+                    </div>
+
+                    <div class="grid gap-3 md:grid-cols-[1fr_90px_1fr] md:items-stretch">
+                      <div class="chamfer border border-cyberOrange/40 bg-cyberOrange/10 p-4 shadow-glowOrange">
+                        <div class="mb-2 flex items-center justify-between">
+                          <h4 class="text-xl font-black uppercase tracking-widest text-cyberOrange">TEAM A</h4>
+                          <div class="mono text-3xl font-black" x-text="teamPower(match.teamA)"></div>
+                        </div>
+                        <template x-for="pid in match.teamA" :key="pid">
+                          <div class="mt-2 flex items-center justify-between border-t border-white/10 pt-2">
+                            <span class="font-black" x-text="getPlayer(pid)?.nickname"></span>
+                            <span class="mono text-xs text-steel" x-text="getPlayer(pid)?.rating + ' ELO'"></span>
+                          </div>
+                        </template>
+                      </div>
+
+                      <div class="flex items-center justify-center">
+                        <div class="mono text-3xl font-black text-white/70 md:text-5xl">VS</div>
+                      </div>
+
+                      <div class="chamfer border border-neonLime/40 bg-neonLime/10 p-4 shadow-glowLime">
+                        <div class="mb-2 flex items-center justify-between">
+                          <h4 class="text-xl font-black uppercase tracking-widest text-neonLime">TEAM B</h4>
+                          <div class="mono text-3xl font-black" x-text="teamPower(match.teamB)"></div>
+                        </div>
+                        <template x-for="pid in match.teamB" :key="pid">
+                          <div class="mt-2 flex items-center justify-between border-t border-white/10 pt-2">
+                            <span class="font-black" x-text="getPlayer(pid)?.nickname"></span>
+                            <span class="mono text-xs text-steel" x-text="getPlayer(pid)?.rating + ' ELO'"></span>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+
+                    <div class="mt-4 grid gap-3 rounded-none border border-white/10 bg-white/5 p-3 md:grid-cols-[1fr_auto_auto] md:items-end">
+                      <div>
+                        <div class="mb-1 text-xs font-black uppercase tracking-widest text-steel" x-text="t('enterScore')"></div>
+                        <div class="grid grid-cols-2 gap-2">
+                          <label>
+                            <span class="text-[10px] font-black text-cyberOrange">TEAM A</span>
+                            <input type="number" min="0" max="30" x-model.number="match.scoreA" class="chamfer mt-1 w-full border border-cyberOrange/30 bg-black/30 px-3 py-3 text-center mono text-3xl font-black outline-none focus:border-cyberOrange" />
+                          </label>
+                          <label>
+                            <span class="text-[10px] font-black text-neonLime">TEAM B</span>
+                            <input type="number" min="0" max="30" x-model.number="match.scoreB" class="chamfer mt-1 w-full border border-neonLime/30 bg-black/30 px-3 py-3 text-center mono text-3xl font-black outline-none focus:border-neonLime" />
+                          </label>
+                        </div>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <button @click="submitScore(match.id, 'A')" class="btn border border-cyberOrange/40 bg-cyberOrange/15 px-4 py-3 text-xs font-black uppercase tracking-widest text-cyberOrange" x-text="t('submitByA')"></button>
+                        <button @click="submitScore(match.id, 'B')" class="btn border border-neonLime/40 bg-neonLime/15 px-4 py-3 text-xs font-black uppercase tracking-widest text-neonLime" x-text="t('submitByB')"></button>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2" x-show="match.status === 'pending'">
+                        <button @click="confirmScore(match.id)" class="btn border border-neonLime/50 bg-neonLime/20 px-4 py-3 text-xs font-black uppercase tracking-widest text-neonLime" x-text="t('confirm')"></button>
+                        <button @click="cancelScore(match.id)" class="btn border border-white/15 bg-white/10 px-4 py-3 text-xs font-black uppercase tracking-widest" x-text="t('editScore')"></button>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <div x-show="!eventMatches().filter(m => m.status !== 'confirmed').length" class="border border-dashed border-white/15 p-8 text-center text-sm text-steel" x-text="t('noCurrentMatches')"></div>
+              </div>
+            </div>
+
+            <div class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
+              <div class="mb-4 flex items-center justify-between gap-3">
+                <h3 class="text-lg font-black uppercase tracking-widest" x-text="t('confirmedResults')"></h3>
+                <button @click="exportData()" class="btn border border-white/10 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-white/15" x-text="t('exportJson')"></button>
+              </div>
+              <div class="overflow-x-auto scrollbar-thin">
+                <table class="w-full min-w-[720px] border-collapse text-sm">
+                  <thead class="table-head text-left text-xs uppercase tracking-widest text-steel">
+                    <tr>
+                      <th class="p-3" x-text="t('time')"></th>
+                      <th class="p-3">TEAM A</th>
+                      <th class="p-3" x-text="t('score')"></th>
+                      <th class="p-3">TEAM B</th>
+                      <th class="p-3" x-text="t('eloDelta')"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="match in confirmedMatches().slice().reverse()" :key="match.id">
+                      <tr class="border-b border-white/10">
+                        <td class="p-3 text-steel" x-text="formatDateTime(match.confirmedAt)"></td>
+                        <td class="p-3 text-cyberOrange font-black" x-text="teamNames(match.teamA)"></td>
+                        <td class="p-3 mono text-2xl font-black" x-text="match.scoreA + ' - ' + match.scoreB"></td>
+                        <td class="p-3 text-neonLime font-black" x-text="teamNames(match.teamB)"></td>
+                        <td class="p-3 mono" x-text="match.deltaA > 0 ? '+' + match.deltaA + ' / ' + (-match.deltaA) : match.deltaA + ' / +' + (-match.deltaA)"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+              <div x-show="!confirmedMatches().length" class="border border-dashed border-white/15 p-5 text-center text-sm text-steel" x-text="t('noResultsYet')"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section x-show="view === 'leaderboard'" x-cloak>
+        <div class="grid gap-5 xl:grid-cols-[1fr_380px]">
+          <div class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <h3 class="text-lg font-black uppercase tracking-widest" x-text="t('leaderboard')"></h3>
+              <div class="h-4 flex-1 hazard opacity-40"></div>
+            </div>
+            <div class="overflow-x-auto scrollbar-thin">
+              <table class="w-full min-w-[780px] border-collapse text-sm">
+                <thead class="table-head text-left text-xs uppercase tracking-widest text-steel">
+                  <tr>
+                    <th class="p-3">#</th>
+                    <th class="p-3" x-text="t('player')"></th>
+                    <th class="p-3">ELO</th>
+                    <th class="p-3" x-text="t('level')"></th>
+                    <th class="p-3" x-text="t('tech')"></th>
+                    <th class="p-3" x-text="t('tact')"></th>
+                    <th class="p-3" x-text="t('matches')"></th>
+                    <th class="p-3" x-text="t('winRate')"></th>
+                    <th class="p-3" x-text="t('form5')"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="(player, index) in leaderboard()" :key="player.id">
+                    <tr class="cursor-pointer border-b border-white/10 hover:bg-white/5" @click="selectedStatsPlayerId = player.id">
+                      <td class="p-3 mono text-lg font-black" x-text="index + 1"></td>
+                      <td class="p-3 font-black" x-text="player.nickname"></td>
+                      <td class="p-3 mono text-2xl font-black" :class="index === 0 ? 'text-neonLime' : 'text-white'" x-text="player.rating"></td>
+                      <td class="p-3 text-steel" x-text="levelName(player)"></td>
+                      <td class="p-3"><div class="power-bar"><div class="power-fill bg-cyberOrange" :style="'width:' + scorePercent(player.tech) + '%'"></div></div><span class="mono text-xs" x-text="player.tech.toFixed(2)"></span></td>
+                      <td class="p-3"><div class="power-bar"><div class="power-fill bg-neonLime" :style="'width:' + scorePercent(player.tact) + '%'"></div></div><span class="mono text-xs" x-text="player.tact.toFixed(2)"></span></td>
+                      <td class="p-3 mono" x-text="player.matches"></td>
+                      <td class="p-3 mono" x-text="winRate(player) + '%'"></td>
+                      <td class="p-3"><span x-html="formBadges(player)"></span></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+            <div x-show="!players.length" class="border border-dashed border-white/15 p-8 text-center text-sm text-steel" x-text="t('noPlayersYet')"></div>
+          </div>
+
+          <aside class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
+            <h3 class="mb-4 text-lg font-black uppercase tracking-widest" x-text="t('playerProfile')"></h3>
+            <label class="block">
+              <span class="mb-1 block text-xs font-black uppercase tracking-widest text-steel" x-text="t('choosePlayer')"></span>
+              <select x-model="selectedStatsPlayerId" class="chamfer w-full border border-white/10 bg-black/25 px-4 py-3 font-bold outline-none focus:border-neonLime/50">
+                <template x-for="player in leaderboard()" :key="player.id">
+                  <option :value="player.id" x-text="player.nickname"></option>
+                </template>
+              </select>
+            </label>
+
+            <template x-if="statsPlayer()">
+              <div class="mt-5 space-y-4">
+                <div class="chamfer border border-neonLime/30 bg-neonLime/10 p-4 text-center shadow-glowLime">
+                  <div class="text-2xl font-black" x-text="statsPlayer().nickname"></div>
+                  <div class="mono text-5xl font-black text-neonLime" x-text="statsPlayer().rating"></div>
+                  <div class="text-xs uppercase tracking-widest text-steel" x-text="levelName(statsPlayer())"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="border border-white/10 bg-black/20 p-3"><div class="text-xs text-steel" x-text="t('matches')"></div><div class="mono text-2xl font-black" x-text="statsPlayer().matches"></div></div>
+                  <div class="border border-white/10 bg-black/20 p-3"><div class="text-xs text-steel" x-text="t('winRate')"></div><div class="mono text-2xl font-black" x-text="winRate(statsPlayer()) + '%'"></div></div>
+                  <div class="border border-white/10 bg-black/20 p-3"><div class="text-xs text-steel" x-text="t('avgFor')"></div><div class="mono text-2xl font-black" x-text="avgFor(statsPlayer())"></div></div>
+                  <div class="border border-white/10 bg-black/20 p-3"><div class="text-xs text-steel" x-text="t('avgAgainst')"></div><div class="mono text-2xl font-black" x-text="avgAgainst(statsPlayer())"></div></div>
+                </div>
+                <div>
+                  <div class="mb-1 flex items-center justify-between text-xs font-black uppercase tracking-widest text-steel"><span x-text="t('techScore')"></span><span class="mono" x-text="statsPlayer().tech.toFixed(2)"></span></div>
+                  <div class="power-bar"><div class="power-fill bg-cyberOrange" :style="'width:' + scorePercent(statsPlayer().tech) + '%'"></div></div>
+                </div>
+                <div>
+                  <div class="mb-1 flex items-center justify-between text-xs font-black uppercase tracking-widest text-steel"><span x-text="t('tactScore')"></span><span class="mono" x-text="statsPlayer().tact.toFixed(2)"></span></div>
+                  <div class="power-bar"><div class="power-fill bg-neonLime" :style="'width:' + scorePercent(statsPlayer().tact) + '%'"></div></div>
+                </div>
+                <div>
+                  <div class="mb-2 text-xs font-black uppercase tracking-widest text-steel" x-text="t('lastFive')"></div>
+                  <div class="flex gap-2" x-html="formBadges(statsPlayer(), true)"></div>
+                </div>
+              </div>
+            </template>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <footer class="mx-auto max-w-7xl px-4 pb-8 text-center text-xs text-steel md:px-6">
+      <div class="border-t border-white/10 pt-5">
+        <span class="mono">PICKLEBALL SYSTEMS HUB - ALPHA 02</span>
+        <span> · </span>
+        <span x-text="t('footerNote')"></span>
+        <button @click="resetAllData()" class="ml-2 text-cyberOrange underline decoration-cyberOrange/40" x-text="t('resetData')"></button>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    function pickleballHub() {
+      return {
+        storageKey: 'pickleball-systems-hub-alpha02-v1',
+        lang: 'th',
+        view: 'hub',
+        activeEventId: null,
+        selectedPlayerId: '',
+        selectedStatsPlayerId: '',
+        editingProfileId: null,
+        events: [
+          {
+            id: 'event-sat-open-po',
+            code: 'SOP',
+            title: 'Saturday Open Po',
+            dateTime: { th: 'วันเสาร์ · 15:00 - 17:00', en: 'Saturday · 15:00 - 17:00' },
+            venue: 'Papaya Court 4-5',
+            status: 'live',
+            accent: 'lime'
+          },
+          {
+            id: 'event-friday-smash',
+            code: 'FNS',
+            title: 'Friday Night Smash',
+            dateTime: { th: 'วันศุกร์ · 19:30 - 21:30', en: 'Friday · 19:30 - 21:30' },
+            venue: 'Club46 Indoor Court',
+            status: 'upcoming',
+            accent: 'orange'
+          },
+          {
+            id: 'event-sunday-social',
+            code: 'SSP',
+            title: 'Sunday Social Pickle',
+            dateTime: { th: 'วันอาทิตย์ · 14:00 - 16:00', en: 'Sunday · 14:00 - 16:00' },
+            venue: 'SUKSPACE',
+            status: 'completed',
+            accent: 'lime'
+          }
+        ],
+        players: [],
+        queues: {},
+        matches: {},
+        form: {
+          nickname: '',
+          selfRating: 3,
+          answers: {}
+        },
+        questions: [
+          {
+            id: 'q1', axis: 'tech',
+            text: { th: 'Serve / Return: คุณเสิร์ฟและรับเสิร์ฟได้มั่นใจแค่ไหน?', en: 'Serve / Return: How confident are your serve and return?' },
+            options: [
+              { value: 1, label: { th: 'ยังพลาดบ่อย ต้องฝึกพื้นฐาน', en: 'Still miss often; need basics' } },
+              { value: 2, label: { th: 'ทำได้บ้าง แต่ยังไม่สม่ำเสมอ', en: 'Can do it, but not consistent' } },
+              { value: 3, label: { th: 'คุมลูกได้ดี เล่นเกมจริงได้', en: 'Reliable enough for real games' } },
+              { value: 4, label: { th: 'เสิร์ฟ/รีเทิร์นมีเป้าหมายและกดดันคู่แข่งได้', en: 'Targeted serve/return that creates pressure' } }
+            ]
+          },
+          {
+            id: 'q2', axis: 'tech',
+            text: { th: 'Dinking: คุณเล่นลูกหน้าเน็ตสั้นและคุมจังหวะได้แค่ไหน?', en: 'Dinking: How well can you control soft net play?' },
+            options: [
+              { value: 1, label: { th: 'ยังไม่ค่อยเข้าใจ Dink', en: 'Not familiar with dink yet' } },
+              { value: 2, label: { th: 'ทำได้เป็นบางครั้ง แต่คุมความสูงยาก', en: 'Sometimes works, height control is hard' } },
+              { value: 3, label: { th: 'Dink ต่อเนื่องได้และไม่รีบตีแรง', en: 'Can dink consistently without rushing' } },
+              { value: 4, label: { th: 'ใช้ Dink เปิดช่องและบังคับเกมได้', en: 'Can use dink to create openings' } }
+            ]
+          },
+          {
+            id: 'q3', axis: 'tech',
+            text: { th: 'Third Shot Drop: คุณตีลูกดรอปจากหลังคอร์ทเข้าครัวได้ดีแค่ไหน?', en: 'Third Shot Drop: How well can you drop from the baseline into the kitchen?' },
+            options: [
+              { value: 1, label: { th: 'ยังไม่ใช้หรือยังไม่เข้าใจ', en: 'Do not use it yet' } },
+              { value: 2, label: { th: 'ลองได้ แต่ลูกลอย/ติดเน็ตบ่อย', en: 'Can try, but often floats or hits net' } },
+              { value: 3, label: { th: 'ทำได้ในเกมทั่วไปพอสมควร', en: 'Can use it in regular games' } },
+              { value: 4, label: { th: 'ใช้เป็นอาวุธเพื่อขึ้นหน้าเน็ตได้', en: 'Can use it as a setup weapon' } }
+            ]
+          },
+          {
+            id: 'q4', axis: 'tech',
+            text: { th: 'Overhead / Slam: คุณจัดการลูกสูงและปิดแต้มได้แค่ไหน?', en: 'Overhead / Slam: How well do you finish high balls?' },
+            options: [
+              { value: 1, label: { th: 'ตีพลาดหรือกลัวลูกสูง', en: 'Often miss or avoid high balls' } },
+              { value: 2, label: { th: 'ตีได้แต่ยังไม่ค่อยคม', en: 'Can hit, but not sharp yet' } },
+              { value: 3, label: { th: 'ปิดแต้มได้เมื่อมีโอกาส', en: 'Can finish when given chances' } },
+              { value: 4, label: { th: 'อ่านลูกสูงดีและปิดแต้มได้มั่นใจ', en: 'Strong overhead and confident finish' } }
+            ]
+          },
+          {
+            id: 'q5', axis: 'tech',
+            text: { th: 'Blocking / Reset: คุณรับลูกเร็วและรีเซ็ตเกมได้แค่ไหน?', en: 'Blocking / Reset: How well can you block speed-ups and reset?' },
+            options: [
+              { value: 1, label: { th: 'โดนลูกเร็วแล้วหลุดง่าย', en: 'Fast balls often break me down' } },
+              { value: 2, label: { th: 'รับได้บางลูก แต่ยังคุมยาก', en: 'Can block some, but control is hard' } },
+              { value: 3, label: { th: 'รับลูกเร็วและวางกลับได้พอสมควร', en: 'Can block and place back fairly well' } },
+              { value: 4, label: { th: 'รีเซ็ตเกมได้ดีและเปลี่ยนรับเป็นรุกได้', en: 'Can reset well and turn defense into offense' } }
+            ]
+          },
+          {
+            id: 'q6', axis: 'tact',
+            text: { th: 'Positioning: คุณยืนตำแหน่งและขยับคู่กับพาร์ตเนอร์ได้แค่ไหน?', en: 'Positioning: How well do you move with your partner?' },
+            options: [
+              { value: 1, label: { th: 'ยังยืนสับสน/ชนคู่บ่อย', en: 'Often confused or overlap with partner' } },
+              { value: 2, label: { th: 'พอเข้าใจ แต่ยังหลุดตำแหน่ง', en: 'Understand basics but drift out of position' } },
+              { value: 3, label: { th: 'ยืนคู่และปิดพื้นที่ได้ดี', en: 'Cover space well with partner' } },
+              { value: 4, label: { th: 'อ่านเกมและขยับเป็นทีมได้ดีมาก', en: 'Read the game and move as a unit' } }
+            ]
+          },
+          {
+            id: 'q7', axis: 'tact',
+            text: { th: 'Rules / Scoring: คุณเข้าใจกติกา Kitchen, Serve, Scoring แค่ไหน?', en: 'Rules / Scoring: How well do you know kitchen, serve, and scoring rules?' },
+            options: [
+              { value: 1, label: { th: 'ยังต้องให้คนช่วยบอกบ่อย', en: 'Need help often' } },
+              { value: 2, label: { th: 'เข้าใจคร่าวๆ แต่ยังสับสนบางจังหวะ', en: 'Know roughly, but still confused sometimes' } },
+              { value: 3, label: { th: 'เล่นและนับคะแนนได้ถูกต้อง', en: 'Can play and score correctly' } },
+              { value: 4, label: { th: 'ช่วยอธิบายกติกาให้คนอื่นได้', en: 'Can explain rules to others' } }
+            ]
+          },
+          {
+            id: 'q8', axis: 'tact',
+            text: { th: 'Fitness: วันนี้คุณพร้อมเล่นต่อเนื่องแค่ไหน?', en: 'Fitness: How ready are you to play multiple rounds today?' },
+            options: [
+              { value: 1, label: { th: 'อยากเล่นเบาๆ เหนื่อยง่าย', en: 'Light play only; get tired easily' } },
+              { value: 2, label: { th: 'เล่นได้ แต่ต้องพักเป็นช่วงๆ', en: 'Can play, need breaks' } },
+              { value: 3, label: { th: 'พร้อมเล่นหลายเกมปกติ', en: 'Ready for several games' } },
+              { value: 4, label: { th: 'ฟิตมาก พร้อมเกมเร็ว/หนัก', en: 'Very fit; ready for fast games' } }
+            ]
+          },
+          {
+            id: 'q9', axis: 'tact',
+            text: { th: 'Transition: คุณขึ้นจากหลังคอร์ทไปหน้าเน็ตได้ดีแค่ไหน?', en: 'Transition: How well do you move from baseline to kitchen?' },
+            options: [
+              { value: 1, label: { th: 'มักค้างอยู่หลังคอร์ท', en: 'Often stay back too long' } },
+              { value: 2, label: { th: 'พยายามขึ้นหน้า แต่ timing ยังไม่ดี', en: 'Try to move up, timing is not stable' } },
+              { value: 3, label: { th: 'เลือกจังหวะขึ้นหน้าได้ดี', en: 'Choose transition timing well' } },
+              { value: 4, label: { th: 'เปลี่ยนโซนและคุมพื้นที่ได้เป็นระบบ', en: 'Transition and control space systematically' } }
+            ]
+          },
+          {
+            id: 'q10', axis: 'tact',
+            text: { th: 'Match Experience: คุณมีประสบการณ์เกมจริง/แข่งมากแค่ไหน?', en: 'Match Experience: How much real match or tournament experience do you have?' },
+            options: [
+              { value: 1, label: { th: 'เพิ่งเริ่มเล่น ยังไม่ค่อยลงเกมจริง', en: 'New player; limited real games' } },
+              { value: 2, label: { th: 'เล่น Open Play บ้าง', en: 'Some open play experience' } },
+              { value: 3, label: { th: 'เล่นเกมนับคะแนนเป็นประจำ', en: 'Regular scored games' } },
+              { value: 4, label: { th: 'เคยแข่งหรือเล่นเกมจริงจังบ่อย', en: 'Tournament or frequent competitive games' } }
+            ]
+          }
+        ],
+        dict: {
+          th: {
+            freeLocal: 'ใช้ฟรี · เก็บข้อมูลในเครื่องด้วย localStorage · เหมาะกับมือถือ/แท็บเล็ตหน้าสนาม',
+            navEvents: 'อีเวนต์', navPlayers: 'ผู้เล่น', navCourt: 'หน้าสนาม', navStats: 'สถิติ', fieldMode: 'FIELD MODE',
+            hubTitle: 'Event Selection Hub', hubSub: 'เลือกอีเวนต์ของก๊วน ดูสถานะ คิว ผลแข่ง และกดเข้าร่วม Open Play ได้ทันที',
+            onboardingTitle: 'Onboarding & 2-Axis Analysis', onboardingSub: 'สร้างโปรไฟล์ผู้เล่นด้วย Self-Rating และแบบทดสอบ 10 ข้อ เพื่อแยก Tech Score + Tactical/Physical Score',
+            queueTitle: 'Self-Service Smart Matchmaking', queueSub: 'ผู้เล่นต่อคิวเอง ผู้จัดกด Match Next Game ระบบเลือก 4 คนที่ระดับเกาะกลุ่มและแบ่งทีมให้สมดุลที่สุด',
+            statsTitle: 'Pro Stats & Leaderboard', statsSub: 'สรุปอันดับ Elo, Win Rate, แต้มเฉลี่ย และฟอร์ม 5 นัดหลังสุด หลังคะแนนได้รับการยืนยันแล้ว',
+            live: 'LIVE', upcoming: 'UPCOMING', completed: 'COMPLETED', joinEvent: 'JOIN EVENT', waiting: 'รอคิว', matches: 'แมตช์', players: 'ผู้เล่น',
+            systemRulesTitle: 'GDSQ Fair Play Logic', rule1Head: '1. Join ง่าย', rule1: 'สแกน QR เข้างาน กรอกชื่อ และเข้าคิวเองได้', rule2Head: '2. วิเคราะห์ 2 แกน', rule2: 'แยก Technical กับ Tactical/Physical เพื่อจับคู่แม่นกว่า self-rating อย่างเดียว', rule3Head: '3. Match แฟร์', rule3: 'เลือก 4 คนคะแนนใกล้กัน แล้วสลับทีมให้พลังรวมใกล้ที่สุด', rule4Head: '4. ยืนยันผลสองฝั่ง', rule4: 'คะแนนต้องมีอีกฝั่งกดยืนยันก่อนอัปเดต Elo',
+            registeredPlayers: 'Registered Players', loadDemo: 'โหลดผู้เล่นตัวอย่าง', noPlayersYet: 'ยังไม่มีผู้เล่น กดสร้างโปรไฟล์ใหม่หรือโหลดตัวอย่าง', retestPlayer: 'Retest Player Power', newPlayerSetup: 'New Player Setup', onboardingHint: 'ตอบครบ 10 ข้อ ระบบจะคำนวณพลัง 2 แกนและ Elo เริ่มต้น ผู้เล่นเก่าทำใหม่ได้เสมอ', clearForm: 'ล้างฟอร์ม', nickname: 'ชื่อเล่น', nicknamePlaceholder: 'เช่น Don, Golf, Ice', selfRating: 'Self-Rating', techScore: 'Technical Score', tactScore: 'Tactical / Physical Score', initialElo: 'Initial Elo', saveRetest: 'SAVE RETEST', createProfile: 'CREATE PROFILE',
+            selectEventFirst: 'กรุณาเลือกอีเวนต์ก่อนจากหน้า Event Hub', liveGames: 'เกมสด', confirmed: 'ยืนยันแล้ว', selfService: 'Self-Service Queue', choosePlayer: 'เลือกผู้เล่น', selectPlayer: 'เลือกชื่อผู้เล่น', joinQueue: 'JOIN QUEUE', pause: 'PAUSE', addNewPlayer: 'เพิ่มผู้เล่นใหม่', waitingList: 'Waiting List', matchNext: 'MATCH NEXT GAME', emptyQueue: 'ยังไม่มีคนในคิว', currentMatches: 'Current Matches', matchId: 'Match', active: 'ACTIVE', pendingVerification: 'PENDING VERIFICATION', enterScore: 'กรอกคะแนนหลังแข่ง', submitByA: 'Submit by Team A', submitByB: 'Submit by Team B', confirm: 'CONFIRM', editScore: 'EDIT', noCurrentMatches: 'ยังไม่มีแมตช์ที่กำลังเล่นหรือรอยืนยัน', confirmedResults: 'Confirmed Results', exportJson: 'Export JSON', time: 'เวลา', score: 'คะแนน', eloDelta: 'Elo Δ', noResultsYet: 'ยังไม่มีผลแข่งที่ยืนยันแล้ว',
+            leaderboard: 'Leaderboard', player: 'ผู้เล่น', level: 'ระดับ', tech: 'Tech', tact: 'Tact', winRate: 'Win Rate', form5: 'ฟอร์ม 5 นัด', playerProfile: 'Player Profile', avgFor: 'แต้มทำเฉลี่ย', avgAgainst: 'แต้มเสียเฉลี่ย', lastFive: 'Last 5 Matches', footerNote: 'Single File App · Tailwind CSS · Alpine.js · localStorage', resetData: 'Reset Data',
+            alertNeedName: 'กรุณากรอกชื่อเล่น', alertNeedAnswers: 'กรุณาตอบคำถามให้ครบ 10 ข้อ', alertSaved: 'บันทึกโปรไฟล์แล้ว', alertSelectPlayer: 'กรุณาเลือกผู้เล่นก่อน', alertNeedFour: 'ต้องมีผู้เล่น waiting อย่างน้อย 4 คน', alertBadScore: 'กรุณากรอกคะแนนให้ถูกต้อง และคะแนนห้ามเสมอ', alertSubmitted: 'ส่งคะแนนแล้ว รออีกฝั่งกดยืนยัน', alertConfirmed: 'ยืนยันผลแล้ว ระบบอัปเดต Elo และส่งผู้เล่นกลับท้ายคิว', alertDemoLoaded: 'โหลดผู้เล่นตัวอย่างแล้ว', alertReset: 'ต้องการล้างข้อมูลทั้งหมดใช่ไหม?', alertExport: 'คัดลอกข้อมูล JSON แล้ว'
+          },
+          en: {
+            freeLocal: 'Free to use · localStorage data · Built for mobile/tablet court-side operation',
+            navEvents: 'EVENTS', navPlayers: 'PLAYERS', navCourt: 'COURT', navStats: 'STATS', fieldMode: 'FIELD MODE',
+            hubTitle: 'Event Selection Hub', hubSub: 'Select a community event, view status, queue, results, and join open play instantly.',
+            onboardingTitle: 'Onboarding & 2-Axis Analysis', onboardingSub: 'Create a player profile using self-rating and a 10-question test to separate Tech Score and Tactical/Physical Score.',
+            queueTitle: 'Self-Service Smart Matchmaking', queueSub: 'Players join the queue themselves. Organizer taps Match Next Game. The engine selects four close-level players and balances teams.',
+            statsTitle: 'Pro Stats & Leaderboard', statsSub: 'See Elo ranking, win rate, average points, and last-five form after results are verified.',
+            live: 'LIVE', upcoming: 'UPCOMING', completed: 'COMPLETED', joinEvent: 'JOIN EVENT', waiting: 'Waiting', matches: 'Matches', players: 'Players',
+            systemRulesTitle: 'GDSQ Fair Play Logic', rule1Head: '1. Easy Join', rule1: 'Scan QR, enter profile, and join the queue by yourself.', rule2Head: '2. 2-Axis Analysis', rule2: 'Separate Technical and Tactical/Physical power for better matching than self-rating alone.', rule3Head: '3. Fair Match', rule3: 'Pick four similar-level players and balance team power.', rule4Head: '4. Double Verify', rule4: 'Scores need confirmation before Elo updates.',
+            registeredPlayers: 'Registered Players', loadDemo: 'Load Demo Players', noPlayersYet: 'No players yet. Create a profile or load demo players.', retestPlayer: 'Retest Player Power', newPlayerSetup: 'New Player Setup', onboardingHint: 'Complete 10 questions to calculate two-axis power and initial Elo. Existing players can retest anytime.', clearForm: 'Clear Form', nickname: 'Nickname', nicknamePlaceholder: 'e.g. Don, Golf, Ice', selfRating: 'Self-Rating', techScore: 'Technical Score', tactScore: 'Tactical / Physical Score', initialElo: 'Initial Elo', saveRetest: 'SAVE RETEST', createProfile: 'CREATE PROFILE',
+            selectEventFirst: 'Please select an event from the Event Hub first.', liveGames: 'Live Games', confirmed: 'Confirmed', selfService: 'Self-Service Queue', choosePlayer: 'Choose Player', selectPlayer: 'Select player', joinQueue: 'JOIN QUEUE', pause: 'PAUSE', addNewPlayer: 'Add New Player', waitingList: 'Waiting List', matchNext: 'MATCH NEXT GAME', emptyQueue: 'No players in queue yet.', currentMatches: 'Current Matches', matchId: 'Match', active: 'ACTIVE', pendingVerification: 'PENDING VERIFICATION', enterScore: 'Enter match score', submitByA: 'Submit by Team A', submitByB: 'Submit by Team B', confirm: 'CONFIRM', editScore: 'EDIT', noCurrentMatches: 'No active or pending matches.', confirmedResults: 'Confirmed Results', exportJson: 'Export JSON', time: 'Time', score: 'Score', eloDelta: 'Elo Δ', noResultsYet: 'No confirmed results yet.',
+            leaderboard: 'Leaderboard', player: 'Player', level: 'Level', tech: 'Tech', tact: 'Tact', winRate: 'Win Rate', form5: 'Last 5', playerProfile: 'Player Profile', avgFor: 'Avg Points For', avgAgainst: 'Avg Points Against', lastFive: 'Last 5 Matches', footerNote: 'Single File App · Tailwind CSS · Alpine.js · localStorage', resetData: 'Reset Data',
+            alertNeedName: 'Please enter a nickname.', alertNeedAnswers: 'Please answer all 10 questions.', alertSaved: 'Profile saved.', alertSelectPlayer: 'Please choose a player first.', alertNeedFour: 'At least 4 waiting players are required.', alertBadScore: 'Please enter valid scores. A match cannot end in a tie.', alertSubmitted: 'Score submitted. Waiting for the other side to confirm.', alertConfirmed: 'Result confirmed. Elo updated and players returned to the queue tail.', alertDemoLoaded: 'Demo players loaded.', alertReset: 'Reset all data?', alertExport: 'JSON data copied to clipboard.'
+          }
+        },
+
+        init() {
+          const saved = localStorage.getItem(this.storageKey);
+          if (saved) {
+            try {
+              const data = JSON.parse(saved);
+              this.lang = data.lang || 'th';
+              this.view = data.view || 'hub';
+              this.activeEventId = data.activeEventId || null;
+              this.players = Array.isArray(data.players) ? data.players : [];
+              this.queues = data.queues || {};
+              this.matches = data.matches || {};
+              this.selectedPlayerId = data.selectedPlayerId || '';
+              this.selectedStatsPlayerId = data.selectedStatsPlayerId || '';
+            } catch (err) {
+              console.warn('Failed to load saved data', err);
+            }
+          }
+          this.events.forEach(event => {
+            if (!this.queues[event.id]) this.queues[event.id] = [];
+            if (!this.matches[event.id]) this.matches[event.id] = [];
+          });
+          if (!this.selectedStatsPlayerId && this.players[0]) this.selectedStatsPlayerId = this.players[0].id;
+          this.persist();
+        },
+
+        persist() {
+          localStorage.setItem(this.storageKey, JSON.stringify({
+            lang: this.lang,
+            view: this.view,
+            activeEventId: this.activeEventId,
+            selectedPlayerId: this.selectedPlayerId,
+            selectedStatsPlayerId: this.selectedStatsPlayerId,
+            players: this.players,
+            queues: this.queues,
+            matches: this.matches
+          }));
+        },
+
+        t(key) { return (this.dict[this.lang] && this.dict[this.lang][key]) || key; },
+        toggleLang() { this.lang = this.lang === 'th' ? 'en' : 'th'; this.persist(); },
+        go(view) { this.view = view; this.persist(); },
+        pageTitle() { return this.t(this.view === 'hub' ? 'hubTitle' : this.view === 'onboarding' ? 'onboardingTitle' : this.view === 'queue' ? 'queueTitle' : 'statsTitle'); },
+        pageSubtitle() { return this.t(this.view === 'hub' ? 'hubSub' : this.view === 'onboarding' ? 'onboardingSub' : this.view === 'queue' ? 'queueSub' : 'statsSub'); },
+        navClass(view) { return this.view === view ? 'border border-neonLime/50 bg-neonLime/15 text-neonLime shadow-glowLime' : 'border border-white/10 bg-white/5 text-steel hover:bg-white/10 hover:text-white'; },
+        statusLabel(status) { return this.t(status || 'upcoming'); },
+
+        activeEvent() { return this.events.find(e => e.id === this.activeEventId); },
+        selectEvent(eventId) { this.activeEventId = eventId; this.view = 'queue'; this.persist(); },
+        eventQueues() { if (!this.activeEventId) return []; return this.queues[this.activeEventId] || []; },
+        eventMatches() { if (!this.activeEventId) return []; return this.matches[this.activeEventId] || []; },
+        activeMatches() { return this.eventMatches().filter(m => m.status === 'active' || m.status === 'pending'); },
+        confirmedMatches() { return this.eventMatches().filter(m => m.status === 'confirmed'); },
+        countEventQueue(eventId) { return (this.queues[eventId] || []).filter(q => q.status === 'waiting').length; },
+        countEventMatches(eventId) { return (this.matches[eventId] || []).filter(m => m.status === 'confirmed').length; },
+        countEventPlayers(eventId) {
+          const ids = new Set();
+          (this.queues[eventId] || []).forEach(q => ids.add(q.playerId));
+          (this.matches[eventId] || []).forEach(m => [...m.teamA, ...m.teamB].forEach(id => ids.add(id)));
+          return ids.size;
+        },
+
+        playersSortedByName() { return this.players.slice().sort((a, b) => a.nickname.localeCompare(b.nickname)); },
+        leaderboard() { return this.players.slice().sort((a, b) => b.rating - a.rating || a.nickname.localeCompare(b.nickname)); },
+        getPlayer(id) { return this.players.find(p => p.id === id); },
+        statsPlayer() { return this.getPlayer(this.selectedStatsPlayerId) || this.leaderboard()[0]; },
+        scorePercent(score) { return Math.max(0, Math.min(100, (Number(score || 0) / 4) * 100)); },
+        formatPower(player) { if (!player) return '-'; return (Number(player.tech || 0) + Number(player.tact || 0)).toFixed(1); },
+        levelName(player) {
+          if (!player) return '-';
+          const r = Number(player.rating || 0);
+          if (r < 1100) return 'New Player';
+          if (r < 1300) return 'Social Player';
+          if (r < 1500) return 'Rally Player';
+          if (r < 1700) return 'Strong Player';
+          return 'Advanced Player';
+        },
+        winRate(player) { if (!player || !player.matches) return 0; return Math.round((player.wins / player.matches) * 100); },
+        avgFor(player) { if (!player || !player.matches) return '0.0'; return (player.pointsFor / player.matches).toFixed(1); },
+        avgAgainst(player) { if (!player || !player.matches) return '0.0'; return (player.pointsAgainst / player.matches).toFixed(1); },
+        formBadges(player, large = false) {
+          const form = player && player.form && player.form.length ? player.form.slice(0, 5) : [];
+          if (!form.length) return '<span class="text-steel">-</span>';
+          return form.map(r => {
+            const cls = r === 'W' ? 'border-neonLime/40 bg-neonLime/15 text-neonLime' : 'border-cyberOrange/40 bg-cyberOrange/15 text-cyberOrange';
+            return `<span class="chamfer inline-flex ${large ? 'h-11 w-11 text-base' : 'h-7 w-7 text-xs'} items-center justify-center border ${cls} mono font-black">${r}</span>`;
+          }).join(' ');
+        },
+
+        resetForm() {
+          this.editingProfileId = null;
+          this.form = { nickname: '', selfRating: 3, answers: {} };
+        },
+        editPlayer(playerId) {
+          const p = this.getPlayer(playerId);
+          if (!p) return;
+          this.editingProfileId = p.id;
+          this.form.nickname = p.nickname;
+          this.form.selfRating = p.selfRating || 3;
+          this.form.answers = { ...(p.answers || {}) };
+        },
+        answeredCount() { return Object.keys(this.form.answers).filter(k => this.form.answers[k]).length; },
+        axisAverage(axis) {
+          const qs = this.questions.filter(q => q.axis === axis);
+          const values = qs.map(q => Number(this.form.answers[q.id] || 0)).filter(Boolean);
+          if (!values.length) return 0;
+          return values.reduce((sum, value) => sum + value, 0) / qs.length;
+        },
+        previewScore(axis) {
+          const value = this.axisAverage(axis);
+          return value ? value.toFixed(2) : '-';
+        },
+        calculateInitialElo(tech, tact, selfRating) {
+          const combined = (Number(selfRating) * 0.4) + (Number(tech) * 0.3) + (Number(tact) * 0.3);
+          return Math.round(650 + combined * 275);
+        },
+        previewElo() {
+          const tech = this.axisAverage('tech');
+          const tact = this.axisAverage('tact');
+          if (!tech || !tact) return '-';
+          return this.calculateInitialElo(tech, tact, this.form.selfRating);
+        },
+        savePlayerProfile() {
+          if (!this.form.nickname) { alert(this.t('alertNeedName')); return; }
+          if (this.answeredCount() < this.questions.length) { alert(this.t('alertNeedAnswers')); return; }
+          const tech = Number(this.axisAverage('tech').toFixed(2));
+          const tact = Number(this.axisAverage('tact').toFixed(2));
+          const initialElo = this.calculateInitialElo(tech, tact, this.form.selfRating);
+          if (this.editingProfileId) {
+            const p = this.getPlayer(this.editingProfileId);
+            if (p) {
+              p.nickname = this.form.nickname;
+              p.selfRating = Number(this.form.selfRating);
+              p.tech = tech;
+              p.tact = tact;
+              p.answers = { ...this.form.answers };
+              if (!p.matches) p.rating = initialElo;
+            }
+          } else {
+            const id = 'p-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+            this.players.push({
+              id,
+              nickname: this.form.nickname,
+              selfRating: Number(this.form.selfRating),
+              tech,
+              tact,
+              answers: { ...this.form.answers },
+              rating: initialElo,
+              matches: 0,
+              wins: 0,
+              losses: 0,
+              pointsFor: 0,
+              pointsAgainst: 0,
+              form: []
+            });
+            this.selectedPlayerId = id;
+            this.selectedStatsPlayerId = id;
+          }
+          this.persist();
+          alert(this.t('alertSaved'));
+          this.resetForm();
+        },
+
+        queueEntry(playerId) { return this.eventQueues().find(q => q.playerId === playerId); },
+        joinQueue() {
+          if (!this.activeEventId) { alert(this.t('selectEventFirst')); return; }
+          if (!this.selectedPlayerId) { alert(this.t('alertSelectPlayer')); return; }
+          const existing = this.queueEntry(this.selectedPlayerId);
+          if (existing) {
+            existing.status = 'waiting';
+            existing.joinedAt = existing.joinedAt || Date.now();
+          } else {
+            this.queues[this.activeEventId].push({ playerId: this.selectedPlayerId, status: 'waiting', joinedAt: Date.now() });
+          }
+          this.persist();
+        },
+        pauseQueue() {
+          if (!this.selectedPlayerId) { alert(this.t('alertSelectPlayer')); return; }
+          const existing = this.queueEntry(this.selectedPlayerId);
+          if (existing) existing.status = 'paused';
+          this.persist();
+        },
+        removeFromQueue(playerId) {
+          this.queues[this.activeEventId] = this.eventQueues().filter(q => q.playerId !== playerId);
+          this.persist();
+        },
+
+        matchNextGame() {
+          const waiting = this.eventQueues().filter(q => q.status === 'waiting' && this.getPlayer(q.playerId));
+          if (waiting.length < 4) { alert(this.t('alertNeedFour')); return; }
+          const selectedEntries = this.pickBestFour(waiting);
+          const selectedPlayers = selectedEntries.map(e => this.getPlayer(e.playerId));
+          const teams = this.balanceTeams(selectedPlayers);
+          selectedEntries.forEach(e => this.removeFromQueue(e.playerId));
+          const match = {
+            id: 'm-' + Date.now() + '-' + Math.random().toString(16).slice(2),
+            eventId: this.activeEventId,
+            teamA: teams.teamA,
+            teamB: teams.teamB,
+            status: 'active',
+            scoreA: null,
+            scoreB: null,
+            submittedBy: null,
+            createdAt: Date.now(),
+            confirmedAt: null,
+            deltaA: 0
+          };
+          this.matches[this.activeEventId].push(match);
+          this.persist();
+        },
+        pickBestFour(waiting) {
+          const ordered = waiting.slice().sort((a, b) => a.joinedAt - b.joinedAt);
+          const pool = ordered.slice(0, Math.min(ordered.length, 12));
+          const combos = [];
+          for (let a = 0; a < pool.length - 3; a++) {
+            for (let b = a + 1; b < pool.length - 2; b++) {
+              for (let c = b + 1; c < pool.length - 1; c++) {
+                for (let d = c + 1; d < pool.length; d++) {
+                  combos.push([pool[a], pool[b], pool[c], pool[d]]);
+                }
+              }
+            }
+          }
+          const now = Date.now();
+          let best = combos[0];
+          let bestScore = Infinity;
+          combos.forEach(combo => {
+            const ratings = combo.map(e => this.getPlayer(e.playerId).rating);
+            const spread = Math.max(...ratings) - Math.min(...ratings);
+            const avgIndex = combo.reduce((sum, e) => sum + ordered.findIndex(x => x.playerId === e.playerId), 0) / 4;
+            const avgWaitMinutes = combo.reduce((sum, e) => sum + ((now - e.joinedAt) / 60000), 0) / 4;
+            const earliestPenalty = combo.some(e => e.playerId === ordered[0].playerId) ? 0 : 120;
+            const score = spread + avgIndex * 35 + earliestPenalty - avgWaitMinutes * 5;
+            if (score < bestScore) { bestScore = score; best = combo; }
+          });
+          return best;
+        },
+        balanceTeams(players) {
+          const options = [
+            [[players[0], players[1]], [players[2], players[3]]],
+            [[players[0], players[2]], [players[1], players[3]]],
+            [[players[0], players[3]], [players[1], players[2]]]
+          ];
+          let best = options[0];
+          let bestScore = Infinity;
+          options.forEach(option => {
+            const powerA = option[0].reduce((s, p) => s + p.tech + p.tact, 0);
+            const powerB = option[1].reduce((s, p) => s + p.tech + p.tact, 0);
+            const eloA = option[0].reduce((s, p) => s + p.rating, 0);
+            const eloB = option[1].reduce((s, p) => s + p.rating, 0);
+            const score = Math.abs(powerA - powerB) * 100 + Math.abs(eloA - eloB) / 10;
+            if (score < bestScore) { bestScore = score; best = option; }
+          });
+          return { teamA: best[0].map(p => p.id), teamB: best[1].map(p => p.id) };
+        },
+        teamPower(teamIds) {
+          const total = teamIds.reduce((sum, id) => {
+            const p = this.getPlayer(id);
+            return sum + (p ? p.tech + p.tact : 0);
+          }, 0);
+          return total.toFixed(1);
+        },
+        teamNames(teamIds) { return teamIds.map(id => this.getPlayer(id)?.nickname || 'Unknown').join(' + '); },
+
+        getMatch(matchId) { return this.eventMatches().find(m => m.id === matchId); },
+        submitScore(matchId, side) {
+          const match = this.getMatch(matchId);
+          if (!match) return;
+          const a = Number(match.scoreA);
+          const b = Number(match.scoreB);
+          if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b < 0 || a === b) {
+            alert(this.t('alertBadScore'));
+            return;
+          }
+          match.scoreA = Math.round(a);
+          match.scoreB = Math.round(b);
+          match.submittedBy = side;
+          match.status = 'pending';
+          this.persist();
+          alert(this.t('alertSubmitted'));
+        },
+        cancelScore(matchId) {
+          const match = this.getMatch(matchId);
+          if (!match) return;
+          match.status = 'active';
+          match.submittedBy = null;
+          this.persist();
+        },
+        confirmScore(matchId) {
+          const match = this.getMatch(matchId);
+          if (!match || match.status !== 'pending') return;
+          const deltaA = this.calculateAndApplyElo(match);
+          match.deltaA = deltaA;
+          match.status = 'confirmed';
+          match.confirmedAt = Date.now();
+          [...match.teamA, ...match.teamB].forEach(pid => {
+            if (!this.queueEntry(pid)) this.queues[this.activeEventId].push({ playerId: pid, status: 'waiting', joinedAt: Date.now() });
+          });
+          this.persist();
+          alert(this.t('alertConfirmed'));
+        },
+        teamRating(teamIds) {
+          return teamIds.reduce((sum, id) => sum + (this.getPlayer(id)?.rating || 1200), 0) / teamIds.length;
+        },
+        calculateAndApplyElo(match) {
+          const ratingA = this.teamRating(match.teamA);
+          const ratingB = this.teamRating(match.teamB);
+          const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+          const actualA = match.scoreA > match.scoreB ? 1 : 0;
+          const margin = Math.abs(match.scoreA - match.scoreB);
+          const ratingDiff = Math.abs(ratingA - ratingB);
+          const movMultiplier = Math.log(margin + 1) * (2.2 / ((ratingDiff * 0.001) + 2.2));
+          const k = 28;
+          let deltaA = Math.round(k * movMultiplier * (actualA - expectedA));
+          if (actualA === 1 && deltaA < 1) deltaA = 1;
+          if (actualA === 0 && deltaA > -1) deltaA = -1;
+          const deltaB = -deltaA;
+          const aWin = actualA === 1;
+          match.teamA.forEach(pid => this.applyPlayerResult(pid, deltaA, aWin, match.scoreA, match.scoreB));
+          match.teamB.forEach(pid => this.applyPlayerResult(pid, deltaB, !aWin, match.scoreB, match.scoreA));
+          return deltaA;
+        },
+        applyPlayerResult(playerId, delta, won, pointsFor, pointsAgainst) {
+          const p = this.getPlayer(playerId);
+          if (!p) return;
+          p.rating = Math.max(500, Math.round((p.rating || 1200) + delta));
+          p.matches = (p.matches || 0) + 1;
+          p.wins = (p.wins || 0) + (won ? 1 : 0);
+          p.losses = (p.losses || 0) + (won ? 0 : 1);
+          p.pointsFor = (p.pointsFor || 0) + Number(pointsFor || 0);
+          p.pointsAgainst = (p.pointsAgainst || 0) + Number(pointsAgainst || 0);
+          p.form = [won ? 'W' : 'L', ...(p.form || [])].slice(0, 5);
+        },
+
+        formatDateTime(ts) {
+          if (!ts) return '-';
+          return new Intl.DateTimeFormat(this.lang === 'th' ? 'th-TH' : 'en-US', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' }).format(new Date(ts));
+        },
+        shortId(id) { return String(id).slice(-6).toUpperCase(); },
+
+        seedDemoPlayers() {
+          if (this.players.length && !confirm(this.lang === 'th' ? 'เพิ่มผู้เล่นตัวอย่างเข้าไปในข้อมูลปัจจุบัน?' : 'Add demo players to current data?')) return;
+          const demos = [
+            ['Don', 3.5, 3.4, 3.2], ['Golf', 3, 3.0, 3.1], ['Ice', 2.5, 2.5, 2.6], ['Nan', 2, 2.1, 2.2],
+            ['Mike', 4, 3.8, 3.7], ['Fern', 3, 3.1, 2.9], ['Aom', 2.5, 2.7, 2.4], ['Benz', 3.5, 3.6, 3.4]
+          ];
+          demos.forEach(([name, self, tech, tact]) => {
+            const id = 'p-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+            this.players.push({
+              id,
+              nickname: name,
+              selfRating: self,
+              tech,
+              tact,
+              answers: {},
+              rating: this.calculateInitialElo(tech, tact, self),
+              matches: 0,
+              wins: 0,
+              losses: 0,
+              pointsFor: 0,
+              pointsAgainst: 0,
+              form: []
+            });
+          });
+          if (!this.selectedPlayerId && this.players[0]) this.selectedPlayerId = this.players[0].id;
+          if (!this.selectedStatsPlayerId && this.players[0]) this.selectedStatsPlayerId = this.players[0].id;
+          this.persist();
+          alert(this.t('alertDemoLoaded'));
+        },
+        exportData() {
+          const payload = JSON.stringify({ events: this.events, players: this.players, queues: this.queues, matches: this.matches }, null, 2);
+          navigator.clipboard?.writeText(payload).then(() => alert(this.t('alertExport'))).catch(() => {
+            const blob = new Blob([payload], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'pickleball-systems-hub-alpha02-data.json';
+            a.click();
+            URL.revokeObjectURL(url);
+          });
+        },
+        resetAllData() {
+          if (!confirm(this.t('alertReset'))) return;
+          localStorage.removeItem(this.storageKey);
+          this.players = [];
+          this.queues = {};
+          this.matches = {};
+          this.activeEventId = null;
+          this.selectedPlayerId = '';
+          this.selectedStatsPlayerId = '';
+          this.view = 'hub';
+          this.events.forEach(event => { this.queues[event.id] = []; this.matches[event.id] = []; });
+          this.resetForm();
+          this.persist();
+        }
+      }
+    }
+  </script>
+</body>
+</html>
