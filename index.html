@@ -1,47 +1,446 @@
 <!DOCTYPE html>
-<html lang="th" x-data="app()" x-init="init()" :class="lang">
+<html lang="th" x-data="app()" x-init="init()">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>GDSQ OPEN PLAY · BILINGUAL FIELD SYSTEM</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-body{background:#1a1d20;color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.th body,.th *{font-family:system-ui,"Noto Sans Thai",sans-serif}.ch{clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}.chs{clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px)}.card{border:1px solid rgba(255,255,255,.12);background:#23282d}.haz{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.16) 0 8px,transparent 8px 16px)}input,select{background:#11161b!important;color:#fff!important;border-color:#3a424a!important}[x-cloak]{display:none!important}.btn{font-weight:900;padding:.82rem 1rem;border:1px solid rgba(255,255,255,.14)}.chip{border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.22);border-radius:14px;padding:.72rem;text-align:center}.mini{font-size:11px;color:#94a3b8}.lime{color:#c7ff2e}.orange{color:#ff9a3d}.scroll{overflow:auto}.stat{border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.28);border-radius:16px;padding:12px}.bar{height:7px;background:#0f1418;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:#c7ff2e}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>GDSQ Open Play Field UI Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body{background:#1a1d20;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif}
+    .cut{clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px)}
+    .card{background:#242a30;border:1px solid #3a424a}
+    .btn{font-weight:900;border:1px solid #3a424a}
+    .lime{color:#c7ff2e}.bg-lime{background:#c7ff2e;color:#111}
+    .ico{display:inline-flex;width:36px;height:36px;align-items:center;justify-content:center;border:1px solid #3a424a;background:#fff;color:#111;border-radius:10px;font-weight:900}
+    .haz{background:repeating-linear-gradient(135deg,rgba(255,255,255,.18) 0 8px,transparent 8px 16px)}
+    input,select{background:#11161b!important;color:#fff!important;border-color:#3a424a!important}
+    [x-cloak]{display:none!important}
+  </style>
 </head>
 <body>
-<header class="sticky top-0 z-50 border-b border-white/10 bg-[#15181b]/95 p-3 backdrop-blur">
- <div class="mx-auto flex max-w-7xl items-center justify-between gap-2">
-  <button @click="tab='events'" class="text-left"><div class="text-[10px] tracking-[.25em] text-lime-300">GDSQ PICKLEBALL</div><div class="text-sm font-black sm:text-lg" x-text="tr('appTitle')"></div></button>
-  <div class="flex gap-2"><button @click="tab='player'" class="chs btn bg-white/5 text-xs" x-text="tr('player')"></button><button @click="tab='organizer'" class="chs btn bg-lime-300 text-xs text-black" x-text="tr('organizer')"></button><button @click="toggleLang()" class="chs btn bg-orange-400 text-xs text-black" x-text="lang==='th'?'EN':'TH'"></button></div>
- </div>
+<header class="sticky top-0 z-50 bg-[#11161b]/95 border-b border-white/10 p-3">
+  <div class="max-w-7xl mx-auto flex justify-between items-center gap-2">
+    <button @click="tab='events'" class="text-left">
+      <div class="text-[10px] tracking-[.25em] lime">GDSQ PICKLEBALL</div>
+      <b x-text="tr('title')"></b>
+    </button>
+    <button @click="toggleLang()" class="cut bg-orange-400 text-black px-4 py-2 font-black" x-text="lang==='th'?'EN':'TH'"></button>
+  </div>
 </header>
-<main class="mx-auto max-w-7xl p-3 sm:p-5">
- <nav class="mb-4 grid grid-cols-4 gap-2 text-center text-xs font-black uppercase">
-  <button @click="tab='events'" :class="tab==='events'?'bg-lime-300 text-black':'bg-white/5'" class="chs btn" x-text="tr('events')"></button>
-  <button @click="tab='player'" :class="tab==='player'?'bg-lime-300 text-black':'bg-white/5'" class="chs btn" x-text="tr('join')"></button>
-  <button @click="tab='organizer'" :class="tab==='organizer'?'bg-lime-300 text-black':'bg-white/5'" class="chs btn" x-text="tr('manage')"></button>
-  <button @click="tab='stats'" :class="tab==='stats'?'bg-lime-300 text-black':'bg-white/5'" class="chs btn" x-text="tr('stats')"></button>
- </nav>
- <div x-show="msg" x-text="msg" class="mb-3 rounded-xl border border-lime-300/40 bg-lime-300/10 p-3 text-sm text-lime-200"></div>
 
- <section x-show="tab==='events'" x-cloak>
-  <div class="mb-4 flex items-end justify-between"><div><h1 class="text-2xl font-black" x-text="tr('selectEvent')"></h1><p class="text-sm text-slate-400" x-text="tr('eventHint')"></p></div><button @click="loadAll()" class="chs btn bg-white/5 text-xs">REFRESH</button></div>
-  <div class="grid gap-4 md:grid-cols-3"><template x-for="e in events" :key="e.id"><article class="ch card p-4" :class="eventId===e.id?'ring-2 ring-lime-300':''"><div class="haz mb-3 h-2"></div><div class="flex justify-between"><span class="rounded-full px-2 py-1 text-[10px] font-black" :class="e.status==='live'?'bg-lime-300 text-black':e.status==='completed'?'bg-slate-600':'bg-orange-400 text-black'" x-text="e.status"></span><span class="text-xs text-slate-400" x-text="tr('round')+' '+(e.current_round||0)+' · '+modeName(e.event_mode)"></span></div><h2 class="mt-3 text-xl font-black" x-text="name(e)"></h2><p class="mt-1 text-sm text-slate-300" x-text="(e.event_time||'-')+' · '+(e.venue||'-')"></p><p class="text-xs text-slate-400" x-text="e.courts_count+' '+tr('courts')"></p><div class="mt-4 grid grid-cols-2 gap-2"><button @click="pickEvent(e.id);tab='player'" class="chs bg-lime-300 px-3 py-3 text-xs font-black text-black" x-text="tr('joinEvent')"></button><button @click="pickEvent(e.id);tab='stats'" class="chs btn bg-white/5 text-xs" x-text="tr('results')"></button></div></article></template></div>
- </section>
+<main class="max-w-7xl mx-auto p-3">
+  <nav class="grid grid-cols-4 gap-2 text-xs font-black text-center mb-4">
+    <template x-for="n in ['events','join','manage','stats']">
+      <button @click="tab=n" class="cut btn py-3" :class="tab===n?'bg-lime':'bg-white/5'" x-text="tr(n)"></button>
+    </template>
+  </nav>
 
- <section x-show="tab==='player'" x-cloak>
-  <div class="grid gap-4 lg:grid-cols-[1fr_.9fr]"><div class="ch card p-4"><div class="haz mb-3 h-2"></div><h2 class="text-2xl font-black" x-text="tr('joinTitle')"></h2><p class="text-sm text-lime-300" x-text="event?name(event):tr('pickEventFirst')"></p><div class="mt-4 grid gap-3 sm:grid-cols-2"><input x-model="join.nick" class="rounded-lg border px-3 py-3" :placeholder="tr('nickname')"><select x-model.number="join.level" class="rounded-lg border px-3 py-3"><template x-for="l in levels"><option :value="l.v" x-text="l.v.toFixed(1)+' · '+levelLabel(l)"></option></template></select></div><div class="mt-3 rounded-xl border border-orange-300/25 bg-orange-950/20 p-3"><div class="flex items-center justify-between gap-2"><div><b class="text-orange-200" x-text="tr('notSure')"></b><p class="text-sm text-slate-400" x-text="tr('assessmentDesc')"></p></div><button @click="assess=!assess" class="chs bg-orange-400 px-3 py-2 text-xs font-black text-black" x-text="assess?tr('hide'):tr('assess')"></button></div></div><div x-show="assess" class="mt-3 grid gap-2"><template x-for="(q,i) in questions"><div class="rounded-xl border border-white/10 bg-black/20 p-3"><div class="mb-2 text-sm font-bold" x-text="(i+1)+'. '+q[lang]"></div><select x-model.number="ans[i]" class="w-full rounded-lg border px-3 py-2"><option value="0">-</option><option value="1">1 Newbie</option><option value="2">2 Beginner</option><option value="3">3 Social</option><option value="4">4 Strong</option><option value="5">5 Advanced</option></select></div></template><div class="rounded-xl border border-lime-300/30 bg-lime-950/10 p-3 text-sm">Estimate: <b x-text="estimate().toFixed(2)+' · '+levelName(estimate())"></b></div></div><button @click="savePlayer()" class="ch mt-4 w-full bg-lime-300 px-5 py-4 font-black text-black" x-text="tr('addReady')"></button></div><div class="ch card p-4"><h3 class="text-xl font-black" x-text="tr('liveQueue')"></h3><div class="mt-3 space-y-2"><template x-for="(p,i) in waiting()" :key="p.id"><div class="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 p-3"><button @click="detail=p" class="text-left"><b x-text="(i+1)+'. '+p.nickname"></b><div class="text-xs text-slate-400" x-text="levelName(p.estimated_level)+' · '+statusName(p.status)+' · '+tr('played')+' '+p.matches_played"></div></button><span class="text-xs" :class="p.status==='ready'?'text-lime-300':'text-slate-400'" x-text="statusName(p.status)"></span></div></template></div></div></div>
- </section>
+  <div x-show="msg" class="mb-3 p-3 rounded-xl border border-lime-300/40 bg-lime-300/10 text-lime-200" x-text="msg"></div>
 
- <section x-show="tab==='organizer'" x-cloak><div class="space-y-4"><div class="ch card p-4"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-2xl font-black" x-text="tr('organizerOpen')"></h2><p class="text-sm text-slate-400" x-text="event?name(event):'-'"></p></div><button @click="loadAll()" class="chs btn bg-white/5 text-xs">REFRESH</button></div><div class="mt-4 grid grid-cols-2 gap-2 text-center text-xs font-black uppercase sm:grid-cols-6"><div class="chip"><span x-text="tr('round')"></span><br><b class="text-xl text-lime-300" x-text="event?.current_round||0"></b></div><div class="chip"><span x-text="tr('players')"></span><br><b class="text-xl" x-text="players.length"></b></div><div class="chip">Ready/Wait<br><b class="text-xl text-lime-300" x-text="waiting().length"></b></div><div class="chip"><span x-text="tr('playing')"></span><br><b class="text-xl text-orange-300" x-text="players.filter(p=>p.status==='playing').length"></b></div><div class="chip">Fairness<br><b class="text-xl" x-text="fairScore()+'%' "></b></div><button @click="previewNext(freeCourt(),nextRound())" class="chs bg-lime-300 p-3 text-black">PREVIEW</button></div><div class="mt-3 rounded-xl border border-lime-300/20 bg-lime-950/10 p-3 text-sm text-slate-300" x-text="tr('timerNote')"></div><div class="mt-4 grid gap-3 sm:grid-cols-4"><label class="text-xs text-slate-400"><span x-text="tr('courts')"></span><input x-model.number="settings.courts" @change="saveSettings" type="number" min="1" max="12" class="mt-1 w-full rounded-lg border px-3 py-3"></label><label class="text-xs text-slate-400">Mode<select x-model="settings.mode" @change="saveSettings" class="mt-1 w-full rounded-lg border px-3 py-3"><option value="social">Social</option><option value="beginner">Beginner Friendly</option><option value="competitive">Competitive</option><option value="manual">Manual Only</option></select></label><button @click="previewNext(freeCourt(),nextRound())" class="ch bg-lime-300 px-4 py-3 font-black text-black">PREVIEW NEXT</button><button @click="matchAllPreview()" class="ch bg-orange-400 px-4 py-3 font-black text-black">PREVIEW ALL</button></div></div>
- <template x-if="preview"><div class="ch card p-4 border-lime-300/40"><div class="flex flex-wrap justify-between gap-2"><div><h3 class="text-xl font-black text-lime-300">MATCH PREVIEW</h3><p class="mini" x-text="'Court '+preview.court+' · '+tr('round')+' '+preview.round+' · Balance '+preview.balance+'% · Repeat '+preview.repeat"></p></div><button @click="preview=null" class="rounded-lg bg-white/10 px-3 py-2 font-black">X</button></div><div class="mt-3 grid gap-3 md:grid-cols-2"><div class="rounded-xl border border-orange-400/40 bg-orange-500/10 p-3"><b class="orange">TEAM A</b><template x-for="p in preview.A"><div class="mt-1 flex items-center justify-between"><span x-text="p.nickname+' · '+levelName(p.estimated_level)"></span><button @click="swapTarget=p;manualOpen=true" class="rounded bg-white/10 px-2 py-1 text-xs">SWAP</button></div></template></div><div class="rounded-xl border border-lime-300/40 bg-lime-500/10 p-3"><b class="lime">TEAM B</b><template x-for="p in preview.B"><div class="mt-1 flex items-center justify-between"><span x-text="p.nickname+' · '+levelName(p.estimated_level)"></span><button @click="swapTarget=p;manualOpen=true" class="rounded bg-white/10 px-2 py-1 text-xs">SWAP</button></div></template></div></div><div class="mt-3 grid gap-2 sm:grid-cols-4"><button @click="confirmPreview()" class="chs bg-lime-300 px-4 py-3 text-sm font-black text-black">CONFIRM MATCH</button><button @click="previewNext(preview.court,preview.round)" class="chs btn bg-white/5 text-sm">REBALANCE</button><button @click="manualOpen=true" class="chs bg-orange-400 px-4 py-3 text-sm font-black text-black">MANUAL EDIT</button><button @click="preview=null" class="chs bg-red-500 px-4 py-3 text-sm font-black text-white">CANCEL</button></div><div x-show="manualOpen" class="mt-3 rounded-xl border border-white/10 bg-black/20 p-3"><p class="mini mb-2">Replace: <b x-text="swapTarget?.nickname||'-'"></b></p><div class="grid gap-2 sm:grid-cols-2"><template x-for="p in replacePool()"><button @click="replaceInPreview(p)" class="rounded-xl border border-white/10 bg-white/5 p-3 text-left text-sm"><b x-text="p.nickname"></b><div class="mini" x-text="levelName(p.estimated_level)+' · '+statusName(p.status)+' · '+tr('played')+' '+p.matches_played"></div></button></template></div></div></div></template>
- <div class="grid gap-4 xl:grid-cols-[.85fr_1.15fr]"><aside class="space-y-4"><div class="ch card p-4"><h3 class="text-lg font-black" x-text="tr('createEvent')"></h3><div class="mt-3 grid gap-2"><input x-model="newEvent.name" class="rounded-lg border px-3 py-3" :placeholder="tr('eventName')"><input x-model="newEvent.time" class="rounded-lg border px-3 py-3" :placeholder="tr('eventTime')"><input x-model="newEvent.venue" class="rounded-lg border px-3 py-3" :placeholder="tr('venue')"><select x-model="newEvent.mode" class="rounded-lg border px-3 py-3"><option value="social">Social Open Play</option><option value="beginner">Beginner Friendly</option><option value="competitive">Fair Competitive</option><option value="manual">Manual Only</option></select><button @click="createEvent" class="chs bg-lime-300 px-4 py-3 text-sm font-black text-black">CREATE EVENT</button></div></div><div class="ch card p-4"><h3 class="text-lg font-black">Tools</h3><div class="mt-3 grid gap-2"><button @click="undoLast" class="chs bg-lime-300 px-4 py-3 text-sm font-black text-black">UNDO LAST RESULT</button><button @click="completeEvent" class="chs btn bg-white/5 text-sm">MARK COMPLETED</button><button @click="clearQueue" class="chs btn bg-white/5 text-sm">CLEAR QUEUE ONLY</button><button @click="resetStats" class="chs bg-orange-400 px-4 py-3 text-sm font-black text-black">RESET STATS</button><button @click="clearEvent" class="chs bg-orange-400 px-4 py-3 text-sm font-black text-black">CLEAR PLAYERS + MATCHES</button><button @click="deleteEvent" class="chs bg-red-500 px-4 py-3 text-sm font-black text-white">DELETE EVENT</button></div></div><div class="ch card p-4"><h3 class="text-lg font-black" x-text="tr('allPlayers')"></h3><div class="mt-3 space-y-2"><template x-for="p in sortedPlayers()" :key="p.id"><div class="rounded-xl border border-white/10 bg-black/20 p-3"><div class="flex justify-between gap-2"><button @click="detail=p" class="text-left"><b x-text="p.nickname"></b><div class="text-xs text-slate-400" x-text="levelName(p.estimated_level)+' · '+statusName(p.status)+' · '+tr('played')+' '+p.matches_played+' · R'+(p.last_played_round||'-')"></div></button><button @click="removePlayer(p)" class="rounded-lg bg-red-500 px-3 py-2 text-xs font-black" x-text="tr('remove')"></button></div><div class="mt-2 grid grid-cols-5 gap-2"><button @click="setStatus(p,'ready')" class="rounded-lg bg-lime-300 px-2 py-2 text-[10px] font-black text-black">READY</button><button @click="setStatus(p,'waiting')" class="rounded-lg bg-white/10 px-2 py-2 text-[10px] font-black">WAIT</button><button @click="setStatus(p,'not_ready')" class="rounded-lg bg-orange-400 px-2 py-2 text-[10px] font-black text-black">NO</button><button @click="setStatus(p,'paused')" class="rounded-lg bg-white/10 px-2 py-2 text-[10px] font-black">PAUSE</button><button @click="setStatus(p,'left')" class="rounded-lg bg-white/10 px-2 py-2 text-[10px] font-black">LEFT</button></div></div></template></div></div></aside><div class="space-y-4"><div class="grid gap-3 md:grid-cols-2"><template x-for="c in courts()"><div class="ch card p-4"><div class="mb-3 flex justify-between"><h3 class="text-xl font-black" x-text="'COURT '+c"></h3><span class="text-lime-300" x-text="courtMatch(c)?elapsed(courtMatch(c)):'READY'"></span></div><template x-if="courtMatch(c)"><div><div class="mb-2 text-xs text-slate-400" x-text="tr('gameTime')+': '+elapsed(courtMatch(c))+' · '+tr('round')+' '+(courtMatch(c).round_number||'-')"></div><div class="grid grid-cols-2 gap-3"><div class="rounded-xl border border-orange-400/40 bg-orange-500/10 p-3"><div class="text-xs font-black text-orange-300">TEAM A</div><template x-for="p in team(courtMatch(c),'A')"><button @click="detail=p" class="block font-bold" x-text="p.nickname"></button></template></div><div class="rounded-xl border border-lime-300/40 bg-lime-500/10 p-3"><div class="text-xs font-black text-lime-300">TEAM B</div><template x-for="p in team(courtMatch(c),'B')"><button @click="detail=p" class="block font-bold" x-text="p.nickname"></button></template></div></div><div class="mt-3 grid grid-cols-2 gap-2"><input type="number" x-model.number="score[courtMatch(c).id].a" class="rounded-lg border px-3 py-3 text-center text-xl font-black" placeholder="A"><input type="number" x-model.number="score[courtMatch(c).id].b" class="rounded-lg border px-3 py-3 text-center text-xl font-black" placeholder="B"></div><div class="mt-2 grid grid-cols-3 gap-2"><button @click="confirmScore(courtMatch(c))" class="chs bg-lime-300 px-3 py-3 text-xs font-black text-black">CONFIRM</button><button @click="editScore(courtMatch(c))" class="chs bg-orange-400 px-3 py-3 text-xs font-black text-black">EDIT</button><button @click="cancelMatch(courtMatch(c))" class="chs btn bg-white/5 text-xs">CANCEL</button></div></div></template></div></template></div><div class="ch card p-4"><h3 class="text-lg font-black text-orange-200">SPECIAL MATCH</h3><p class="text-sm text-slate-400" x-text="tr('specialDesc')"></p><button @click="special=!special" class="chs mt-3 bg-orange-400 px-4 py-3 text-sm font-black text-black">CREATE MANUAL</button><div x-show="special" class="mt-3 grid gap-2 sm:grid-cols-2"><template x-for="p in players.filter(x=>x.status!=='playing'&&x.status!=='left')"><label class="rounded-xl border border-white/10 bg-black/20 p-3"><input type="checkbox" :value="p.id" x-model="picked"> <span x-text="p.nickname+' · '+levelName(p.estimated_level)+' · '+statusName(p.status)"></span></label></template><button @click="createSpecial" class="chs bg-orange-400 px-4 py-3 text-sm font-black text-black sm:col-span-2">START SPECIAL</button></div></div></div></div></div></section>
- <section x-show="tab==='stats'" x-cloak><div class="grid gap-4 lg:grid-cols-[1fr_.8fr]"><div class="ch card p-4"><h2 class="text-2xl font-black" x-text="tr('eventRanking')"></h2><p class="mini mt-1" x-text="tr('rankingRule')"></p><div class="scroll"><table class="mt-3 w-full min-w-[760px] text-left text-sm"><thead class="text-xs text-slate-400"><tr><th>#</th><th x-text="tr('player')"></th><th>Score</th><th>W-L</th><th>Win%</th><th>Diff</th><th x-text="tr('played')"></th><th>Skill</th><th>ELO</th></tr></thead><tbody><template x-for="(p,i) in eventRanking()"><tr class="border-t border-white/10"><td class="py-3 font-black" x-text="i+1"></td><td><button @click="detail=p" class="font-bold" x-text="p.nickname"></button></td><td class="font-black text-lime-300" x-text="eventScore(p)"></td><td x-text="p.wins+'-'+p.losses"></td><td x-text="winRate(p)+'%'"></td><td x-text="pointDiff(p)"></td><td x-text="p.matches_played"></td><td x-text="levelName(p.estimated_level)"></td><td x-text="Math.round(p.elo)"></td></tr></template></tbody></table></div></div><div class="space-y-4"><div class="ch card p-4"><h2 class="text-xl font-black" x-text="tr('eventSummary')"></h2><div class="mt-3 grid grid-cols-2 gap-3"><template x-for="box in eventSummaryBoxes()"><div class="stat"><b class="text-xl" x-text="box.v"></b><div class="mini" x-text="box.k"></div></div></template></div><pre class="mt-3 whitespace-pre-wrap rounded-xl bg-black/30 p-3 text-sm text-slate-300" x-text="summary()"></pre><div class="mt-3 grid grid-cols-2 gap-2"><button @click="copySummary" class="chs bg-lime-300 px-4 py-3 text-sm font-black text-black">COPY</button><button @click="saveShareText" class="chs bg-orange-400 px-4 py-3 text-sm font-black text-black">SAVE SHARE</button></div></div></div></div></section>
-</main><div x-show="detail" x-cloak class="fixed inset-0 z-50 bg-black/70 p-4 backdrop-blur" @click.self="detail=null"><div class="ch mx-auto mt-6 max-w-2xl card p-5"><div class="flex justify-between"><div><div class="text-[10px] tracking-[.25em] text-lime-300" x-text="tr('playerSummary')"></div><h2 class="text-3xl font-black" x-text="detail?.nickname"></h2><p class="text-lime-300" x-text="detail?levelName(detail.estimated_level):''"></p></div><button @click="detail=null" class="rounded-lg bg-white/10 px-3 py-2 font-black">X</button></div><template x-if="detail"><div><div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3"><template x-for="box in detailBoxes()"><div class="stat"><b x-text="box.v"></b><div class="mini" x-text="box.k"></div></div></template></div><div class="mt-4 rounded-xl border border-white/10 bg-black/20 p-4"><div class="mb-2 flex justify-between text-sm"><span>Win Rate</span><b x-text="winRate(detail)+'%'"></b></div><div class="bar"><i :style="'width:'+winRate(detail)+'%'"></i></div><p class="mt-3 text-sm text-slate-300" x-text="playerInsight(detail)"></p></div></div></template></div></div>
+  <!-- EVENTS -->
+  <section x-show="tab==='events'" x-cloak>
+    <div class="mb-4 flex items-end justify-between">
+      <div>
+        <h1 class="text-2xl font-black" x-text="tr('selectEvent')"></h1>
+        <p class="text-sm text-slate-400" x-text="tr('eventHint')"></p>
+      </div>
+      <button @click="load()" class="cut btn bg-white/5 px-3 py-2">REFRESH</button>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-3">
+      <template x-for="e in events" :key="e.id">
+        <div class="cut card p-4" :class="eventId===e.id?'ring-2 ring-lime-300':''">
+          <div class="haz h-2 mb-3"></div>
+          <div class="flex justify-between text-xs">
+            <span class="rounded-full px-2 py-1 font-black" :class="e.status==='live'?'bg-lime':'bg-slate-600'" x-text="e.status"></span>
+            <span x-text="tr('round')+' '+(e.current_round||0)"></span>
+          </div>
+          <h2 class="text-xl font-black mt-3" x-text="e.name_th||e.name_en"></h2>
+          <p class="text-sm text-slate-300" x-text="(e.event_time||'-')+' · '+(e.venue||'-')"></p>
+          <div class="grid grid-cols-2 gap-2 mt-4">
+            <button @click="pick(e.id);tab='join'" class="cut bg-lime px-3 py-3 font-black" x-text="tr('joinEvent')"></button>
+            <button @click="pick(e.id);tab='stats'" class="cut btn bg-white/5 px-3 py-3" x-text="tr('results')"></button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </section>
+
+  <!-- JOIN -->
+  <section x-show="tab==='join'" x-cloak>
+    <div class="grid gap-4 lg:grid-cols-[1fr_.85fr]">
+      <div class="cut card p-4">
+        <div class="haz h-2 mb-3"></div>
+        <h2 class="text-2xl font-black" x-text="tr('joinTitle')"></h2>
+        <p class="lime text-sm" x-text="event ? event.name_th : tr('pickEvent')"></p>
+
+        <div class="grid gap-3 mt-4 sm:grid-cols-2">
+          <input x-model="join.nick" class="rounded-lg border p-3" :placeholder="tr('nickname')">
+          <select x-model.number="join.level" class="rounded-lg border p-3">
+            <template x-for="l in levels">
+              <option :value="l.v" x-text="l.v.toFixed(1)+' · '+(lang==='th'?l.th:l.en)"></option>
+            </template>
+          </select>
+        </div>
+
+        <div class="mt-3 rounded-xl border border-orange-300/30 bg-orange-950/20 p-3 flex justify-between gap-2">
+          <div>
+            <b class="text-orange-200" x-text="tr('assessmentTitle')"></b>
+            <p class="text-sm text-slate-400" x-text="tr('assessmentHint')"></p>
+          </div>
+          <button @click="showAssess=!showAssess" class="cut bg-orange-400 text-black px-3 py-2 font-black" x-text="showAssess?tr('hide'):tr('open')"></button>
+        </div>
+
+        <div x-show="showAssess" class="grid gap-2 mt-3">
+          <template x-for="(q,i) in questions">
+            <div class="rounded-xl border border-white/10 bg-black/20 p-3">
+              <div class="flex gap-2 mb-2">
+                <span class="ico" x-text="q.i"></span>
+                <div>
+                  <b x-text="(i+1)+'. '+q[lang]"></b>
+                  <div class="text-xs text-slate-400" x-text="q.note[lang]"></div>
+                </div>
+              </div>
+              <select x-model.number="ans[i]" class="w-full rounded-lg border p-2">
+                <option value="0">-</option>
+                <option value="1">1 · Beginner / ทำได้น้อย</option>
+                <option value="2">2 · Basic / พอทำได้</option>
+                <option value="3">3 · Average / ปานกลาง</option>
+                <option value="4">4 · Good / ดี</option>
+                <option value="5">5 · Excellent / ดีมาก</option>
+              </select>
+            </div>
+          </template>
+          <div class="rounded-xl border border-lime-300/30 bg-lime-950/10 p-3">
+            Assessment: <b x-text="avg().toFixed(2)+' / 5'"></b> · Estimate <b x-text="estimate().toFixed(2)"></b>
+          </div>
+        </div>
+
+        <button @click="savePlayer()" class="cut w-full bg-lime mt-4 p-4 font-black" x-text="tr('saveReady')"></button>
+      </div>
+
+      <div class="cut card p-4">
+        <h3 class="text-xl font-black" x-text="tr('queue')"></h3>
+        <div class="space-y-2 mt-3">
+          <template x-for="(p,i) in waiting()" :key="p.id">
+            <button @click="detail=p" class="w-full text-left rounded-xl border border-white/10 bg-black/20 p-3">
+              <b x-text="(i+1)+'. '+p.nickname"></b>
+              <div class="text-xs text-slate-400" x-text="levelName(p.estimated_level)+' · '+statusName(p.status)+' · '+tr('played')+' '+p.matches_played"></div>
+            </button>
+          </template>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MANAGE -->
+  <section x-show="tab==='manage'" x-cloak>
+    <div class="space-y-4">
+      <div class="cut card p-4">
+        <h2 class="text-2xl font-black" x-text="tr('quick')"></h2>
+        <p class="text-sm text-slate-400" x-text="event?event.name_th:'-'"></p>
+
+        <div class="grid gap-3 mt-4 sm:grid-cols-4">
+          <button @click="previewNext()" class="cut card p-4 text-left">
+            <span class="ico">➜</span><b class="ml-2" x-text="tr('nextMatch')"></b>
+            <p class="text-xs text-slate-400 mt-2" x-text="tr('nextDesc')"></p>
+          </button>
+          <button @click="tab='join'" class="cut card p-4 text-left">
+            <span class="ico">＋</span><b class="ml-2" x-text="tr('joinQueue')"></b>
+            <p class="text-xs text-slate-400 mt-2" x-text="tr('joinDesc')"></p>
+          </button>
+          <button @click="tab='stats'" class="cut card p-4 text-left">
+            <span class="ico">▥</span><b class="ml-2" x-text="tr('summary')"></b>
+            <p class="text-xs text-slate-400 mt-2" x-text="tr('summaryDesc')"></p>
+          </button>
+          <button @click="advanced=!advanced" class="cut card p-4 text-left">
+            <span class="ico">⚙</span><b class="ml-2" x-text="tr('advanced')"></b>
+            <p class="text-xs text-slate-400 mt-2" x-text="tr('advancedDesc')"></p>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-6 gap-2 mt-4 text-center text-xs font-black">
+          <div class="rounded-xl bg-black/25 p-3">Round<br><b class="text-xl lime" x-text="event?.current_round||0"></b></div>
+          <div class="rounded-xl bg-black/25 p-3">Players<br><b class="text-xl" x-text="players.length"></b></div>
+          <div class="rounded-xl bg-black/25 p-3">Ready<br><b class="text-xl lime" x-text="waiting().length"></b></div>
+          <div class="rounded-xl bg-black/25 p-3">Playing<br><b class="text-xl text-orange-300" x-text="players.filter(p=>p.status==='playing').length"></b></div>
+          <div class="rounded-xl bg-black/25 p-3">Fairness<br><b class="text-xl" x-text="fairScore()+'%'"></b></div>
+          <div class="rounded-xl bg-black/25 p-3">Mode<br><b class="text-xl" x-text="modeName(settings.mode)"></b></div>
+        </div>
+
+        <div class="grid gap-3 mt-4 sm:grid-cols-3">
+          <label class="text-xs text-slate-400">Courts
+            <input x-model.number="settings.courts" @change="saveSettings()" type="number" min="1" max="12" class="mt-1 w-full rounded-lg border p-3">
+          </label>
+          <label class="text-xs text-slate-400">Mode
+            <select x-model="settings.mode" @change="saveSettings()" class="mt-1 w-full rounded-lg border p-3">
+              <option value="social">Social</option>
+              <option value="beginner">Beginner Friendly</option>
+              <option value="competitive">Competitive</option>
+              <option value="manual">Manual Only</option>
+            </select>
+          </label>
+          <button @click="previewNext()" class="cut bg-lime p-3 font-black">PREVIEW NEXT</button>
+        </div>
+      </div>
+
+      <div x-show="preview" class="cut card p-4 border-lime-300/40">
+        <div class="flex justify-between">
+          <div>
+            <h3 class="text-xl font-black lime" x-text="tr('preview')"></h3>
+            <p class="text-xs text-slate-400" x-text="'Court '+preview.court+' · Round '+preview.round+' · Balance '+preview.balance+'%'"></p>
+          </div>
+          <button @click="preview=null" class="rounded-lg bg-white/10 px-3 py-2">X</button>
+        </div>
+        <div class="grid gap-3 mt-3 md:grid-cols-2">
+          <div class="rounded-xl border border-orange-400/40 bg-orange-500/10 p-3">
+            <b class="text-orange-300">TEAM A</b>
+            <template x-for="p in preview.A"><div x-text="p.nickname+' · '+levelName(p.estimated_level)"></div></template>
+          </div>
+          <div class="rounded-xl border border-lime-300/40 bg-lime-500/10 p-3">
+            <b class="lime">TEAM B</b>
+            <template x-for="p in preview.B"><div x-text="p.nickname+' · '+levelName(p.estimated_level)"></div></template>
+          </div>
+        </div>
+        <div class="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
+          <b x-text="tr('reasons')"></b>
+          <template x-for="r in preview.reasons">
+            <div class="text-sm text-slate-300">✓ <span x-text="r"></span></div>
+          </template>
+        </div>
+        <div class="grid gap-2 mt-3 sm:grid-cols-3">
+          <button @click="confirmPreview()" class="cut bg-lime p-3 font-black">CONFIRM</button>
+          <button @click="previewNext()" class="cut btn bg-white/5 p-3">REBALANCE</button>
+          <button @click="preview=null" class="cut bg-red-500 p-3 font-black">CANCEL</button>
+        </div>
+      </div>
+
+      <div class="grid gap-4 xl:grid-cols-[.85fr_1.15fr]">
+        <aside class="space-y-4">
+          <div class="cut card p-4">
+            <h3 class="font-black" x-text="tr('createEvent')"></h3>
+            <div class="grid gap-2 mt-3">
+              <input x-model="newEvent.name" class="rounded-lg border p-3" :placeholder="tr('eventName')">
+              <input x-model="newEvent.time" class="rounded-lg border p-3" :placeholder="tr('eventTime')">
+              <input x-model="newEvent.venue" class="rounded-lg border p-3" :placeholder="tr('venue')">
+              <button @click="createEvent()" class="cut bg-lime p-3 font-black">CREATE EVENT</button>
+            </div>
+          </div>
+
+          <div x-show="advanced" class="cut card p-4">
+            <h3 class="font-black" x-text="tr('advanced')"></h3>
+            <div class="grid gap-2 mt-3">
+              <button @click="ask('Reset Stats',tr('resetMsg'),resetStats)" class="cut bg-orange-400 text-black p-3 font-black">RESET STATS</button>
+              <button @click="ask('Clear Event',tr('clearMsg'),clearEvent)" class="cut bg-orange-400 text-black p-3 font-black">CLEAR PLAYERS + MATCHES</button>
+              <button @click="ask('Remove Event',tr('removeEventMsg'),removeEvent)" class="cut bg-red-500 p-3 font-black">REMOVE EVENT</button>
+            </div>
+          </div>
+
+          <div class="cut card p-4">
+            <h3 class="font-black" x-text="tr('allPlayers')"></h3>
+            <div class="space-y-2 mt-3">
+              <template x-for="p in sortedPlayers()" :key="p.id">
+                <div class="rounded-xl border border-white/10 bg-black/20 p-3">
+                  <div class="flex justify-between">
+                    <button @click="detail=p" class="text-left">
+                      <b x-text="p.nickname"></b>
+                      <div class="text-xs text-slate-400" x-text="levelName(p.estimated_level)+' · '+statusName(p.status)+' · '+tr('played')+' '+p.matches_played"></div>
+                    </button>
+                    <button @click="ask(tr('remove'),tr('removePlayerMsg')+' '+p.nickname,()=>removePlayer(p))" class="rounded-lg bg-red-500 px-3 text-xs font-black" x-text="tr('remove')"></button>
+                  </div>
+                  <div class="grid grid-cols-5 gap-1 mt-2">
+                    <template x-for="s in ['ready','waiting','not_ready','paused','left']">
+                      <button @click="setStatus(p,s)" class="rounded bg-white/10 py-2 text-[10px]" x-text="statusName(s)"></button>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </aside>
+
+        <div class="space-y-4">
+          <div class="grid gap-3 md:grid-cols-2">
+            <template x-for="c in courts()">
+              <div class="cut card p-4">
+                <div class="flex justify-between mb-3">
+                  <h3 class="text-xl font-black" x-text="'COURT '+c"></h3>
+                  <span class="lime" x-text="courtMatch(c)?elapsed(courtMatch(c)):'READY'"></span>
+                </div>
+                <template x-if="courtMatch(c)">
+                  <div>
+                    <div class="grid grid-cols-2 gap-3">
+                      <div class="rounded-xl border border-orange-400/40 bg-orange-500/10 p-3">
+                        <b class="text-orange-300">TEAM A</b>
+                        <template x-for="p in team(courtMatch(c),'A')"><button @click="detail=p" class="block" x-text="p.nickname"></button></template>
+                      </div>
+                      <div class="rounded-xl border border-lime-300/40 bg-lime-500/10 p-3">
+                        <b class="lime">TEAM B</b>
+                        <template x-for="p in team(courtMatch(c),'B')"><button @click="detail=p" class="block" x-text="p.nickname"></button></template>
+                      </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mt-3">
+                      <input type="number" x-model.number="score[courtMatch(c).id].a" class="rounded-lg border p-3 text-center text-xl font-black" placeholder="A">
+                      <input type="number" x-model.number="score[courtMatch(c).id].b" class="rounded-lg border p-3 text-center text-xl font-black" placeholder="B">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mt-2">
+                      <button @click="confirmScore(courtMatch(c))" class="cut bg-lime p-3 font-black">CONFIRM</button>
+                      <button @click="cancelMatch(courtMatch(c))" class="cut btn bg-white/5 p-3">CANCEL</button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section x-show="tab==='stats'" x-cloak>
+    <div class="grid gap-4 lg:grid-cols-[1fr_.8fr]">
+      <div class="cut card p-4">
+        <h2 class="text-2xl font-black" x-text="tr('ranking')"></h2>
+        <p class="text-xs text-slate-400" x-text="tr('rankRule')"></p>
+        <div class="overflow-auto">
+          <table class="mt-3 w-full min-w-[720px] text-sm text-left">
+            <thead class="text-slate-400 text-xs"><tr><th>#</th><th>Player</th><th>Score</th><th>W-L</th><th>Win%</th><th>Diff</th><th>Played</th><th>Skill</th></tr></thead>
+            <tbody>
+              <template x-for="(p,i) in ranking()">
+                <tr class="border-t border-white/10">
+                  <td class="py-3" x-text="i+1"></td>
+                  <td><button @click="detail=p" class="font-bold" x-text="p.nickname"></button></td>
+                  <td class="lime font-black" x-text="eventScore(p)"></td>
+                  <td x-text="p.wins+'-'+p.losses"></td>
+                  <td x-text="winRate(p)+'%'"></td>
+                  <td x-text="diff(p)"></td>
+                  <td x-text="p.matches_played"></td>
+                  <td x-text="levelName(p.estimated_level)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="cut card p-4">
+        <h2 class="text-xl font-black" x-text="tr('summary')"></h2>
+        <div class="grid grid-cols-2 gap-2 mt-3">
+          <template x-for="b in boxes()"><div class="rounded-xl bg-black/25 p-3 text-center"><b class="text-xl" x-text="b.v"></b><div class="text-xs text-slate-400" x-text="b.k"></div></div></template>
+        </div>
+        <h3 class="mt-4 font-black lime" x-text="tr('highlights')"></h3>
+        <template x-for="a in awards()"><div class="rounded-xl border border-white/10 bg-black/20 p-3 mt-2 text-sm"><b x-text="a.title"></b>: <span x-text="a.name"></span><div class="text-xs text-slate-400" x-text="a.note"></div></div></template>
+        <pre class="mt-3 rounded-xl bg-black/30 p-3 text-sm whitespace-pre-wrap" x-text="summary()"></pre>
+        <button @click="copySummary()" class="cut bg-lime p-3 font-black w-full mt-2">COPY LINE</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div x-show="detail" x-cloak class="fixed inset-0 bg-black/70 p-4 z-50" @click.self="detail=null">
+  <div class="cut card max-w-2xl mx-auto mt-8 p-5">
+    <div class="flex justify-between">
+      <div><div class="text-[10px] tracking-[.25em] lime" x-text="tr('playerSummary')"></div><h2 class="text-3xl font-black" x-text="detail?.nickname"></h2><p class="lime" x-text="detail?levelName(detail.estimated_level):''"></p></div>
+      <button @click="detail=null" class="bg-white/10 rounded-lg px-3">X</button>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
+      <template x-for="b in playerBoxes(detail)"><div class="rounded-xl bg-black/25 p-3 text-center"><b x-text="b.v"></b><div class="text-xs text-slate-400" x-text="b.k"></div></div></template>
+    </div>
+    <p class="mt-4 rounded-xl bg-black/30 p-3 text-sm" x-text="insight(detail)"></p>
+  </div>
+</div>
+
+<div x-show="modal.open" x-cloak class="fixed inset-0 bg-black/80 p-4 z-[60]" @click.self="modal.open=false">
+  <div class="cut max-w-md mx-auto mt-24 p-5 border border-red-500 bg-[#2a1111]">
+    <h3 class="text-xl font-black text-red-300" x-text="modal.title"></h3>
+    <p class="text-sm text-slate-300 mt-2" x-text="modal.msg"></p>
+    <div class="grid grid-cols-2 gap-2 mt-4">
+      <button @click="modal.open=false" class="cut btn bg-white/5 p-3">CANCEL</button>
+      <button @click="runModal()" class="cut bg-red-500 p-3 font-black">CONFIRM</button>
+    </div>
+  </div>
+</div>
+
 <script>
-function app(){return{url:'https://zzeikmrrlfvwnwsprmjy.supabase.co',key:'sb_publishable_xSAZX5dgZ_3Qr3nzoOtqYA_Z0l8yOaX',db:null,lang:localStorage.psh_lang||'th',tab:'events',events:[],eventId:localStorage.psh_event||'',event:null,players:[],matches:[],mps:[],msg:'',join:{nick:localStorage.last_nick||'',level:2.5},assess:false,ans:Array(10).fill(0),score:{},settings:{courts:1,mode:'social'},newEvent:{name:'',time:'',venue:'',mode:'social'},special:false,picked:[],detail:null,tick:Date.now(),preview:null,manualOpen:false,swapTarget:null,levels:[{v:1,n:'Newbie',th:'มือใหม่'},{v:1.5,n:'Starter',th:'เริ่มต้น'},{v:2,n:'Beginner',th:'พื้นฐาน'},{v:2.5,n:'Social Beginner',th:'เล่นชิลเริ่มต้น'},{v:3,n:'Social Player',th:'เล่น Open Play ได้'},{v:3.25,n:'Rally Player',th:'ต่อบอลได้ดี'},{v:3.5,n:'Intermediate',th:'ระดับกลาง'},{v:4,n:'Strong Player',th:'ผู้เล่นแข็งแรง'},{v:4.5,n:'Advanced',th:'ขั้นสูง'},{v:5,n:'Expert',th:'เชี่ยวชาญ'}],questions:[{th:'เสิร์ฟ / รับเสิร์ฟ สม่ำเสมอแค่ไหน',en:'Serve / return consistency'},{th:'Dinking / หน้าเน็ต ทำได้แค่ไหน',en:'Dinking / net play'},{th:'Third Shot Drop ทำได้แค่ไหน',en:'Third shot drop'},{th:'Overhead / Slam คุมได้แค่ไหน',en:'Overhead / slam control'},{th:'Blocking ลูกเร็วได้แค่ไหน',en:'Blocking fast balls'},{th:'ยืนตำแหน่งคู่ดีแค่ไหน',en:'Doubles positioning'},{th:'เข้าใจกติกาและนับคะแนนแค่ไหน',en:'Rules / scoring'},{th:'ความฟิตและการเคลื่อนที่',en:'Fitness / movement'},{th:'Transition ขึ้นหน้าเน็ต',en:'Transition to kitchen'},{th:'ประสบการณ์เล่นเกมจริง',en:'Match experience'}],tx:{th:{appTitle:'ระบบจัดคู่สนามจริง · สองภาษา',player:'ผู้เล่น',organizer:'ผู้จัด',events:'กิจกรรม',join:'เข้าร่วม',manage:'จัดการ',stats:'สถิติ',selectEvent:'เลือกกิจกรรม',eventHint:'ทุกคนใช้ลิงก์เดียวกัน ข้อมูลอัปเดตเรียลไทม์',round:'รอบ',courts:'คอร์ท',joinEvent:'เข้าร่วม',results:'ดูผล',joinTitle:'ลงชื่อเข้าเล่น',pickEventFirst:'เลือกกิจกรรมก่อน',nickname:'ชื่อเล่น',notSure:'ไม่แน่ใจระดับตัวเอง?',assessmentDesc:'ทำแบบประเมินเสริมได้ ไม่บังคับ',hide:'ซ่อน',assess:'ประเมิน',addReady:'บันทึกและพร้อมเล่น',liveQueue:'คิวรอเล่น',played:'เล่นแล้ว',organizerOpen:'Organizer ไม่ต้องใช้รหัส',players:'ผู้เล่น',playing:'กำลังเล่น',timerNote:'เวลาเกมเปลี่ยนเป็นจับเวลานับขึ้น ไม่ต้องตั้งเวลา ระบบจะโชว์ว่าแต่ละเกมใช้เวลากี่นาที',createEvent:'สร้างกิจกรรม',eventName:'ชื่อกิจกรรม',eventTime:'เวลา เช่น SAT 15:00',venue:'สนาม',allPlayers:'รายชื่อทั้งหมด',remove:'ลบ',specialDesc:'เลือก 4 คนเอง ระบบจะแบ่งทีมให้สมดุล',gameTime:'เวลาเกม',eventRanking:'อันดับผลงานอีเวนท์',rankingRule:'เรียงจากผลงานวันนี้: ชนะ → Win Rate → แต้มได้เสีย → จำนวนเกม → ELO เป็นตัวตัดสินสุดท้าย',eventSummary:'สรุปอีเวนท์',playerSummary:'สรุปผู้เล่น'},en:{appTitle:'Bilingual Field Match System',player:'Player',organizer:'Organizer',events:'Events',join:'Join',manage:'Manage',stats:'Stats',selectEvent:'Select Event',eventHint:'One shared link with real-time updates',round:'Round',courts:'Courts',joinEvent:'Join Event',results:'Results',joinTitle:'Join as Player',pickEventFirst:'Select an event first',nickname:'Nickname',notSure:'Not sure about your level?',assessmentDesc:'Optional quick assessment',hide:'Hide',assess:'Assess',addReady:'Save & Ready',liveQueue:'Live Queue',played:'Played',organizerOpen:'Organizer · No PIN',players:'Players',playing:'Playing',timerNote:'Game timer now counts up only. No duration setting; it shows how many minutes each game takes.',createEvent:'Create Event',eventName:'Event name',eventTime:'Time e.g. SAT 15:00',venue:'Venue',allPlayers:'All Players',remove:'Remove',specialDesc:'Pick 4 players manually; system balances teams',gameTime:'Game Time',eventRanking:'Event Ranking',rankingRule:'Ranked by today performance: Wins → Win Rate → Point Diff → Matches → ELO as final tiebreaker',eventSummary:'Event Summary',playerSummary:'Player Summary'}},tr(k){return this.tx[this.lang][k]||k},toggleLang(){this.lang=this.lang==='th'?'en':'th';localStorage.psh_lang=this.lang},levelLabel(l){return this.lang==='th'?l.th:l.n},modeName(m){let map={social:{th:'โซเชียล',en:'Social'},beginner:{th:'มือใหม่',en:'Beginner'},competitive:{th:'แข่งขัน',en:'Competitive'},manual:{th:'แมนนวล',en:'Manual'}};return map[m]?.[this.lang]||m||'Social'},statusName(s){let map={ready:{th:'พร้อม',en:'Ready'},waiting:{th:'รอคิว',en:'Waiting'},not_ready:{th:'ยังไม่พร้อม',en:'Not Ready'},playing:{th:'กำลังเล่น',en:'Playing'},paused:{th:'พัก',en:'Paused'},left:{th:'ออกแล้ว',en:'Left'},registered:{th:'ลงทะเบียน',en:'Registered'}};return map[s]?.[this.lang]||s},async init(){this.db=supabase.createClient(this.url,this.key);setInterval(()=>this.tick=Date.now(),1000);await this.loadAll();this.db.channel('live').on('postgres_changes',{event:'*',schema:'public'},()=>this.loadAll()).subscribe()},flash(m){this.msg=m;setTimeout(()=>this.msg='',2600)},name(e){return e?.name_th||e?.name_en||'-'},async loadAll(){let ev=await this.db.from('psh_events').select('*').order('created_at',{ascending:false});this.events=ev.data||[];if(!this.eventId&&this.events[0])this.eventId=this.events[0].id;if(this.eventId)await this.pickEvent(this.eventId,false)},async pickEvent(id,save=true){this.eventId=id;if(save)localStorage.psh_event=id;this.event=this.events.find(e=>e.id===id)||null;if(this.event){this.settings.courts=this.event.courts_count;this.settings.mode=this.event.event_mode||'social'}let ep=await this.db.from('psh_event_players').select('*').eq('event_id',id).order('created_at');this.players=ep.data||[];let ma=await this.db.from('psh_matches').select('*').eq('event_id',id).order('created_at',{ascending:false});this.matches=ma.data||[];let ids=this.matches.map(m=>m.id);if(ids.length){let mp=await this.db.from('psh_match_players').select('*').in('match_id',ids);this.mps=mp.data||[]}else this.mps=[];this.matches.forEach(m=>{if(!this.score[m.id])this.score[m.id]={a:m.team_a_score??'',b:m.team_b_score??''}})},slug(s){return String(s).trim().toLowerCase().replace(/[^a-z0-9ก-๙]+/g,'-')},levelName(v){v=Number(v)||2.5;let l=this.levels.find(x=>v<=x.v+.24)||this.levels[this.levels.length-1];return this.lang==='th'?l.th:l.n},estimate(){let vals=this.ans.map(Number).filter(Boolean);if(!vals.length)return Number(this.join.level);let avg=vals.reduce((a,b)=>a+b,0)/vals.length;return Math.max(1,Math.min(5,Number(this.join.level)*.55+avg*.45))},elo(l){return 900+Number(l)*180},async savePlayer(){if(!this.eventId)return this.flash(this.tr('pickEventFirst'));let nick=this.join.nick.trim();if(!nick)return this.flash(this.tr('nickname'));let key=this.slug(nick);let p=await this.db.from('psh_players').upsert({nickname:nick,nickname_key:key},{onConflict:'nickname_key'}).select().single();let est=this.estimate(), assessed=this.ans.some(Number);let row={event_id:this.eventId,player_id:p.data.id,nickname:nick,self_rating:this.join.level,tech_score:0,tact_score:0,estimated_level:est,elo:this.elo(est),rating_source:assessed?'ai_assisted':'self_rated',rating_confidence:assessed?'medium':'low',status:'ready',queue_joined_at:new Date().toISOString()};await this.db.from('psh_event_players').upsert(row,{onConflict:'event_id,player_id'});localStorage.last_nick=nick;this.ans=Array(10).fill(0);this.flash('Ready');await this.pickEvent(this.eventId)},waiting(){let ok=this.players.filter(p=>['ready','waiting'].includes(p.status));let ready=ok.filter(p=>p.status==='ready'), wait=ok.filter(p=>p.status==='waiting');return [...ready,...wait].sort((a,b)=>(a.status==='ready'?0:1)-(b.status==='ready'?0:1)||(a.matches_played-b.matches_played)||new Date(a.queue_joined_at||a.created_at)-new Date(b.queue_joined_at||b.created_at))},sortedPlayers(){return [...this.players].sort((a,b)=>({ready:0,waiting:1,not_ready:2,playing:3,paused:4,registered:5,left:6}[a.status]??9)-({ready:0,waiting:1,not_ready:2,playing:3,paused:4,registered:5,left:6}[b.status]??9)||a.matches_played-b.matches_played)},pointDiff(p){return (p.points_for||0)-(p.points_against||0)},winRate(p){return p.matches_played?Math.round((p.wins||0)/(p.matches_played||1)*100):0},eventScore(p){let wr=this.winRate(p),pd=this.pointDiff(p);return Math.round((p.wins||0)*100+wr*.6+pd*2+(p.matches_played||0)*3-(p.losses||0)*12)},eventRanking(){return [...this.players].filter(p=>(p.matches_played||0)>0).sort((a,b)=>(b.wins-a.wins)||(this.winRate(b)-this.winRate(a))||(this.pointDiff(b)-this.pointDiff(a))||(b.matches_played-a.matches_played)||(this.eventScore(b)-this.eventScore(a))||(b.elo-a.elo)).concat([...this.players].filter(p=>(p.matches_played||0)===0).sort((a,b)=>b.elo-a.elo))},leaderboard(){return this.eventRanking()},fairScore(){if(!this.players.length)return 100;let active=this.players.filter(p=>p.status!=='left'),played=active.map(p=>p.matches_played||0),gap=played.length?Math.max(...played)-Math.min(...played):0;return Math.max(0,100-gap*25)},async setStatus(p,status){await this.db.from('psh_event_players').update({status,queue_joined_at:['ready','waiting'].includes(status)?new Date().toISOString():null}).eq('id',p.id);await this.pickEvent(this.eventId)},async saveSettings(){await this.db.from('psh_events').update({courts_count:this.settings.courts,event_mode:this.settings.mode}).eq('id',this.eventId);this.flash('Saved')},courts(){return Array.from({length:Number(this.settings.courts)||1},(_,i)=>i+1)},active(){return this.matches.filter(m=>m.status==='live'||m.status==='pending')},courtMatch(c){return this.active().find(m=>m.court_number===c)},freeCourt(){return this.courts().find(c=>!this.courtMatch(c))||null},nextRound(){return (this.event?.current_round||0)+1},elapsed(m){this.tick;let end=m.ended_at?new Date(m.ended_at).getTime():Date.now(),sec=Math.max(0,Math.floor((end-new Date(m.started_at).getTime())/1000));return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0')},rows(m){return this.mps.filter(x=>x.match_id===m.id)},team(m,t){let ids=this.rows(m).filter(x=>x.team===t).map(x=>x.event_player_id);return ids.map(id=>this.players.find(p=>p.id===id)).filter(Boolean)},power(p){let mode=this.settings.mode;if(mode==='competitive')return Number(p.elo)*1.25;if(mode==='beginner')return Number(p.elo)+(p.estimated_level>=3.75?300:0);return Number(p.elo)+(Number(p.tech_score||0)*16)+(Number(p.tact_score||0)*16)},combos(a,k){let r=[];let f=(s,c)=>{if(c.length===k)return r.push([...c]);for(let i=s;i<=a.length-(k-c.length);i++){c.push(a[i]);f(i+1,c);c.pop()}};f(0,[]);return r},recentMatches(n=8){return this.matches.filter(m=>['confirmed','live'].includes(m.status)).slice(0,n)},recentPairPenalty(combo){let ids=combo.map(p=>p.id),pen=0;for(let m of this.recentMatches(10)){let rows=this.rows(m),mids=rows.map(r=>r.event_player_id),overlap=ids.filter(id=>mids.includes(id)).length;if(overlap===4)pen+=9000;if(overlap>=3)pen+=3500;for(let i=0;i<ids.length;i++)for(let j=i+1;j<ids.length;j++){let r1=rows.find(r=>r.event_player_id===ids[i]),r2=rows.find(r=>r.event_player_id===ids[j]);if(r1&&r2&&r1.team===r2.team)pen+=1200;else if(r1&&r2)pen+=350}}return pen},chooseFour(round){let q=this.waiting();if(q.length<4)return null;if(this.settings.mode==='manual')return null;let allowed=q.filter(p=>!p.rest_until_round||p.rest_until_round<round);if(allowed.length>=4)q=allowed;let min=Math.min(...q.map(p=>p.matches_played||0));let pool=q.filter(p=>(p.matches_played||0)<=min);if(pool.length<4)pool=q.filter(p=>(p.matches_played||0)<=min+1);if(pool.length<4)pool=q;pool=pool.slice(0,14);let best=null,bs=1e15,now=Date.now();for(let c of this.combos(pool,4)){let plays=c.map(p=>p.matches_played||0),playSum=plays.reduce((a,b)=>a+b,0),playRange=Math.max(...plays)-Math.min(...plays),ratingVals=c.map(p=>this.power(p)),range=Math.max(...ratingVals)-Math.min(...ratingVals),wait=c.reduce((s,p)=>s+(now-new Date(p.queue_joined_at||p.created_at||now))/60000,0),beg=c.filter(p=>p.estimated_level<2.55||p.rating_confidence==='low').length,adv=c.filter(p=>p.estimated_level>=3.75).length,protect=(this.settings.mode==='beginner'&&adv)?9000:(beg>=2&&adv>=1)?5000:0,rest=c.filter(p=>p.rest_until_round&&p.rest_until_round>=round).length*7000,repeat=this.recentPairPenalty(c),score=playSum*100000+playRange*45000+rest+protect+repeat+range*(this.settings.mode==='competitive'?1.2:.45)-wait*30;if(score<bs){bs=score;best=c}}return best},teamRepeatPenalty(team){let pen=0;for(let m of this.recentMatches(6)){let rows=this.rows(m),r1=rows.find(r=>r.event_player_id===team[0].id),r2=rows.find(r=>r.event_player_id===team[1].id);if(r1&&r2&&r1.team===r2.team)pen+=10000}return pen},balance(four){let ps=[...four].sort((a,b)=>this.power(b)-this.power(a)),opts=[[[0,3],[1,2]],[[0,2],[1,3]],[[0,1],[2,3]]],best=null,bd=1e15;for(let o of opts){let A=[ps[o[0][0]],ps[o[0][1]]],B=[ps[o[1][0]],ps[o[1][1]]],d=Math.abs(A.reduce((s,p)=>s+this.power(p),0)-B.reduce((s,p)=>s+this.power(p),0))+this.teamRepeatPenalty(A)+this.teamRepeatPenalty(B);if(d<bd){bd=d;best={A,B,d}}}return best},balanceScore(A,B){let sa=A.reduce((s,p)=>s+this.power(p),0),sb=B.reduce((s,p)=>s+this.power(p),0);return Math.max(0,Math.round(100-Math.abs(sa-sb)/30))},previewNext(c,round){if(!c)return this.flash('No free court');let four=this.chooseFour(round);if(!four)return this.flash(this.settings.mode==='manual'?'Manual Only':'Need 4 ready/waiting players');let b=this.balance(four);this.preview={court:c,round,A:b.A,B:b.B,balance:this.balanceScore(b.A,b.B),repeat:this.recentPairPenalty(four)>3000?'MED':'LOW'}},matchAllPreview(){this.previewNext(this.freeCourt(),this.nextRound())},replacePool(){let used=[...(this.preview?.A||[]),...(this.preview?.B||[])].map(p=>p.id);return this.players.filter(p=>!used.includes(p.id)&&!['playing','left','not_ready'].includes(p.status))},replaceInPreview(p){if(!this.preview||!this.swapTarget)return;['A','B'].forEach(t=>{this.preview[t]=this.preview[t].map(x=>x.id===this.swapTarget.id?p:x)});let b=this.balance([...this.preview.A,...this.preview.B]);this.preview.A=b.A;this.preview.B=b.B;this.preview.balance=this.balanceScore(b.A,b.B);this.swapTarget=null;this.manualOpen=false},async confirmPreview(){if(!this.preview)return;await this.createMatch(this.preview.court,[...this.preview.A,...this.preview.B],'fair',this.preview.round);await this.db.from('psh_events').update({current_round:Math.max(this.preview.round,this.event?.current_round||0)}).eq('id',this.eventId);this.preview=null;await this.loadAll()},async createMatch(c,four,type,round){let teams=this.balance(four),m=await this.db.from('psh_matches').insert({event_id:this.eventId,court_number:c,status:'live',match_type:type,started_at:new Date().toISOString(),round_number:round,preview_json:{A:teams.A.map(p=>p.nickname),B:teams.B.map(p=>p.nickname)}}).select().single();let rows=[...teams.A.map(p=>({match_id:m.data.id,event_player_id:p.id,team:'A',rating_before:p.elo})),...teams.B.map(p=>({match_id:m.data.id,event_player_id:p.id,team:'B',rating_before:p.elo}))];await this.db.from('psh_match_players').insert(rows);await this.db.from('psh_event_players').update({status:'playing',queue_joined_at:null}).in('id',four.map(p=>p.id));this.flash('Match created');await this.pickEvent(this.eventId)},async createSpecial(){let four=this.players.filter(p=>this.picked.includes(p.id));if(four.length!==4)return this.flash('เลือก 4 คน');let round=this.nextRound();await this.createMatch(this.freeCourt(),four,'special',round);await this.db.from('psh_events').update({current_round:round}).eq('id',this.eventId);this.picked=[];this.special=false;await this.loadAll()},expected(a,b){return 1/(1+Math.pow(10,(b-a)/400))},async confirmScore(m){let s=this.score[m.id]||{},a=Number(s.a),b=Number(s.b);if(isNaN(a)||isNaN(b)||a===b)return this.flash('กรอกคะแนนให้ถูก');let A=this.team(m,'A'),B=this.team(m,'B'),snap={players:[...A,...B].map(p=>({...p})),match:{...m},mps:this.rows(m).map(r=>({...r}))},aWin=a>b,expA=this.expected(A.reduce((s,p)=>s+p.elo,0)/2,B.reduce((s,p)=>s+p.elo,0)/2),delta=Math.round((22+Math.min(Math.abs(a-b),10)*1.2)*((aWin?1:0)-expA)),round=m.round_number||this.event?.current_round||0,ups=[];for(let p of [...A,...B]){let isA=A.some(x=>x.id===p.id),won=isA?aWin:!aWin,pf=isA?a:b,pa=isA?b:a,newE=Number(p.elo)+(isA?delta:-delta),form=[...(p.last_form||[]),won?'W':'L'].slice(-5);ups.push(this.db.from('psh_event_players').update({status:'waiting',queue_joined_at:new Date().toISOString(),elo:newE,matches_played:p.matches_played+1,wins:p.wins+(won?1:0),losses:p.losses+(won?0:1),points_for:p.points_for+pf,points_against:p.points_against+pa,last_form:form,last_played_round:round,rest_until_round:round+1,rating_confidence:(p.matches_played+1)>=5?'high':(p.matches_played+1)>=3?'medium':p.rating_confidence}).eq('id',p.id));let r=this.rows(m).find(x=>x.event_player_id===p.id);if(r)ups.push(this.db.from('psh_match_players').update({rating_after:newE,result:won?'W':'L',points_for:pf,points_against:pa}).eq('id',r.id))}ups.push(this.db.from('psh_matches').update({status:'confirmed',team_a_score:a,team_b_score:b,ended_at:new Date().toISOString(),original_result_json:snap}).eq('id',m.id));await Promise.all(ups);this.flash('Confirmed');await this.pickEvent(this.eventId)},editScore(m){this.confirmScore(m)},async cancelMatch(m){let ids=this.rows(m).map(r=>r.event_player_id);await this.db.from('psh_matches').update({status:'cancelled',ended_at:new Date().toISOString()}).eq('id',m.id);if(ids.length)await this.db.from('psh_event_players').update({status:'waiting',queue_joined_at:new Date().toISOString()}).in('id',ids);await this.pickEvent(this.eventId)},async undoLast(){let m=this.matches.find(x=>x.status==='confirmed'&&x.original_result_json&&!x.is_undone);if(!m)return this.flash('No undo data');if(!confirm('Undo last confirmed match?'))return;for(let p of m.original_result_json.players){await this.db.from('psh_event_players').update({status:'waiting',queue_joined_at:new Date().toISOString(),elo:p.elo,matches_played:p.matches_played,wins:p.wins,losses:p.losses,points_for:p.points_for,points_against:p.points_against,last_form:p.last_form,last_played_round:p.last_played_round,rest_until_round:p.rest_until_round,rating_confidence:p.rating_confidence}).eq('id',p.id)}await this.db.from('psh_matches').update({status:'undone',is_undone:true}).eq('id',m.id);this.flash('Undo complete');await this.pickEvent(this.eventId)},async createEvent(){let n=this.newEvent.name.trim();if(!n)return this.flash(this.tr('eventName'));let row={slug:this.slug(n)+'-'+Date.now().toString().slice(-5),name_th:n,name_en:n,event_time:this.newEvent.time,venue:this.newEvent.venue,status:'live',courts_count:2,organizer_pin:'open',current_round:0,event_mode:this.newEvent.mode||'social'};let r=await this.db.from('psh_events').insert(row).select().single();this.newEvent={name:'',time:'',venue:'',mode:'social'};await this.loadAll();await this.pickEvent(r.data.id);this.flash('Created')},async completeEvent(){if(confirm('Complete event?')){await this.db.from('psh_events').update({status:'completed',share_text:this.summary()}).eq('id',this.eventId);await this.loadAll()}},async clearQueue(){if(confirm('Clear queue?')){await this.db.from('psh_event_players').update({status:'paused',queue_joined_at:null}).eq('event_id',this.eventId).in('status',['ready','waiting','not_ready']);await this.pickEvent(this.eventId)}},async resetStats(){if(confirm('Reset stats?')){await this.db.from('psh_event_players').update({matches_played:0,wins:0,losses:0,points_for:0,points_against:0,last_form:[],last_played_round:null,rest_until_round:null}).eq('event_id',this.eventId);await this.db.from('psh_events').update({current_round:0}).eq('id',this.eventId);await this.pickEvent(this.eventId)}},async clearEvent(){if(confirm('Clear all players and matches?')){await this.db.from('psh_matches').delete().eq('event_id',this.eventId);await this.db.from('psh_event_players').delete().eq('event_id',this.eventId);await this.db.from('psh_events').update({current_round:0}).eq('id',this.eventId);await this.pickEvent(this.eventId)}},async deleteEvent(){if(confirm('Delete event?')){await this.db.from('psh_events').delete().eq('id',this.eventId);this.eventId='';localStorage.removeItem('psh_event');await this.loadAll()}},async removePlayer(p){if(p.status==='playing')return this.flash('Playing player cannot be removed');if(confirm('Remove '+p.nickname+'?')){await this.db.from('psh_event_players').delete().eq('id',p.id);await this.pickEvent(this.eventId)}},async saveShareText(){await this.db.from('psh_events').update({share_text:this.summary()}).eq('id',this.eventId);this.flash('Share saved')},detailBoxes(){let p=this.detail;if(!p)return[];let rank=this.eventRanking().findIndex(x=>x.id===p.id)+1;return[{k:this.tr('eventRanking'),v:rank||'-'},{k:'Event Score',v:this.eventScore(p)},{k:'Status',v:this.statusName(p.status)},{k:'Skill',v:this.levelName(p.estimated_level)},{k:'ELO',v:Math.round(p.elo)},{k:this.tr('played'),v:p.matches_played},{k:'W-L',v:p.wins+'-'+p.losses},{k:'Win Rate',v:this.winRate(p)+'%'},{k:'Point Diff',v:this.pointDiff(p)},{k:'Avg Score',v:p.matches_played?((p.points_for/p.matches_played).toFixed(1)+' / '+(p.points_against/p.matches_played).toFixed(1)):'-'}]},playerInsight(p){if(!p.matches_played)return this.lang==='th'?'ยังไม่มีผลการแข่งขันในอีเวนท์นี้':'No match results yet.';let txt=this.lang==='th'?`วันนี้ ${p.nickname} เล่น ${p.matches_played} เกม ชนะ ${p.wins} แพ้ ${p.losses} Win Rate ${this.winRate(p)}% แต้มได้เสีย ${this.pointDiff(p)} ระดับฝีมือ ${this.levelName(p.estimated_level)}`:`${p.nickname} played ${p.matches_played} games today: ${p.wins}W-${p.losses}L, ${this.winRate(p)}% win rate, point diff ${this.pointDiff(p)}, skill ${this.levelName(p.estimated_level)}.`;return txt},eventSummaryBoxes(){let confirmed=this.matches.filter(m=>m.status==='confirmed'),rank=this.eventRanking(),played=this.players.map(p=>p.matches_played||0),gap=played.length?Math.max(...played)-Math.min(...played):0;return[{k:this.tr('players'),v:this.players.length},{k:'Matches',v:confirmed.length},{k:'Fairness',v:this.fairScore()+'%'},{k:'Play Gap',v:gap},{k:'Top Player',v:rank[0]?.nickname||'-'},{k:'Mode',v:this.modeName(this.event?.event_mode)}]},summary(){let e=this.event;if(!e)return'';let played=this.players.map(p=>p.matches_played||0),gap=played.length?Math.max(...played)-Math.min(...played):0,top=this.eventRanking().slice(0,10).map((p,i)=>`${i+1}. ${p.nickname} · W${p.wins}/L${p.losses} · Win ${this.winRate(p)}% · Diff ${this.pointDiff(p)} · Skill ${this.levelName(p.estimated_level)}`).join('\n');return `GDSQ Open Play Summary\n${this.name(e)}\nMode: ${this.modeName(e.event_mode)}\nRound: ${e.current_round||0}\nPlayers: ${this.players.length}\nMatches: ${this.matches.filter(m=>m.status==='confirmed').length}\nPlay Gap: ${gap}\nFairness: ${this.fairScore()}%\n\nEvent Ranking\n${top}`},copySummary(){navigator.clipboard.writeText(this.summary());this.flash('Copied')}}}
+function app(){return{
+url:'https://zzeikmrrlfvwnwsprmjy.supabase.co',key:'sb_publishable_xSAZX5dgZ_3Qr3nzoOtqYA_Z0l8yOaX',db:null,
+lang:localStorage.psh_lang||'th',tab:'events',events:[],event:null,eventId:localStorage.psh_event||'',players:[],matches:[],mps:[],msg:'',
+join:{nick:localStorage.last_nick||'',level:2.5},showAssess:false,ans:Array(10).fill(0),settings:{courts:1,mode:'social'},newEvent:{name:'',time:'',venue:''},score:{},preview:null,advanced:false,detail:null,modal:{open:false},
+levels:[{v:1,th:'มือใหม่',en:'Newbie'},{v:1.5,th:'เริ่มต้น',en:'Starter'},{v:2,th:'พื้นฐาน',en:'Beginner'},{v:2.5,th:'เล่นชิลเริ่มต้น',en:'Social Beginner'},{v:3,th:'เล่น Open Play ได้',en:'Social Player'},{v:3.5,th:'ระดับกลาง',en:'Intermediate'},{v:4,th:'ผู้เล่นแข็งแรง',en:'Strong Player'},{v:4.5,th:'ขั้นสูง',en:'Advanced'},{v:5,th:'เชี่ยวชาญ',en:'Expert'}],
+questions:[
+{i:'S',th:'การเสิร์ฟ: เสิร์ฟเข้าและวางทิศทางได้สม่ำเสมอแค่ไหน',en:'Serve: consistency and placement',note:{th:'เริ่มแต้มได้มั่นคง',en:'Stable point start'}},
+{i:'R',th:'การรับเสิร์ฟ: รับลูกลึกและคุมทิศทางได้แค่ไหน',en:'Return: deep controlled returns',note:{th:'ลดการเสียแต้มจากลูกแรก',en:'Avoid early errors'}},
+{i:'D',th:'Dink: เล่นลูกสั้นต่ำใน Kitchen ได้แค่ไหน',en:'Dink: low controlled kitchen shots',note:{th:'ทักษะหลักในเกมคู่',en:'Key doubles skill'}},
+{i:'3',th:'Third Shot Drop: เปลี่ยนเกมขึ้นหน้าเน็ตได้แค่ไหน',en:'Third shot drop and transition',note:{th:'มาตรฐานการสร้างแต้ม',en:'Core scoring setup'}},
+{i:'V',th:'Volley / Block: รับลูกเร็วและวอลเลย์ได้แค่ไหน',en:'Volley/block: handle fast balls',note:{th:'คุมเกมหน้าเน็ต',en:'Net control'}},
+{i:'P',th:'Positioning: ยืนตำแหน่งคู่และปิดช่องได้แค่ไหน',en:'Positioning with partner',note:{th:'สำคัญมากใน Doubles',en:'Critical in doubles'}},
+{i:'T',th:'Transition: ขยับจากท้ายคอร์ทขึ้นหน้าเน็ตได้ดีแค่ไหน',en:'Transition to kitchen',note:{th:'ลดช่องว่างเกมรับ/บุก',en:'Defense to attack'}},
+{i:'C',th:'Consistency: ตีต่อเนื่องและลด error ได้แค่ไหน',en:'Consistency and error control',note:{th:'วัดความนิ่ง',en:'Stability'}},
+{i:'⚖',th:'กติกา / การนับคะแนน / Kitchen Rule เข้าใจแค่ไหน',en:'Rules, scoring, kitchen rule',note:{th:'เล่นลื่น ไม่สะดุด',en:'Smooth play'}},
+{i:'M',th:'ประสบการณ์เกมจริง: อ่านเกมและแก้สถานการณ์ได้แค่ไหน',en:'Match experience and adaptation',note:{th:'ภาพรวมการเล่นจริง',en:'Real-game ability'}}
+],
+tx:{
+th:{title:'ระบบจัดคู่สนามจริง',events:'กิจกรรม',join:'เข้าร่วม',manage:'จัดการ',stats:'สถิติ',selectEvent:'เลือกกิจกรรม',eventHint:'ลิงก์เดียว ใช้งานร่วมกันแบบเรียลไทม์',round:'รอบ',joinEvent:'เข้าร่วม',results:'ดูผล',joinTitle:'ลงชื่อเข้าเล่น',pickEvent:'เลือกกิจกรรมก่อน',nickname:'ชื่อเล่น',assessmentTitle:'ประเมินทักษะ 1–5',assessmentHint:'10 คำถามตามทักษะมาตรฐาน Pickleball',hide:'ซ่อน',open:'เปิด',saveReady:'บันทึกและพร้อมเล่น',queue:'คิวรอเล่น',played:'เล่นแล้ว',quick:'การทำงานด่วน',nextMatch:'แมตช์ถัดไป',nextDesc:'ดูตัวอย่างการจับคู่ก่อนเริ่ม',joinQueue:'เข้าคิวรอ',joinDesc:'ลงชื่อหรือเปลี่ยนสถานะผู้เล่น',summary:'สรุปอีเวนท์',summaryDesc:'ดูอันดับและแชร์ LINE',advanced:'เครื่องมือขั้นสูง',advancedDesc:'รีเซ็ต/ล้างข้อมูลแบบระวัง',preview:'ตัวอย่างแมตช์',reasons:'เหตุผลการจับคู่',createEvent:'สร้างกิจกรรม',eventName:'ชื่อกิจกรรม',eventTime:'เวลา เช่น SAT 15:00',venue:'สนาม',allPlayers:'รายชื่อทั้งหมด',remove:'ลบ',ranking:'อันดับผลงานอีเวนท์',rankRule:'เรียงจากผลงานวันนี้: ชนะ > Win Rate > แต้มได้เสีย > จำนวนเกม',highlights:'ไฮไลต์ผู้เล่น',playerSummary:'สรุปผู้เล่น',resetMsg:'รีเซ็ตสถิติผู้เล่นทั้งหมดในกิจกรรมนี้',clearMsg:'ลบผู้เล่นและแมตช์ทั้งหมดในกิจกรรมนี้',removeEventMsg:'ลบกิจกรรมนี้ออกจากระบบ',removePlayerMsg:'ลบผู้เล่นนี้ออกจากกิจกรรมหรือไม่'},
+en:{title:'Field Match System',events:'Events',join:'Join',manage:'Manage',stats:'Stats',selectEvent:'Select Event',eventHint:'One shared real-time link',round:'Round',joinEvent:'Join',results:'Results',joinTitle:'Join as Player',pickEvent:'Select event first',nickname:'Nickname',assessmentTitle:'1–5 Skill Assessment',assessmentHint:'10 standard pickleball skill questions',hide:'Hide',open:'Open',saveReady:'Save & Ready',queue:'Live Queue',played:'Played',quick:'Quick Action',nextMatch:'Next Match',nextDesc:'Preview match before start',joinQueue:'Join Queue',joinDesc:'Register or change status',summary:'Event Summary',summaryDesc:'Ranking and LINE share',advanced:'Advanced Tools',advancedDesc:'Reset/clear with confirmation',preview:'Match Preview',reasons:'Matchmaking Reasons',createEvent:'Create Event',eventName:'Event name',eventTime:'Time e.g. SAT 15:00',venue:'Venue',allPlayers:'All Players',remove:'Remove',ranking:'Event Ranking',rankRule:'Ranked by today: wins > win rate > point diff > games played',highlights:'Player Highlights',playerSummary:'Player Summary',resetMsg:'Reset all player stats in this event.',clearMsg:'Remove all players and matches in this event.',removeEventMsg:'Remove this event from the system.',removePlayerMsg:'Remove this player from event?'}
+},
+tr(k){return this.tx[this.lang][k]||k},
+toggleLang(){this.lang=this.lang==='th'?'en':'th';localStorage.psh_lang=this.lang},
+levelName(v){let l=this.levels.find(x=>Number(v)<=x.v+.24)||this.levels[this.levels.length-1];return this.lang==='th'?l.th:l.en},
+statusName(s){let m={ready:['พร้อม','Ready'],waiting:['รอคิว','Waiting'],not_ready:['ยังไม่พร้อม','Not Ready'],playing:['กำลังเล่น','Playing'],paused:['พัก','Paused'],left:['ออกแล้ว','Left']};return (m[s]||[s,s])[this.lang==='th'?0:1]},
+modeName(m){let a={social:['โซเชียล','Social'],beginner:['มือใหม่','Beginner'],competitive:['แข่งขัน','Competitive'],manual:['แมนนวล','Manual']};return(a[m]||[m,m])[this.lang==='th'?0:1]},
+async init(){this.db=supabase.createClient(this.url,this.key);setInterval(()=>this.tick=Date.now(),1000);await this.load();this.db.channel('live').on('postgres_changes',{event:'*',schema:'public'},()=>this.load()).subscribe()},
+flash(m){this.msg=m;setTimeout(()=>this.msg='',2200)},
+async load(){let e=await this.db.from('psh_events').select('*').order('created_at',{ascending:false});this.events=e.data||[];if(!this.eventId&&this.events[0])this.eventId=this.events[0].id;if(this.eventId)await this.pick(this.eventId,false)},
+async pick(id,save=true){this.eventId=id;if(save)localStorage.psh_event=id;this.event=this.events.find(e=>e.id===id);this.settings.courts=this.event?.courts_count||1;this.settings.mode=this.event?.event_mode||'social';let p=await this.db.from('psh_event_players').select('*').eq('event_id',id);this.players=p.data||[];let m=await this.db.from('psh_matches').select('*').eq('event_id',id).order('created_at',{ascending:false});this.matches=m.data||[];let ids=this.matches.map(x=>x.id);this.mps=ids.length?(await this.db.from('psh_match_players').select('*').in('match_id',ids)).data||[]:[];this.matches.forEach(m=>{if(!this.score[m.id])this.score[m.id]={a:m.team_a_score??'',b:m.team_b_score??''}})},
+avg(){let v=this.ans.map(Number).filter(Boolean);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0},
+estimate(){return this.avg()?Math.max(1,Math.min(5,this.join.level*.55+this.avg()*.45)):this.join.level},
+tech(){let v=this.ans.slice(0,5).map(Number).filter(Boolean);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0},
+tact(){let v=this.ans.slice(5).map(Number).filter(Boolean);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0},
+slug(s){return s.trim().toLowerCase().replace(/[^a-z0-9ก-๙]+/g,'-')},
+async savePlayer(){if(!this.eventId)return this.flash(this.tr('pickEvent'));let n=this.join.nick.trim();if(!n)return;let p=await this.db.from('psh_players').upsert({nickname:n,nickname_key:this.slug(n)},{onConflict:'nickname_key'}).select().single(),est=this.estimate(),ass=!!this.avg();await this.db.from('psh_event_players').upsert({event_id:this.eventId,player_id:p.data.id,nickname:n,self_rating:this.join.level,tech_score:this.tech(),tact_score:this.tact(),estimated_level:est,elo:900+est*180,rating_source:ass?'ai_assisted':'self_rated',rating_confidence:ass?'medium':'low',status:'ready',queue_joined_at:new Date().toISOString()},{onConflict:'event_id,player_id'});localStorage.last_nick=n;this.ans=Array(10).fill(0);this.flash('Ready');await this.pick(this.eventId)},
+waiting(){return this.players.filter(p=>['ready','waiting'].includes(p.status)).sort((a,b)=>(a.status==='ready'?0:1)-(b.status==='ready'?0:1)||(a.matches_played-b.matches_played)||new Date(a.queue_joined_at||a.created_at)-new Date(b.queue_joined_at||b.created_at))},
+sortedPlayers(){return[...this.players].sort((a,b)=>({ready:0,waiting:1,not_ready:2,playing:3,paused:4,left:5}[a.status]??9)-({ready:0,waiting:1,not_ready:2,playing:3,paused:4,left:5}[b.status]??9)||a.matches_played-b.matches_played)},
+diff(p){return(p.points_for||0)-(p.points_against||0)},
+winRate(p){return p.matches_played?Math.round(p.wins/p.matches_played*100):0},
+eventScore(p){return Math.round((p.wins||0)*100+this.winRate(p)*.6+this.diff(p)*2+(p.matches_played||0)*3-(p.losses||0)*12)},
+ranking(){return[...this.players].sort((a,b)=>(b.wins-a.wins)||(this.winRate(b)-this.winRate(a))||(this.diff(b)-this.diff(a))||(b.matches_played-a.matches_played)||(this.eventScore(b)-this.eventScore(a))||(b.elo-a.elo))},
+fairScore(){let pl=this.players.filter(p=>p.status!=='left').map(p=>p.matches_played||0);if(!pl.length)return 100;return Math.max(0,100-(Math.max(...pl)-Math.min(...pl))*25)},
+async setStatus(p,s){await this.db.from('psh_event_players').update({status:s,queue_joined_at:['ready','waiting'].includes(s)?new Date().toISOString():null}).eq('id',p.id);await this.pick(this.eventId)},
+async saveSettings(){await this.db.from('psh_events').update({courts_count:this.settings.courts,event_mode:this.settings.mode}).eq('id',this.eventId);this.flash('Saved')},
+courts(){return Array.from({length:+this.settings.courts||1},(_,i)=>i+1)},
+active(){return this.matches.filter(m=>['live','pending'].includes(m.status))},
+courtMatch(c){return this.active().find(m=>m.court_number===c)},
+elapsed(m){this.tick;let sec=Math.floor(((m.ended_at?new Date(m.ended_at).getTime():Date.now())-new Date(m.started_at).getTime())/1000);return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0')},
+rows(m){return this.mps.filter(x=>x.match_id===m.id)},
+team(m,t){return this.rows(m).filter(x=>x.team===t).map(x=>this.players.find(p=>p.id===x.event_player_id)).filter(Boolean)},
+power(p){return +p.elo+(+p.tech_score||0)*16+(+p.tact_score||0)*16},
+combos(a,k){let r=[],f=(s,c)=>{if(c.length===k)return r.push([...c]);for(let i=s;i<=a.length-(k-c.length);i++){c.push(a[i]);f(i+1,c);c.pop()}};f(0,[]);return r},
+chooseFour(){let q=this.waiting();if(q.length<4)return null;let min=Math.min(...q.map(p=>p.matches_played||0)),pool=q.filter(p=>(p.matches_played||0)<=min+1).slice(0,14),best=null,bs=1e15,now=Date.now();for(let c of this.combos(pool,4)){let plays=c.map(p=>p.matches_played||0),range=Math.max(...plays)-Math.min(...plays),wait=c.reduce((s,p)=>s+(now-new Date(p.queue_joined_at||p.created_at||now))/60000,0),pow=c.map(p=>this.power(p)),pr=Math.max(...pow)-Math.min(...pow),score=plays.reduce((a,b)=>a+b,0)*100000+range*45000+pr*.45-wait*30;if(score<bs){bs=score;best=c}}return best},
+balance(f){let a=[...f].sort((x,y)=>this.power(y)-this.power(x)),opts=[[[0,3],[1,2]],[[0,2],[1,3]],[[0,1],[2,3]]],best=null,bd=1e9;for(let o of opts){let A=[a[o[0][0]],a[o[0][1]]],B=[a[o[1][0]],a[o[1][1]]],d=Math.abs(A.reduce((s,p)=>s+this.power(p),0)-B.reduce((s,p)=>s+this.power(p),0));if(d<bd){bd=d;best={A,B}}}return best},
+freeCourt(){return this.courts().find(c=>!this.courtMatch(c))},
+previewNext(){let c=this.freeCourt(),four=this.chooseFour();if(!c)return this.flash('No free court');if(!four)return this.flash('Need 4 players');let b=this.balance(four),least=[...four].sort((a,b)=>a.matches_played-b.matches_played)[0],long=[...four].sort((a,b)=>new Date(a.queue_joined_at||a.created_at)-new Date(b.queue_joined_at||b.created_at))[0];this.preview={court:c,round:(this.event?.current_round||0)+1,A:b.A,B:b.B,balance:Math.max(0,Math.round(100-Math.abs(b.A.reduce((s,p)=>s+this.power(p),0)-b.B.reduce((s,p)=>s+this.power(p),0))/30)),reasons:[`${long.nickname} ${this.lang==='th'?'รอคิวนานที่สุด':'waited longest'}`,`${least.nickname} ${this.lang==='th'?'เล่นน้อยกว่ากลุ่ม':'played fewer games'}`,this.lang==='th'?'ทีม A/B มีพลังใกล้กัน':'Teams are balanced']}},
+async confirmPreview(){let p=this.preview;if(!p)return;await this.createMatch(p.court,[...p.A,...p.B],p.round);await this.db.from('psh_events').update({current_round:p.round}).eq('id',this.eventId);this.preview=null;await this.load()},
+async createMatch(c,four,round){let b=this.balance(four),m=await this.db.from('psh_matches').insert({event_id:this.eventId,court_number:c,status:'live',match_type:'fair',started_at:new Date().toISOString(),round_number:round}).select().single(),rows=[...b.A.map(p=>({match_id:m.data.id,event_player_id:p.id,team:'A',rating_before:p.elo})),...b.B.map(p=>({match_id:m.data.id,event_player_id:p.id,team:'B',rating_before:p.elo}))];await this.db.from('psh_match_players').insert(rows);await this.db.from('psh_event_players').update({status:'playing'}).in('id',four.map(p=>p.id));await this.pick(this.eventId)},
+expected(a,b){return 1/(1+Math.pow(10,(b-a)/400))},
+async confirmScore(m){let s=this.score[m.id],a=+s.a,b=+s.b;if(isNaN(a)||isNaN(b)||a===b)return this.flash('Score?');let A=this.team(m,'A'),B=this.team(m,'B'),aWin=a>b,delta=Math.round((22+Math.min(Math.abs(a-b),10)*1.2)*((aWin?1:0)-this.expected(A.reduce((s,p)=>s+p.elo,0)/2,B.reduce((s,p)=>s+p.elo,0)/2))),round=m.round_number||0;for(let p of [...A,...B]){let isA=A.some(x=>x.id===p.id),won=isA?aWin:!aWin,pf=isA?a:b,pa=isA?b:a,newE=+p.elo+(isA?delta:-delta);await this.db.from('psh_event_players').update({status:'waiting',queue_joined_at:new Date().toISOString(),elo:newE,matches_played:p.matches_played+1,wins:p.wins+(won?1:0),losses:p.losses+(won?0:1),points_for:p.points_for+pf,points_against:p.points_against+pa,last_played_round:round,rest_until_round:round+1}).eq('id',p.id)}await this.db.from('psh_matches').update({status:'confirmed',team_a_score:a,team_b_score:b,ended_at:new Date().toISOString()}).eq('id',m.id);await this.pick(this.eventId)},
+async cancelMatch(m){let ids=this.rows(m).map(r=>r.event_player_id);await this.db.from('psh_matches').update({status:'cancelled',ended_at:new Date().toISOString()}).eq('id',m.id);if(ids.length)await this.db.from('psh_event_players').update({status:'waiting',queue_joined_at:new Date().toISOString()}).in('id',ids);await this.pick(this.eventId)},
+async createEvent(){let n=this.newEvent.name.trim();if(!n)return;let r=await this.db.from('psh_events').insert({slug:this.slug(n)+'-'+Date.now().toString().slice(-5),name_th:n,name_en:n,event_time:this.newEvent.time,venue:this.newEvent.venue,status:'live',courts_count:2,organizer_pin:'open',current_round:0,event_mode:'social'}).select().single();this.newEvent={name:'',time:'',venue:''};await this.load();await this.pick(r.data.id)},
+ask(t,m,fn){this.modal={open:true,title:t,msg:m,fn}},
+async runModal(){let fn=this.modal.fn;this.modal.open=false;if(fn)await fn()},
+async resetStats(){await this.db.from('psh_event_players').update({matches_played:0,wins:0,losses:0,points_for:0,points_against:0,last_played_round:null,rest_until_round:null}).eq('event_id',this.eventId);await this.pick(this.eventId)},
+async clearEvent(){await this.db.from('psh_matches').delete().eq('event_id',this.eventId);await this.db.from('psh_event_players').delete().eq('event_id',this.eventId);await this.pick(this.eventId)},
+async removeEvent(){await this.db.from('psh_events').delete().eq('id',this.eventId);this.eventId='';localStorage.removeItem('psh_event');await this.load()},
+async removePlayer(p){await this.db.from('psh_event_players').delete().eq('id',p.id);await this.pick(this.eventId)},
+playerBoxes(p){if(!p)return[];let r=this.ranking().findIndex(x=>x.id===p.id)+1;return[{k:this.tr('ranking'),v:r||'-'},{k:'Score',v:this.eventScore(p)},{k:'Status',v:this.statusName(p.status)},{k:'Skill',v:this.levelName(p.estimated_level)},{k:'Played',v:p.matches_played},{k:'W-L',v:p.wins+'-'+p.losses},{k:'Win%',v:this.winRate(p)+'%'},{k:'Diff',v:this.diff(p)}]},
+insight(p){if(!p)return'';return this.lang==='th'?`${p.nickname} เล่น ${p.matches_played} เกม ชนะ ${p.wins} แพ้ ${p.losses} Win Rate ${this.winRate(p)}% แต้มได้เสีย ${this.diff(p)} ระดับ ${this.levelName(p.estimated_level)}`:`${p.nickname}: ${p.matches_played} games, ${p.wins}W-${p.losses}L, ${this.winRate(p)}% win rate, diff ${this.diff(p)}, skill ${this.levelName(p.estimated_level)}.`},
+boxes(){let r=this.ranking(),pl=this.players.map(p=>p.matches_played||0),gap=pl.length?Math.max(...pl)-Math.min(...pl):0;return[{k:'Players',v:this.players.length},{k:'Matches',v:this.matches.filter(m=>m.status==='confirmed').length},{k:'Fairness',v:this.fairScore()+'%'},{k:'Play Gap',v:gap},{k:'Top',v:r[0]?.nickname||'-'},{k:'Mode',v:this.modeName(this.event?.event_mode)}]},
+awards(){let r=this.ranking(),act=this.players.filter(p=>p.matches_played>0),most=[...act].sort((a,b)=>b.matches_played-a.matches_played)[0],beg=[...act].filter(p=>p.estimated_level<2.75).sort((a,b)=>this.eventScore(b)-this.eventScore(a))[0];return[{title:this.lang==='th'?'🏆 ผู้เล่นเด่น':'🏆 Top Performer',name:r[0]?.nickname||'-',note:r[0]?`${r[0].wins}W / ${this.winRate(r[0])}%`:''},{title:this.lang==='th'?'🔥 เล่นเยอะสุด':'🔥 Most Active',name:most?.nickname||'-',note:most?`${most.matches_played} games`:''},{title:this.lang==='th'?'🌱 มือใหม่เด่น':'🌱 Best Beginner',name:beg?.nickname||'-',note:beg?this.levelName(beg.estimated_level):''}]},
+summary(){let e=this.event;if(!e)return'';let top=this.ranking().slice(0,10).map((p,i)=>`${i+1}. ${p.nickname} · W${p.wins}/L${p.losses} · Win ${this.winRate(p)}% · Diff ${this.diff(p)}`).join('\\n'),aw=this.awards().map(a=>`${a.title}: ${a.name}`).join('\\n');return`🏓 GDSQ Open Play Summary\\n${e.name_th||e.name_en}\\nPlayers: ${this.players.length}\\nMatches: ${this.matches.filter(m=>m.status==='confirmed').length}\\nFairness: ${this.fairScore()}%\\n\\n⭐ Highlights\\n${aw}\\n\\n🏆 Ranking\\n${top}`},
+copySummary(){navigator.clipboard.writeText(this.summary());this.flash('Copied')}
+}}
 </script>
-</body></html>
+</body>
+</html>
