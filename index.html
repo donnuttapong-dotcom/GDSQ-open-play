@@ -337,6 +337,57 @@
         <button @click="copySummary()" class="cut bg-lime p-3 font-black w-full mt-2">COPY LINE</button>
       </div>
     </div>
+
+    <div class="cut c<div x-show="detail" x-cloak class="fixed inset-0 bg-black/70 p-4 z-50 overflow-auto" @click.self="detail=null">
+  <div class="cut card max-w-3xl mx-auto mt-8 p-5">
+    <div class="flex justify-between">
+      <div><div class="text-[10px] tracking-[.25em] lime" x-text="tr('playerSummary')"></div><h2 class="text-3xl font-black" x-text="detail?.nickname"></h2><p class="lime" x-text="detail?levelName(detail.estimated_level):''"></p></div>
+      <button @click="detail=null" class="bg-white/10 rounded-lg px-3">X</button>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
+      <template x-for="b in playerBoxes(detail)"><div class="rounded-xl bg-black/25 p-3 text-center"><b x-text="b.v"></b><div class="text-xs text-slate-400" x-text="b.k"></div></div></template>
+    </div>
+    <p class="mt-4 rounded-xl bg-black/30 p-3 text-sm" x-text="insight(detail)"></p>
+
+    <div class="mt-4">
+      <div class="flex justify-between items-end gap-2">
+        <h3 class="text-xl font-black lime" x-text="tr('playerMatchHistory')"></h3>
+        <button @click="copyPlayerHistory(detail)" class="cut btn bg-white/5 px-3 py-2 text-xs">COPY</button>
+      </div>
+      <div class="mt-2 grid gap-2">
+        <template x-for="h in playerHistory(detail)" :key="h.match.id">
+          <div class="rounded-xl border border-white/10 bg-black/20 p-3">
+            <div class="flex justify-between gap-2">
+              <div><b x-text="h.result+' · '+h.score"></b><div class="text-xs text-slate-400" x-text="'Court '+(h.match.court_number||'-')+' · Round '+(h.match.round_number||'-')+' · '+matchDuration(h.match)"></div></div>
+              <div class="text-right text-xs" :class="h.result==='WIN'?'text-lime-300':'text-red-300'" x-text="h.pointDiff"></div>
+            </div>
+            <div class="mt-2 text-sm" x-text="tr('partner')+': '+h.partner"></div>
+            <div class="text-sm text-slate-300" x-text="tr('opponents')+': '+h.opponents"></div>
+          </div>
+        </template>
+        <div x-show="detail && playerHistory(detail).length===0" class="rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-slate-400" x-text="tr('noPlayerHistory')"></div>
+      </div>
+    </div>
+  </div>Date(m.ended_at||m.created_at)"></div>
+              </div>
+              <div class="text-xl font-black lime" x-text="(m.team_a_score??'-')+' - '+(m.team_b_score??'-')"></div>
+            </div>
+            <div class="grid md:grid-cols-2 gap-2 mt-3">
+              <div class="rounded-lg border border-orange-400/40 bg-orange-500/10 p-3" :class="m.team_a_score>m.team_b_score?'ring-1 ring-orange-300':''">
+                <div class="text-xs text-orange-300 font-black">TEAM A</div>
+                <div x-text="teamNames(m,'A')"></div>
+              </div>
+              <div class="rounded-lg border border-lime-300/40 bg-lime-500/10 p-3" :class="m.team_b_score>m.team_a_score?'ring-1 ring-lime-300':''">
+                <div class="text-xs text-lime-300 font-black">TEAM B</div>
+                <div x-text="teamNames(m,'B')"></div>
+              </div>
+            </div>
+            <div class="mt-2 text-xs text-slate-400" x-text="matchSummaryLine(m)"></div>
+          </div>
+        </template>
+        <div x-show="confirmedMatches().length===0" class="rounded-xl border border-white/10 bg-black/20 p-4 text-slate-400" x-text="tr('noMatchHistory')"></div>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -383,8 +434,8 @@ questions:[
 {i:'M',th:'ประสบการณ์เกมจริง: อ่านเกมและแก้สถานการณ์ได้แค่ไหน',en:'Match experience and adaptation',note:{th:'ภาพรวมการเล่นจริง',en:'Real-game ability'}}
 ],
 tx:{
-th:{title:'ระบบจัดคู่สนามจริง',events:'กิจกรรม',join:'เข้าร่วม',manage:'จัดการ',stats:'สถิติ',selectEvent:'เลือกกิจกรรม',eventHint:'ลิงก์เดียว ใช้งานร่วมกันแบบเรียลไทม์',round:'รอบ',joinEvent:'เข้าร่วม',results:'ดูผล',joinTitle:'ลงชื่อเข้าเล่น',pickEvent:'เลือกกิจกรรมก่อน',nickname:'ชื่อเล่น',assessmentTitle:'ประเมินทักษะ 1–5',assessmentHint:'10 คำถามตามทักษะมาตรฐาน Pickleball',hide:'ซ่อน',open:'เปิด',saveReady:'บันทึกและพร้อมเล่น',queue:'คิวรอเล่น',played:'เล่นแล้ว',quick:'การทำงานด่วน',nextMatch:'แมตช์ถัดไป',nextDesc:'ดูตัวอย่างการจับคู่ก่อนเริ่ม',joinQueue:'เข้าคิวรอ',joinDesc:'ลงชื่อหรือเปลี่ยนสถานะผู้เล่น',summary:'สรุปอีเวนท์',summaryDesc:'ดูอันดับและแชร์ LINE',advanced:'เครื่องมือขั้นสูง',advancedDesc:'รีเซ็ต/ล้างข้อมูลแบบระวัง',preview:'ตัวอย่างแมตช์',reasons:'เหตุผลการจับคู่',createEvent:'สร้างกิจกรรม',eventName:'ชื่อกิจกรรม',eventTime:'เวลา เช่น SAT 15:00',venue:'สนาม',allPlayers:'รายชื่อทั้งหมด',remove:'ลบ',ranking:'อันดับผลงานอีเวนท์',rankRule:'เรียงจากผลงานวันนี้: ชนะ > Win Rate > แต้มได้เสีย > จำนวนเกม',highlights:'ไฮไลต์ผู้เล่น',playerSummary:'สรุปผู้เล่น',resetMsg:'รีเซ็ตสถิติผู้เล่นทั้งหมดในกิจกรรมนี้',clearMsg:'ลบผู้เล่นและแมตช์ทั้งหมดในกิจกรรมนี้',removeEventMsg:'ลบกิจกรรมนี้ออกจากระบบ',removePlayerMsg:'ลบผู้เล่นนี้ออกจากกิจกรรมหรือไม่'},
-en:{title:'Field Match System',events:'Events',join:'Join',manage:'Manage',stats:'Stats',selectEvent:'Select Event',eventHint:'One shared real-time link',round:'Round',joinEvent:'Join',results:'Results',joinTitle:'Join as Player',pickEvent:'Select event first',nickname:'Nickname',assessmentTitle:'1–5 Skill Assessment',assessmentHint:'10 standard pickleball skill questions',hide:'Hide',open:'Open',saveReady:'Save & Ready',queue:'Live Queue',played:'Played',quick:'Quick Action',nextMatch:'Next Match',nextDesc:'Preview match before start',joinQueue:'Join Queue',joinDesc:'Register or change status',summary:'Event Summary',summaryDesc:'Ranking and LINE share',advanced:'Advanced Tools',advancedDesc:'Reset/clear with confirmation',preview:'Match Preview',reasons:'Matchmaking Reasons',createEvent:'Create Event',eventName:'Event name',eventTime:'Time e.g. SAT 15:00',venue:'Venue',allPlayers:'All Players',remove:'Remove',ranking:'Event Ranking',rankRule:'Ranked by today: wins > win rate > point diff > games played',highlights:'Player Highlights',playerSummary:'Player Summary',resetMsg:'Reset all player stats in this event.',clearMsg:'Remove all players and matches in this event.',removeEventMsg:'Remove this event from the system.',removePlayerMsg:'Remove this player from event?'}
+th:{title:'ระบบจัดคู่สนามจริง',events:'กิจกรรม',join:'เข้าร่วม',manage:'จัดการ',stats:'สถิติ',selectEvent:'เลือกกิจกรรม',eventHint:'ลิงก์เดียว ใช้งานร่วมกันแบบเรียลไทม์',round:'รอบ',joinEvent:'เข้าร่วม',results:'ดูผล',joinTitle:'ลงชื่อเข้าเล่น',pickEvent:'เลือกกิจกรรมก่อน',nickname:'ชื่อเล่น',assessmentTitle:'ประเมินทักษะ 1–5',assessmentHint:'10 คำถามตามทักษะมาตรฐาน Pickleball',hide:'ซ่อน',open:'เปิด',saveReady:'บันทึกและพร้อมเล่น',queue:'คิวรอเล่น',played:'เล่นแล้ว',quick:'การทำงานด่วน',nextMatch:'แมตช์ถัดไป',nextDesc:'ดูตัวอย่างการจับคู่ก่อนเริ่ม',joinQueue:'เข้าคิวรอ',joinDesc:'ลงชื่อหรือเปลี่ยนสถานะผู้เล่น',summary:'สรุปอีเวนท์',summaryDesc:'ดูอันดับและแชร์ LINE',advanced:'เครื่องมือขั้นสูง',advancedDesc:'รีเซ็ต/ล้างข้อมูลแบบระวัง',preview:'ตัวอย่างแมตช์',reasons:'เหตุผลการจับคู่',createEvent:'สร้างกิจกรรม',eventName:'ชื่อกิจกรรม',eventTime:'เวลา เช่น SAT 15:00',venue:'สนาม',allPlayers:'รายชื่อทั้งหมด',remove:'ลบ',ranking:'อันดับผลงานอีเวนท์',rankRule:'เรียงจากผลงานวันนี้: ชนะ > Win Rate > แต้มได้เสีย > จำนวนเกม',highlights:'ไฮไลต์ผู้เล่น',playerSummary:'สรุปผู้เล่น',matchHistory:'ประวัติแมตช์ย้อนหลัง',matchHistoryHint:'ดูย้อนหลังว่าแต่ละแมตช์ใครคู่กับใคร เจอใคร และคะแนนเท่าไหร่',noMatchHistory:'ยังไม่มีแมตช์ที่ยืนยันผลแล้ว',playerMatchHistory:'ประวัติการเล่นของผู้เล่น',partner:'คู่เล่น',opponents:'คู่แข่ง',noPlayerHistory:'ยังไม่มีประวัติแมตช์ของผู้เล่นนี้',resetMsg:'รีเซ็ตสถิติผู้เล่นทั้งหมดในกิจกรรมนี้',clearMsg:'ลบผู้เล่นและแมตช์ทั้งหมดในกิจกรรมนี้',removeEventMsg:'ลบกิจกรรมนี้ออกจากระบบ',removePlayerMsg:'ลบผู้เล่นนี้ออกจากกิจกรรมหรือไม่'},
+en:{title:'Field Match System',events:'Events',join:'Join',manage:'Manage',stats:'Stats',selectEvent:'Select Event',eventHint:'One shared real-time link',round:'Round',joinEvent:'Join',results:'Results',joinTitle:'Join as Player',pickEvent:'Select event first',nickname:'Nickname',assessmentTitle:'1–5 Skill Assessment',assessmentHint:'10 standard pickleball skill questions',hide:'Hide',open:'Open',saveReady:'Save & Ready',queue:'Live Queue',played:'Played',quick:'Quick Action',nextMatch:'Next Match',nextDesc:'Preview match before start',joinQueue:'Join Queue',joinDesc:'Register or change status',summary:'Event Summary',summaryDesc:'Ranking and LINE share',advanced:'Advanced Tools',advancedDesc:'Reset/clear with confirmation',preview:'Match Preview',reasons:'Matchmaking Reasons',createEvent:'Create Event',eventName:'Event name',eventTime:'Time e.g. SAT 15:00',venue:'Venue',allPlayers:'All Players',remove:'Remove',ranking:'Event Ranking',rankRule:'Ranked by today: wins > win rate > point diff > games played',highlights:'Player Highlights',playerSummary:'Player Summary',matchHistory:'Match History',matchHistoryHint:'Review every completed match: partners, opponents, scores, and duration.',noMatchHistory:'No confirmed matches yet.',playerMatchHistory:'Player Match History',partner:'Partner',opponents:'Opponents',noPlayerHistory:'No match history for this player yet.',resetMsg:'Reset all player stats in this event.',clearMsg:'Remove all players and matches in this event.',removeEventMsg:'Remove this event from the system.',removePlayerMsg:'Remove this player from event?'}
 },
 tr(k){return this.tx[this.lang][k]||k},
 toggleLang(){this.lang=this.lang==='th'?'en':'th';localStorage.psh_lang=this.lang},
@@ -434,6 +485,17 @@ async resetStats(){await this.db.from('psh_event_players').update({matches_playe
 async clearEvent(){await this.db.from('psh_matches').delete().eq('event_id',this.eventId);await this.db.from('psh_event_players').delete().eq('event_id',this.eventId);await this.pick(this.eventId)},
 async removeEvent(){await this.db.from('psh_events').delete().eq('id',this.eventId);this.eventId='';localStorage.removeItem('psh_event');await this.load()},
 async removePlayer(p){await this.db.from('psh_event_players').delete().eq('id',p.id);await this.pick(this.eventId)},
+confirmedMatches(){return this.matches.filter(m=>m.status==='confirmed').sort((a,b)=>new Date(b.ended_at||b.created_at)-new Date(a.ended_at||a.created_at))},
+matchRows(m){return this.mps.filter(r=>r.match_id===m.id)},
+matchPlayers(m,t){return this.matchRows(m).filter(r=>r.team===t).map(r=>this.players.find(p=>p.id===r.event_player_id)).filter(Boolean)},
+teamNames(m,t){let n=this.matchPlayers(m,t).map(p=>p.nickname).join(' + ');return n||'-'},
+matchDuration(m){if(!m.started_at)return'-';let end=m.ended_at?new Date(m.ended_at).getTime():Date.now(),sec=Math.max(0,Math.floor((end-new Date(m.started_at).getTime())/1000));return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0')},
+formatDate(d){if(!d)return'-';try{return new Date(d).toLocaleString(this.lang==='th'?'th-TH':'en-US',{dateStyle:'short',timeStyle:'short'})}catch(e){return d}},
+matchSummaryLine(m){let aw=m.team_a_score>m.team_b_score,win=aw?'A':'B',lose=aw?'B':'A',diff=Math.abs((m.team_a_score||0)-(m.team_b_score||0));return `${this.lang==='th'?'ทีม':'Team'} ${win} ${this.lang==='th'?'ชนะ':'won'} ${this.teamNames(m,win)} · ${this.lang==='th'?'แต้มต่าง':'diff'} ${diff} · ${this.lang==='th'?'เจอ':'vs'} ${this.teamNames(m,lose)}`},
+playerHistory(p){if(!p)return[];return this.confirmedMatches().map(m=>{let rows=this.matchRows(m),me=rows.find(r=>r.event_player_id===p.id);if(!me)return null;let team=me.team,opp=team==='A'?'B':'A',myScore=team==='A'?m.team_a_score:m.team_b_score,oppScore=team==='A'?m.team_b_score:m.team_a_score,result=myScore>oppScore?'WIN':'LOSS';let partner=rows.filter(r=>r.team===team&&r.event_player_id!==p.id).map(r=>this.players.find(x=>x.id===r.event_player_id)?.nickname).filter(Boolean).join(' + ')||'-';let opponents=rows.filter(r=>r.team===opp).map(r=>this.players.find(x=>x.id===r.event_player_id)?.nickname).filter(Boolean).join(' + ')||'-';return{match:m,result,score:`${myScore}-${oppScore}`,partner,opponents,pointDiff:(myScore-oppScore>0?'+':'')+(myScore-oppScore)}}).filter(Boolean)},
+historyText(){let lines=this.confirmedMatches().reverse().map((m,i)=>`#${i+1} Court ${m.court_number||'-'} R${m.round_number||'-'} · ${this.teamNames(m,'A')} ${m.team_a_score}-${m.team_b_score} ${this.teamNames(m,'B')} · ${this.matchDuration(m)}`);return `🏓 Match History\\n${this.event?.name_th||this.event?.name_en||''}\\n\\n${lines.join('\\n')}`},
+copyMatchHistory(){navigator.clipboard.writeText(this.historyText());this.flash('Copied history')},
+copyPlayerHistory(p){let rows=this.playerHistory(p).reverse().map((h,i)=>`#${i+1} ${h.result} ${h.score} · Partner: ${h.partner} · VS: ${h.opponents}`);navigator.clipboard.writeText(`🏓 ${p.nickname} Match History\\n${rows.join('\\n')}`);this.flash('Copied player history')},
 playerBoxes(p){if(!p)return[];let r=this.ranking().findIndex(x=>x.id===p.id)+1;return[{k:this.tr('ranking'),v:r||'-'},{k:'Score',v:this.eventScore(p)},{k:'Status',v:this.statusName(p.status)},{k:'Skill',v:this.levelName(p.estimated_level)},{k:'Played',v:p.matches_played},{k:'W-L',v:p.wins+'-'+p.losses},{k:'Win%',v:this.winRate(p)+'%'},{k:'Diff',v:this.diff(p)}]},
 insight(p){if(!p)return'';return this.lang==='th'?`${p.nickname} เล่น ${p.matches_played} เกม ชนะ ${p.wins} แพ้ ${p.losses} Win Rate ${this.winRate(p)}% แต้มได้เสีย ${this.diff(p)} ระดับ ${this.levelName(p.estimated_level)}`:`${p.nickname}: ${p.matches_played} games, ${p.wins}W-${p.losses}L, ${this.winRate(p)}% win rate, diff ${this.diff(p)}, skill ${this.levelName(p.estimated_level)}.`},
 boxes(){let r=this.ranking(),pl=this.players.map(p=>p.matches_played||0),gap=pl.length?Math.max(...pl)-Math.min(...pl):0;return[{k:'Players',v:this.players.length},{k:'Matches',v:this.matches.filter(m=>m.status==='confirmed').length},{k:'Fairness',v:this.fairScore()+'%'},{k:'Play Gap',v:gap},{k:'Top',v:r[0]?.nickname||'-'},{k:'Mode',v:this.modeName(this.event?.event_mode)}]},
