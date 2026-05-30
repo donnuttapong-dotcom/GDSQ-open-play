@@ -1,1163 +1,472 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en" x-data="pshApp()" x-init="init()" :class="{ 'th': lang==='th' }">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PICKLEBALL SYSTEMS HUB - ALPHA 02</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>PICKLEBALL SYSTEMS HUB - ALPHA 04 ONLINE</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            tactical: '#1a1d20',
-            panel: '#23272b',
-            panel2: '#2b3035',
-            cyberOrange: '#ff6a00',
-            neonLime: '#b6ff00',
-            steel: '#88929c'
-          },
-          boxShadow: {
-            glowOrange: '0 0 24px rgba(255,106,0,.35)',
-            glowLime: '0 0 24px rgba(182,255,0,.30)'
-          }
-        }
-      }
-    }
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    :root {
-      --bg: #1a1d20;
-      --panel: #23272b;
-      --panel-2: #2b3035;
-      --line: rgba(255,255,255,.12);
-      --orange: #ff6a00;
-      --lime: #b6ff00;
-      --muted: #88929c;
-    }
-    html { background: var(--bg); }
-    body {
-      min-height: 100vh;
-      color: #f5f7fa;
-      background:
-        radial-gradient(circle at 15% 10%, rgba(255,106,0,.12), transparent 24rem),
-        radial-gradient(circle at 85% 18%, rgba(182,255,0,.10), transparent 25rem),
-        linear-gradient(135deg, #121416 0%, #1a1d20 45%, #202428 100%);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    [x-cloak] { display: none !important; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
-    .chamfer {
-      clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
-    }
-    .chamfer-lg {
-      clip-path: polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px);
-    }
-    .hazard {
-      background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.12) 0 8px, rgba(255,255,255,0) 8px 16px);
-    }
-    .scanlines::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      background: repeating-linear-gradient(to bottom, rgba(255,255,255,.025) 0 1px, transparent 1px 5px);
-      mix-blend-mode: overlay;
-      z-index: 1;
-    }
-    .grid-bg {
-      background-image:
-        linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
-      background-size: 30px 30px;
-    }
-    .btn {
-      clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
-      transition: transform .15s ease, filter .15s ease, opacity .15s ease;
-    }
-    .btn:active { transform: scale(.985); }
-    .poster-frame {
-      min-height: 170px;
-      background:
-        linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,0)),
-        repeating-linear-gradient(135deg, rgba(255,255,255,.08) 0 8px, rgba(255,255,255,0) 8px 18px),
-        linear-gradient(135deg, #252b30, #121416);
-    }
-    .status-dot { width: .58rem; height: .58rem; border-radius: 999px; display: inline-block; }
-    .power-bar {
-      height: .68rem;
-      background: rgba(255,255,255,.10);
-      overflow: hidden;
-      clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
-    }
-    .power-fill {
-      height: 100%;
-      background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.25) 0 6px, rgba(255,255,255,0) 6px 12px);
-    }
-    .table-head {
-      background:
-        repeating-linear-gradient(135deg, rgba(255,255,255,.11) 0 8px, transparent 8px 16px),
-        rgba(255,255,255,.05);
-    }
-    .scrollbar-thin::-webkit-scrollbar { height: 6px; width: 6px; }
-    .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 999px; }
+    :root{--bg:#1a1d20;--panel:#23282d;--line:#3a424a;--orange:#ff7a18;--lime:#c7ff2e;--cyan:#3ee7ff;--muted:#9ca3af;}
+    html,body{background:var(--bg); color:#f5f5f5; min-height:100%;}
+    body{font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;}
+    .th body,.th *{font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans Thai", sans-serif;}
+    .chamfer{clip-path: polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);}
+    .chamfer-sm{clip-path: polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);}
+    .hazard{background-image: repeating-linear-gradient(135deg,rgba(255,255,255,.14) 0 8px,transparent 8px 16px);}
+    .grid-bg{background-image: linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px); background-size:32px 32px;}
+    .glow-orange{box-shadow:0 0 0 1px rgba(255,122,24,.4),0 0 24px rgba(255,122,24,.12);}
+    .glow-lime{box-shadow:0 0 0 1px rgba(199,255,46,.4),0 0 24px rgba(199,255,46,.12);}
+    .no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{scrollbar-width:none}
+    [x-cloak]{display:none!important}
+    input,select,textarea{background:#121519!important;color:#fff!important;border-color:#3a424a!important}
+    input::placeholder{color:#64748b!important}
   </style>
 </head>
-<body class="scanlines" x-data="pickleballHub()" x-init="init()" :lang="lang">
-  <div class="relative z-10 min-h-screen">
-    <header class="sticky top-0 z-40 border-b border-white/10 bg-tactical/90 backdrop-blur-xl">
-      <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6">
-        <button @click="go('hub')" class="group flex min-w-0 items-center gap-3 text-left">
-          <div class="chamfer flex h-11 w-11 shrink-0 items-center justify-center border border-cyberOrange/50 bg-cyberOrange/15 shadow-glowOrange">
-            <span class="mono text-lg font-black text-cyberOrange">PB</span>
-          </div>
-          <div class="min-w-0">
-            <h1 class="truncate text-sm font-black tracking-widest text-white md:text-lg">PICKLEBALL SYSTEMS HUB</h1>
-            <p class="mono truncate text-[10px] uppercase tracking-[.28em] text-steel">ALPHA 02 · FAIR OPEN PLAY ENGINE</p>
-          </div>
+<body class="grid-bg">
+  <div class="min-h-screen pb-24">
+    <header class="sticky top-0 z-50 border-b border-white/10 bg-[#15181b]/95 backdrop-blur">
+      <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-3 sm:px-5">
+        <button @click="go('hub')" class="text-left">
+          <div class="text-[10px] tracking-[0.28em] text-lime-300">PICKLEBALL SYSTEMS HUB</div>
+          <div class="text-sm font-black tracking-wide sm:text-lg">ALPHA 04 · ONLINE FIELD MODE</div>
         </button>
-
-        <div class="flex shrink-0 items-center gap-2">
-          <button @click="toggleLang()" class="btn border border-white/15 bg-white/10 px-3 py-2 text-xs font-black tracking-widest hover:bg-white/15">
-            <span x-text="lang === 'th' ? 'TH / EN' : 'EN / TH'"></span>
-          </button>
-          <button @click="go('queue')" class="btn hidden border border-neonLime/40 bg-neonLime/10 px-3 py-2 text-xs font-black text-neonLime md:block" x-show="activeEventId">
-            <span x-text="t('fieldMode')"></span>
+        <div class="flex items-center gap-2">
+          <div class="hidden rounded-full border border-white/10 px-3 py-1 text-[11px] text-slate-300 sm:block" :class="online ? 'text-lime-300' : 'text-orange-300'">
+            <span x-text="online ? t('online') : t('setupNeeded')"></span>
+          </div>
+          <button @click="lang = lang === 'th' ? 'en' : 'th'; saveLocal()" class="chamfer-sm border border-white/15 bg-white/5 px-3 py-2 text-xs font-black hover:bg-white/10">
+            <span x-text="lang === 'th' ? 'EN' : 'TH'"></span>
           </button>
         </div>
       </div>
     </header>
 
-    <main class="mx-auto max-w-7xl px-4 py-5 md:px-6 md:py-8">
-      <section class="mb-5 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+    <main class="mx-auto max-w-7xl px-3 py-4 sm:px-5">
+      <template x-if="!configured">
+        <section class="chamfer border border-orange-400/50 bg-orange-950/20 p-4 shadow-2xl">
+          <div class="hazard mb-3 h-2 w-full opacity-80"></div>
+          <h1 class="text-xl font-black text-orange-300" x-text="t('setupTitle')"></h1>
+          <p class="mt-2 text-sm leading-6 text-slate-300" x-text="t('setupDesc')"></p>
+          <div class="mt-4 grid gap-3 md:grid-cols-2">
+            <div>
+              <label class="text-xs font-bold uppercase text-slate-400">Supabase URL</label>
+              <input x-model="setup.url" class="mt-1 w-full rounded-lg border px-3 py-3 text-sm" placeholder="https://xxxxx.supabase.co" />
+            </div>
+            <div>
+              <label class="text-xs font-bold uppercase text-slate-400">Publishable / Anon Key</label>
+              <input x-model="setup.key" class="mt-1 w-full rounded-lg border px-3 py-3 text-sm" placeholder="sb_publishable_... or eyJ..." />
+            </div>
+          </div>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button @click="saveConfig()" class="chamfer-sm bg-lime-300 px-4 py-3 text-sm font-black text-black">SAVE CONFIG</button>
+            <button @click="showSql = !showSql" class="chamfer-sm border border-white/20 px-4 py-3 text-sm font-black" x-text="showSql ? 'HIDE SQL' : 'SHOW SQL STEP'"></button>
+          </div>
+          <pre x-show="showSql" x-cloak class="mt-4 max-h-80 overflow-auto rounded-xl border border-white/10 bg-black/40 p-3 text-xs text-slate-300">1) Run supabase_alpha04_schema.sql in Supabase SQL Editor
+2) Enable Realtime for psh_* tables if needed
+3) Paste URL + publishable key here
+4) Upload this file as index.html to GitHub Pages</pre>
+        </section>
+      </template>
+
+      <template x-if="configured">
         <div>
-          <div class="mb-2 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-steel">
-            <span class="status-dot bg-neonLime shadow-glowLime"></span>
-            <span x-text="t('freeLocal')"></span>
-          </div>
-          <h2 class="text-2xl font-black tracking-tight md:text-4xl" x-text="pageTitle()"></h2>
-          <p class="mt-2 max-w-3xl text-sm leading-relaxed text-steel md:text-base" x-text="pageSubtitle()"></p>
-        </div>
+          <nav class="mb-4 grid grid-cols-4 gap-2 text-center text-[11px] font-black uppercase sm:text-xs">
+            <button @click="go('hub')" :class="tab==='hub' ? 'bg-lime-300 text-black' : 'bg-white/5 text-slate-300'" class="chamfer-sm border border-white/10 px-2 py-3" x-text="t('events')"></button>
+            <button @click="go('player')" :class="tab==='player' ? 'bg-lime-300 text-black' : 'bg-white/5 text-slate-300'" class="chamfer-sm border border-white/10 px-2 py-3" x-text="t('player')"></button>
+            <button @click="go('organizer')" :class="tab==='organizer' ? 'bg-lime-300 text-black' : 'bg-white/5 text-slate-300'" class="chamfer-sm border border-white/10 px-2 py-3" x-text="t('organizer')"></button>
+            <button @click="go('stats')" :class="tab==='stats' ? 'bg-lime-300 text-black' : 'bg-white/5 text-slate-300'" class="chamfer-sm border border-white/10 px-2 py-3" x-text="t('stats')"></button>
+          </nav>
 
-        <nav class="scrollbar-thin flex gap-2 overflow-x-auto pb-1 md:justify-end">
-          <button @click="go('hub')" :class="navClass('hub')" class="btn shrink-0 px-4 py-3 text-xs font-black tracking-widest" x-text="t('navEvents')"></button>
-          <button @click="go('onboarding')" :class="navClass('onboarding')" class="btn shrink-0 px-4 py-3 text-xs font-black tracking-widest" x-text="t('navPlayers')"></button>
-          <button @click="go('queue')" :class="navClass('queue')" class="btn shrink-0 px-4 py-3 text-xs font-black tracking-widest" x-text="t('navCourt')"></button>
-          <button @click="go('leaderboard')" :class="navClass('leaderboard')" class="btn shrink-0 px-4 py-3 text-xs font-black tracking-widest" x-text="t('navStats')"></button>
-        </nav>
-      </section>
+          <div x-show="toast" x-transition class="fixed bottom-4 left-3 right-3 z-[70] mx-auto max-w-lg rounded-xl border border-lime-300/40 bg-[#101316]/95 p-3 text-sm text-lime-200 shadow-2xl" x-text="toast"></div>
 
-      <section x-show="view === 'hub'" x-cloak>
-        <div class="grid gap-4 md:grid-cols-3">
-          <template x-for="event in events" :key="event.id">
-            <article class="chamfer-lg overflow-hidden border border-white/10 bg-panel/90 shadow-2xl">
-              <div class="poster-frame chamfer relative m-3 overflow-hidden border border-white/10 p-4" :class="event.status === 'live' ? 'shadow-glowLime' : ''">
-                <div class="absolute inset-x-0 top-0 h-6 hazard opacity-60"></div>
-                <div class="absolute bottom-3 right-3 text-right">
-                  <div class="mono text-5xl font-black tracking-tighter" :class="event.accent === 'orange' ? 'text-cyberOrange' : 'text-neonLime'" x-text="event.code"></div>
-                  <div class="mono text-[10px] uppercase tracking-[.35em] text-white/60">OPEN PLAY</div>
-                </div>
-                <div class="relative z-10 inline-flex items-center gap-2 border border-white/10 bg-black/30 px-3 py-1 text-xs font-black uppercase tracking-widest">
-                  <span class="status-dot" :class="event.status === 'live' ? 'bg-neonLime' : event.status === 'upcoming' ? 'bg-cyberOrange' : 'bg-steel'"></span>
-                  <span x-text="statusLabel(event.status)"></span>
-                </div>
-              </div>
-              <div class="space-y-4 p-4 pt-1">
-                <div>
-                  <h3 class="text-xl font-black uppercase tracking-wide" x-text="event.title"></h3>
-                  <p class="mt-2 text-sm text-steel" x-text="event.dateTime[lang]"></p>
-                  <p class="text-sm text-steel" x-text="event.venue"></p>
-                </div>
-                <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                  <div class="border border-white/10 bg-white/5 p-2">
-                    <div class="mono text-lg font-black" x-text="countEventQueue(event.id)"></div>
-                    <div class="text-steel" x-text="t('waiting')"></div>
-                  </div>
-                  <div class="border border-white/10 bg-white/5 p-2">
-                    <div class="mono text-lg font-black" x-text="countEventMatches(event.id)"></div>
-                    <div class="text-steel" x-text="t('matches')"></div>
-                  </div>
-                  <div class="border border-white/10 bg-white/5 p-2">
-                    <div class="mono text-lg font-black" x-text="countEventPlayers(event.id)"></div>
-                    <div class="text-steel" x-text="t('players')"></div>
-                  </div>
-                </div>
-                <button @click="selectEvent(event.id)" class="btn w-full border border-neonLime/40 bg-neonLime/15 px-4 py-3 text-sm font-black uppercase tracking-widest text-neonLime hover:bg-neonLime/20">
-                  <span x-text="t('joinEvent')"></span>
-                </button>
-              </div>
-            </article>
-          </template>
-        </div>
-
-        <div class="chamfer-lg mt-5 border border-white/10 bg-panel/70 p-4 md:p-6">
-          <div class="mb-3 flex items-center justify-between gap-3">
-            <h3 class="text-lg font-black uppercase tracking-widest" x-text="t('systemRulesTitle')"></h3>
-            <div class="h-4 flex-1 hazard opacity-40"></div>
-          </div>
-          <div class="grid gap-3 text-sm text-steel md:grid-cols-4">
-            <div class="border border-white/10 bg-white/5 p-3"><b class="text-white" x-text="t('rule1Head')"></b><br><span x-text="t('rule1')"></span></div>
-            <div class="border border-white/10 bg-white/5 p-3"><b class="text-white" x-text="t('rule2Head')"></b><br><span x-text="t('rule2')"></span></div>
-            <div class="border border-white/10 bg-white/5 p-3"><b class="text-white" x-text="t('rule3Head')"></b><br><span x-text="t('rule3')"></span></div>
-            <div class="border border-white/10 bg-white/5 p-3"><b class="text-white" x-text="t('rule4Head')"></b><br><span x-text="t('rule4')"></span></div>
-          </div>
-        </div>
-      </section>
-
-      <section x-show="view === 'onboarding'" x-cloak>
-        <div class="grid gap-5 lg:grid-cols-[420px_1fr]">
-          <aside class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
-            <div class="mb-4 flex items-center justify-between gap-3">
-              <h3 class="font-black uppercase tracking-widest" x-text="t('registeredPlayers')"></h3>
-              <button @click="seedDemoPlayers()" class="btn border border-white/10 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-white/15" x-text="t('loadDemo')"></button>
-            </div>
-            <div class="space-y-2" x-show="players.length">
-              <template x-for="player in playersSortedByName()" :key="player.id">
-                <button @click="editPlayer(player.id)" class="chamfer flex w-full items-center justify-between gap-3 border border-white/10 bg-white/5 p-3 text-left hover:border-neonLime/40 hover:bg-neonLime/5">
-                  <div class="min-w-0">
-                    <div class="truncate font-black" x-text="player.nickname"></div>
-                    <div class="text-xs text-steel"><span x-text="levelName(player)"></span> · <span class="mono" x-text="player.rating"></span> ELO</div>
-                  </div>
-                  <div class="mono text-xs font-black text-neonLime" x-text="formatPower(player)"></div>
-                </button>
-              </template>
-            </div>
-            <div x-show="!players.length" class="border border-dashed border-white/15 p-5 text-center text-sm text-steel" x-text="t('noPlayersYet')"></div>
-          </aside>
-
-          <div class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
-            <div class="mb-5 grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+          <section x-show="tab==='hub'" x-cloak>
+            <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h3 class="text-xl font-black uppercase tracking-widest" x-text="editingProfileId ? t('retestPlayer') : t('newPlayerSetup')"></h3>
-                <p class="mt-1 text-sm text-steel" x-text="t('onboardingHint')"></p>
+                <h2 class="text-2xl font-black uppercase" x-text="t('selectEvent')"></h2>
+                <p class="text-sm text-slate-400" x-text="t('selectEventHint')"></p>
               </div>
-              <button @click="resetForm()" class="btn border border-cyberOrange/40 bg-cyberOrange/10 px-4 py-3 text-xs font-black uppercase tracking-widest text-cyberOrange" x-text="t('clearForm')"></button>
+              <button @click="refreshAll()" class="chamfer-sm border border-white/15 px-4 py-2 text-xs font-black">REFRESH</button>
             </div>
-
-            <div class="grid gap-3 md:grid-cols-2">
-              <label class="block">
-                <span class="mb-1 block text-xs font-black uppercase tracking-widest text-steel" x-text="t('nickname')"></span>
-                <input x-model.trim="form.nickname" class="chamfer w-full border border-white/10 bg-black/25 px-4 py-3 font-bold outline-none focus:border-neonLime/50" :placeholder="t('nicknamePlaceholder')" />
-              </label>
-              <label class="block">
-                <span class="mb-1 block text-xs font-black uppercase tracking-widest text-steel" x-text="t('selfRating')"></span>
-                <select x-model.number="form.selfRating" class="chamfer w-full border border-white/10 bg-black/25 px-4 py-3 font-bold outline-none focus:border-neonLime/50">
-                  <option value="2">2.0 · Beginner / New Player</option>
-                  <option value="2.5">2.5 · Social Beginner</option>
-                  <option value="3">3.0 · Social Player</option>
-                  <option value="3.5">3.5 · Strong Social</option>
-                  <option value="4">4.0 · Advanced Club</option>
-                </select>
-              </label>
-            </div>
-
-            <div class="mt-5 grid gap-3">
-              <template x-for="(q, index) in questions" :key="q.id">
-                <div class="chamfer border border-white/10 bg-white/5 p-3 md:p-4">
-                  <div class="mb-3 flex items-start gap-3">
-                    <div class="chamfer flex h-9 w-11 shrink-0 items-center justify-center border text-sm font-black" :class="index < 5 ? 'border-cyberOrange/50 bg-cyberOrange/10 text-cyberOrange' : 'border-neonLime/50 bg-neonLime/10 text-neonLime'" x-text="String(index + 1).padStart(2,'0')"></div>
-                    <div>
-                      <div class="text-[10px] font-black uppercase tracking-widest" :class="index < 5 ? 'text-cyberOrange' : 'text-neonLime'" x-text="index < 5 ? 'TECHNICAL AXIS' : 'TACTICAL / PHYSICAL AXIS'"></div>
-                      <p class="font-bold" x-text="q.text[lang]"></p>
+            <div class="grid gap-4 md:grid-cols-3">
+              <template x-for="ev in events" :key="ev.id">
+                <article @click="selectEvent(ev.id)" class="chamfer cursor-pointer border bg-[#22272d] p-3 transition hover:-translate-y-0.5" :class="selectedEventId===ev.id ? 'border-lime-300 glow-lime' : 'border-white/10'">
+                  <div class="chamfer-sm relative h-36 overflow-hidden bg-[#111]">
+                    <div class="absolute inset-0 bg-gradient-to-br from-orange-500/20 via-transparent to-lime-300/20"></div>
+                    <div class="hazard absolute left-0 top-0 h-full w-10 opacity-30"></div>
+                    <div class="absolute bottom-3 left-3 right-3">
+                      <div class="text-[10px] font-black uppercase tracking-[0.2em]" :class="ev.status==='live' ? 'text-lime-300' : 'text-slate-300'" x-text="ev.status"></div>
+                      <div class="text-xl font-black uppercase" x-text="eventName(ev)"></div>
                     </div>
                   </div>
-                  <div class="grid gap-2 md:grid-cols-2">
-                    <template x-for="option in q.options" :key="option.value">
-                      <label class="chamfer cursor-pointer border p-3 text-sm transition" :class="form.answers[q.id] === option.value ? 'border-neonLime/60 bg-neonLime/10 text-white' : 'border-white/10 bg-black/15 text-steel hover:border-white/25'">
-                        <input type="radio" class="sr-only" :name="q.id" :value="option.value" x-model.number="form.answers[q.id]" />
-                        <span class="mono mr-2 font-black" x-text="option.value"></span>
-                        <span x-text="option.label[lang]"></span>
-                      </label>
-                    </template>
+                  <div class="mt-3 space-y-2 text-sm text-slate-300">
+                    <div class="flex justify-between gap-3"><span x-text="t('time')"></span><b x-text="ev.event_time"></b></div>
+                    <div class="flex justify-between gap-3"><span x-text="t('venue')"></span><b x-text="ev.venue"></b></div>
+                    <div class="flex justify-between gap-3"><span x-text="t('courts')"></span><b x-text="ev.courts_count"></b></div>
                   </div>
-                </div>
+                  <button @click.stop="selectEvent(ev.id); go('player')" class="chamfer-sm mt-4 w-full bg-lime-300 px-4 py-3 text-sm font-black text-black" x-text="t('joinEvent')"></button>
+                </article>
               </template>
             </div>
+          </section>
 
-            <div class="mt-5 grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
-              <div class="grid gap-3 md:grid-cols-3">
-                <div class="border border-white/10 bg-black/20 p-3">
-                  <div class="text-xs text-steel" x-text="t('techScore')"></div>
-                  <div class="mono text-2xl font-black text-cyberOrange" x-text="previewScore('tech')"></div>
-                </div>
-                <div class="border border-white/10 bg-black/20 p-3">
-                  <div class="text-xs text-steel" x-text="t('tactScore')"></div>
-                  <div class="mono text-2xl font-black text-neonLime" x-text="previewScore('tact')"></div>
-                </div>
-                <div class="border border-white/10 bg-black/20 p-3">
-                  <div class="text-xs text-steel" x-text="t('initialElo')"></div>
-                  <div class="mono text-2xl font-black" x-text="previewElo()"></div>
-                </div>
-              </div>
-              <button @click="savePlayerProfile()" class="btn border border-neonLime/50 bg-neonLime/15 px-6 py-4 text-sm font-black uppercase tracking-widest text-neonLime shadow-glowLime hover:bg-neonLime/20" x-text="editingProfileId ? t('saveRetest') : t('createProfile')"></button>
-            </div>
-          </div>
-        </div>
-      </section>
+          <section x-show="tab==='player'" x-cloak>
+            <div class="grid gap-4 lg:grid-cols-[1fr_.9fr]">
+              <div class="chamfer border border-white/10 bg-[#22272d]/90 p-4">
+                <div class="hazard mb-3 h-2"></div>
+                <h2 class="text-2xl font-black uppercase" x-text="t('joinAsPlayer')"></h2>
+                <p class="mt-1 text-sm text-slate-400" x-text="t('joinDesc')"></p>
 
-      <section x-show="view === 'queue'" x-cloak>
-        <div x-show="!activeEventId" class="chamfer-lg border border-cyberOrange/40 bg-cyberOrange/10 p-5 text-cyberOrange">
-          <b x-text="t('selectEventFirst')"></b>
-        </div>
-
-        <div x-show="activeEventId" class="grid gap-5 xl:grid-cols-[400px_1fr]">
-          <aside class="space-y-5">
-            <div class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
-              <div class="mb-4 flex items-start justify-between gap-3">
-                <div>
-                  <h3 class="text-xl font-black uppercase tracking-widest" x-text="activeEvent()?.title"></h3>
-                  <p class="text-sm text-steel" x-text="activeEvent()?.dateTime[lang]"></p>
-                  <p class="text-sm text-steel" x-text="activeEvent()?.venue"></p>
-                </div>
-                <span class="chamfer border px-3 py-1 text-xs font-black uppercase tracking-widest" :class="activeEvent()?.status === 'live' ? 'border-neonLime/40 bg-neonLime/10 text-neonLime' : 'border-cyberOrange/40 bg-cyberOrange/10 text-cyberOrange'" x-text="statusLabel(activeEvent()?.status)"></span>
-              </div>
-
-              <div class="grid grid-cols-3 gap-2 text-center">
-                <div class="border border-white/10 bg-black/20 p-3">
-                  <div class="mono text-2xl font-black" x-text="eventQueues().filter(q => q.status === 'waiting').length"></div>
-                  <div class="text-xs text-steel" x-text="t('waiting')"></div>
-                </div>
-                <div class="border border-white/10 bg-black/20 p-3">
-                  <div class="mono text-2xl font-black" x-text="activeMatches().length"></div>
-                  <div class="text-xs text-steel" x-text="t('liveGames')"></div>
-                </div>
-                <div class="border border-white/10 bg-black/20 p-3">
-                  <div class="mono text-2xl font-black" x-text="confirmedMatches().length"></div>
-                  <div class="text-xs text-steel" x-text="t('confirmed')"></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
-              <h3 class="mb-3 font-black uppercase tracking-widest" x-text="t('selfService')"></h3>
-              <label class="block">
-                <span class="mb-1 block text-xs font-black uppercase tracking-widest text-steel" x-text="t('choosePlayer')"></span>
-                <select x-model="selectedPlayerId" class="chamfer w-full border border-white/10 bg-black/25 px-4 py-3 font-bold outline-none focus:border-neonLime/50">
-                  <option value="" x-text="t('selectPlayer')"></option>
-                  <template x-for="player in playersSortedByName()" :key="player.id">
-                    <option :value="player.id" x-text="player.nickname + ' · ' + levelName(player) + ' · ' + player.rating + ' ELO'"></option>
-                  </template>
-                </select>
-              </label>
-              <div class="mt-3 grid grid-cols-2 gap-2">
-                <button @click="joinQueue()" class="btn border border-neonLime/50 bg-neonLime/15 px-4 py-3 text-xs font-black uppercase tracking-widest text-neonLime" x-text="t('joinQueue')"></button>
-                <button @click="pauseQueue()" class="btn border border-cyberOrange/50 bg-cyberOrange/15 px-4 py-3 text-xs font-black uppercase tracking-widest text-cyberOrange" x-text="t('pause')"></button>
-              </div>
-              <button @click="go('onboarding')" class="btn mt-2 w-full border border-white/10 bg-white/10 px-4 py-3 text-xs font-black uppercase tracking-widest hover:bg-white/15" x-text="t('addNewPlayer')"></button>
-            </div>
-
-            <div class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
-              <div class="mb-3 flex items-center justify-between gap-3">
-                <h3 class="font-black uppercase tracking-widest" x-text="t('waitingList')"></h3>
-                <button @click="matchNextGame()" class="btn border border-neonLime/50 bg-neonLime/15 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-neonLime shadow-glowLime" x-text="t('matchNext')"></button>
-              </div>
-              <div class="space-y-2">
-                <template x-for="(entry, index) in eventQueues()" :key="entry.playerId">
-                  <div class="chamfer flex items-center justify-between gap-2 border border-white/10 p-3" :class="entry.status === 'waiting' ? 'bg-white/5' : 'bg-cyberOrange/5 opacity-70'">
-                    <div class="flex min-w-0 items-center gap-3">
-                      <div class="mono flex h-9 w-9 shrink-0 items-center justify-center border border-white/10 bg-black/20 font-black" x-text="index + 1"></div>
-                      <div class="min-w-0">
-                        <div class="truncate font-black" x-text="getPlayer(entry.playerId)?.nickname || 'Unknown'"></div>
-                        <div class="text-xs text-steel"><span x-text="levelName(getPlayer(entry.playerId))"></span> · <span class="mono" x-text="getPlayer(entry.playerId)?.rating || '-' "></span> ELO</div>
-                      </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <span class="chamfer border px-2 py-1 text-[10px] font-black uppercase tracking-widest" :class="entry.status === 'waiting' ? 'border-neonLime/40 text-neonLime' : 'border-cyberOrange/40 text-cyberOrange'" x-text="entry.status"></span>
-                      <button @click="removeFromQueue(entry.playerId)" class="text-xs font-black text-steel hover:text-white">✕</button>
-                    </div>
+                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label class="text-xs font-black uppercase text-slate-400" x-text="t('nickname')"></label>
+                    <input x-model.trim="join.nickname" class="mt-1 w-full rounded-lg border px-3 py-3" :placeholder="t('nicknamePh')" />
                   </div>
-                </template>
-                <div x-show="!eventQueues().length" class="border border-dashed border-white/15 p-5 text-center text-sm text-steel" x-text="t('emptyQueue')"></div>
-              </div>
-            </div>
-          </aside>
-
-          <div class="space-y-5">
-            <div class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
-              <div class="mb-4 flex items-center justify-between gap-3">
-                <h3 class="text-lg font-black uppercase tracking-widest" x-text="t('currentMatches')"></h3>
-                <div class="h-4 flex-1 hazard opacity-40"></div>
-              </div>
-
-              <div class="grid gap-4">
-                <template x-for="match in eventMatches().filter(m => m.status !== 'confirmed')" :key="match.id">
-                  <div class="chamfer-lg border border-white/10 bg-black/20 p-4">
-                    <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <div class="mono text-xs uppercase tracking-widest text-steel" x-text="t('matchId') + ' ' + shortId(match.id)"></div>
-                        <div class="text-sm text-steel" x-text="formatDateTime(match.createdAt)"></div>
-                      </div>
-                      <span class="chamfer border px-3 py-1 text-xs font-black uppercase tracking-widest" :class="match.status === 'active' ? 'border-neonLime/40 text-neonLime' : 'border-cyberOrange/40 text-cyberOrange'" x-text="match.status === 'active' ? t('active') : t('pendingVerification')"></span>
-                    </div>
-
-                    <div class="grid gap-3 md:grid-cols-[1fr_90px_1fr] md:items-stretch">
-                      <div class="chamfer border border-cyberOrange/40 bg-cyberOrange/10 p-4 shadow-glowOrange">
-                        <div class="mb-2 flex items-center justify-between">
-                          <h4 class="text-xl font-black uppercase tracking-widest text-cyberOrange">TEAM A</h4>
-                          <div class="mono text-3xl font-black" x-text="teamPower(match.teamA)"></div>
-                        </div>
-                        <template x-for="pid in match.teamA" :key="pid">
-                          <div class="mt-2 flex items-center justify-between border-t border-white/10 pt-2">
-                            <span class="font-black" x-text="getPlayer(pid)?.nickname"></span>
-                            <span class="mono text-xs text-steel" x-text="getPlayer(pid)?.rating + ' ELO'"></span>
-                          </div>
-                        </template>
-                      </div>
-
-                      <div class="flex items-center justify-center">
-                        <div class="mono text-3xl font-black text-white/70 md:text-5xl">VS</div>
-                      </div>
-
-                      <div class="chamfer border border-neonLime/40 bg-neonLime/10 p-4 shadow-glowLime">
-                        <div class="mb-2 flex items-center justify-between">
-                          <h4 class="text-xl font-black uppercase tracking-widest text-neonLime">TEAM B</h4>
-                          <div class="mono text-3xl font-black" x-text="teamPower(match.teamB)"></div>
-                        </div>
-                        <template x-for="pid in match.teamB" :key="pid">
-                          <div class="mt-2 flex items-center justify-between border-t border-white/10 pt-2">
-                            <span class="font-black" x-text="getPlayer(pid)?.nickname"></span>
-                            <span class="mono text-xs text-steel" x-text="getPlayer(pid)?.rating + ' ELO'"></span>
-                          </div>
-                        </template>
-                      </div>
-                    </div>
-
-                    <div class="mt-4 grid gap-3 rounded-none border border-white/10 bg-white/5 p-3 md:grid-cols-[1fr_auto_auto] md:items-end">
-                      <div>
-                        <div class="mb-1 text-xs font-black uppercase tracking-widest text-steel" x-text="t('enterScore')"></div>
-                        <div class="grid grid-cols-2 gap-2">
-                          <label>
-                            <span class="text-[10px] font-black text-cyberOrange">TEAM A</span>
-                            <input type="number" min="0" max="30" x-model.number="match.scoreA" class="chamfer mt-1 w-full border border-cyberOrange/30 bg-black/30 px-3 py-3 text-center mono text-3xl font-black outline-none focus:border-cyberOrange" />
-                          </label>
-                          <label>
-                            <span class="text-[10px] font-black text-neonLime">TEAM B</span>
-                            <input type="number" min="0" max="30" x-model.number="match.scoreB" class="chamfer mt-1 w-full border border-neonLime/30 bg-black/30 px-3 py-3 text-center mono text-3xl font-black outline-none focus:border-neonLime" />
-                          </label>
-                        </div>
-                      </div>
-                      <div class="grid grid-cols-2 gap-2">
-                        <button @click="submitScore(match.id, 'A')" class="btn border border-cyberOrange/40 bg-cyberOrange/15 px-4 py-3 text-xs font-black uppercase tracking-widest text-cyberOrange" x-text="t('submitByA')"></button>
-                        <button @click="submitScore(match.id, 'B')" class="btn border border-neonLime/40 bg-neonLime/15 px-4 py-3 text-xs font-black uppercase tracking-widest text-neonLime" x-text="t('submitByB')"></button>
-                      </div>
-                      <div class="grid grid-cols-2 gap-2" x-show="match.status === 'pending'">
-                        <button @click="confirmScore(match.id)" class="btn border border-neonLime/50 bg-neonLime/20 px-4 py-3 text-xs font-black uppercase tracking-widest text-neonLime" x-text="t('confirm')"></button>
-                        <button @click="cancelScore(match.id)" class="btn border border-white/15 bg-white/10 px-4 py-3 text-xs font-black uppercase tracking-widest" x-text="t('editScore')"></button>
-                      </div>
-                    </div>
+                  <div>
+                    <label class="text-xs font-black uppercase text-slate-400" x-text="t('selfRating')"></label>
+                    <select x-model.number="join.selfRating" class="mt-1 w-full rounded-lg border px-3 py-3">
+                      <option value="2.0">2.0 · Beginner</option>
+                      <option value="2.5">2.5 · Social Beginner</option>
+                      <option value="3.0">3.0 · Social Player</option>
+                      <option value="3.5">3.5 · Intermediate</option>
+                      <option value="4.0">4.0 · Strong Player</option>
+                    </select>
                   </div>
-                </template>
-                <div x-show="!eventMatches().filter(m => m.status !== 'confirmed').length" class="border border-dashed border-white/15 p-8 text-center text-sm text-steel" x-text="t('noCurrentMatches')"></div>
-              </div>
-            </div>
+                </div>
 
-            <div class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
-              <div class="mb-4 flex items-center justify-between gap-3">
-                <h3 class="text-lg font-black uppercase tracking-widest" x-text="t('confirmedResults')"></h3>
-                <button @click="exportData()" class="btn border border-white/10 bg-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-white/15" x-text="t('exportJson')"></button>
-              </div>
-              <div class="overflow-x-auto scrollbar-thin">
-                <table class="w-full min-w-[720px] border-collapse text-sm">
-                  <thead class="table-head text-left text-xs uppercase tracking-widest text-steel">
-                    <tr>
-                      <th class="p-3" x-text="t('time')"></th>
-                      <th class="p-3">TEAM A</th>
-                      <th class="p-3" x-text="t('score')"></th>
-                      <th class="p-3">TEAM B</th>
-                      <th class="p-3" x-text="t('eloDelta')"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <template x-for="match in confirmedMatches().slice().reverse()" :key="match.id">
-                      <tr class="border-b border-white/10">
-                        <td class="p-3 text-steel" x-text="formatDateTime(match.confirmedAt)"></td>
-                        <td class="p-3 text-cyberOrange font-black" x-text="teamNames(match.teamA)"></td>
-                        <td class="p-3 mono text-2xl font-black" x-text="match.scoreA + ' - ' + match.scoreB"></td>
-                        <td class="p-3 text-neonLime font-black" x-text="teamNames(match.teamB)"></td>
-                        <td class="p-3 mono" x-text="match.deltaA > 0 ? '+' + match.deltaA + ' / ' + (-match.deltaA) : match.deltaA + ' / +' + (-match.deltaA)"></td>
-                      </tr>
+                <div class="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
+                  <button @click="join.useAssessment = !join.useAssessment" class="flex w-full items-center justify-between gap-3 text-left">
+                    <span>
+                      <b class="block text-sm uppercase text-lime-300" x-text="t('notSure')"></b>
+                      <span class="text-xs text-slate-400" x-text="t('assessmentHint')"></span>
+                    </span>
+                    <span class="chamfer-sm border border-white/20 px-3 py-2 text-xs font-black" x-text="join.useAssessment ? t('hide') : t('takeAssessment')"></span>
+                  </button>
+                  <div x-show="join.useAssessment" x-transition class="mt-4 space-y-3">
+                    <template x-for="(q,idx) in questions" :key="q.key">
+                      <div class="rounded-lg border border-white/10 bg-[#15181b] p-3">
+                        <div class="text-sm font-bold"><span x-text="idx+1"></span>. <span x-text="q[lang]"></span></div>
+                        <div class="mt-2 grid grid-cols-4 gap-2">
+                          <template x-for="n in [1,2,3,4]" :key="n">
+                            <button @click="join.answers[q.key]=n" class="chamfer-sm border px-2 py-2 text-xs font-black" :class="join.answers[q.key]===n ? 'border-lime-300 bg-lime-300 text-black' : 'border-white/10 bg-white/5 text-slate-300'" x-text="n"></button>
+                          </template>
+                        </div>
+                      </div>
                     </template>
-                  </tbody>
-                </table>
+                  </div>
+                </div>
+
+                <div class="mt-4 rounded-xl border border-cyan-300/20 bg-cyan-950/10 p-3 text-sm text-slate-300">
+                  <b class="text-cyan-200" x-text="t('aiEstimate')"></b>
+                  <div class="mt-2 grid gap-2 sm:grid-cols-3">
+                    <div><span class="text-slate-500">Level</span><div class="text-xl font-black" x-text="previewEstimate().level.toFixed(2)"></div></div>
+                    <div><span class="text-slate-500">Tech</span><div class="text-xl font-black" x-text="previewEstimate().tech.toFixed(2)"></div></div>
+                    <div><span class="text-slate-500">Tact</span><div class="text-xl font-black" x-text="previewEstimate().tact.toFixed(2)"></div></div>
+                  </div>
+                </div>
+
+                <button @click="submitPlayer()" :disabled="busy" class="chamfer mt-4 w-full bg-lime-300 px-5 py-4 text-base font-black uppercase text-black disabled:opacity-40" x-text="busy ? t('saving') : t('addJoinQueue')"></button>
               </div>
-              <div x-show="!confirmedMatches().length" class="border border-dashed border-white/15 p-5 text-center text-sm text-steel" x-text="t('noResultsYet')"></div>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      <section x-show="view === 'leaderboard'" x-cloak>
-        <div class="grid gap-5 xl:grid-cols-[1fr_380px]">
-          <div class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
-            <div class="mb-4 flex items-center justify-between gap-3">
-              <h3 class="text-lg font-black uppercase tracking-widest" x-text="t('leaderboard')"></h3>
-              <div class="h-4 flex-1 hazard opacity-40"></div>
-            </div>
-            <div class="overflow-x-auto scrollbar-thin">
-              <table class="w-full min-w-[780px] border-collapse text-sm">
-                <thead class="table-head text-left text-xs uppercase tracking-widest text-steel">
-                  <tr>
-                    <th class="p-3">#</th>
-                    <th class="p-3" x-text="t('player')"></th>
-                    <th class="p-3">ELO</th>
-                    <th class="p-3" x-text="t('level')"></th>
-                    <th class="p-3" x-text="t('tech')"></th>
-                    <th class="p-3" x-text="t('tact')"></th>
-                    <th class="p-3" x-text="t('matches')"></th>
-                    <th class="p-3" x-text="t('winRate')"></th>
-                    <th class="p-3" x-text="t('form5')"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <template x-for="(player, index) in leaderboard()" :key="player.id">
-                    <tr class="cursor-pointer border-b border-white/10 hover:bg-white/5" @click="selectedStatsPlayerId = player.id">
-                      <td class="p-3 mono text-lg font-black" x-text="index + 1"></td>
-                      <td class="p-3 font-black" x-text="player.nickname"></td>
-                      <td class="p-3 mono text-2xl font-black" :class="index === 0 ? 'text-neonLime' : 'text-white'" x-text="player.rating"></td>
-                      <td class="p-3 text-steel" x-text="levelName(player)"></td>
-                      <td class="p-3"><div class="power-bar"><div class="power-fill bg-cyberOrange" :style="'width:' + scorePercent(player.tech) + '%'"></div></div><span class="mono text-xs" x-text="player.tech.toFixed(2)"></span></td>
-                      <td class="p-3"><div class="power-bar"><div class="power-fill bg-neonLime" :style="'width:' + scorePercent(player.tact) + '%'"></div></div><span class="mono text-xs" x-text="player.tact.toFixed(2)"></span></td>
-                      <td class="p-3 mono" x-text="player.matches"></td>
-                      <td class="p-3 mono" x-text="winRate(player) + '%'"></td>
-                      <td class="p-3"><span x-html="formBadges(player)"></span></td>
-                    </tr>
+              <aside class="space-y-4">
+                <div class="chamfer border border-white/10 bg-[#22272d]/90 p-4">
+                  <h3 class="text-lg font-black uppercase" x-text="t('myStatus')"></h3>
+                  <template x-if="myEventPlayer">
+                    <div class="mt-3 space-y-3">
+                      <div class="flex items-center justify-between rounded-lg bg-black/20 p-3"><span x-text="myEventPlayer.nickname"></span><b class="text-lime-300" x-text="myEventPlayer.status"></b></div>
+                      <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                        <div class="rounded-lg bg-black/20 p-2"><span class="text-slate-500">ELO</span><b class="block text-lg" x-text="Math.round(myEventPlayer.elo)"></b></div>
+                        <div class="rounded-lg bg-black/20 p-2"><span class="text-slate-500">W-L</span><b class="block text-lg" x-text="myEventPlayer.wins+'-'+myEventPlayer.losses"></b></div>
+                        <div class="rounded-lg bg-black/20 p-2"><span class="text-slate-500">Q</span><b class="block text-lg" x-text="myQueuePosition() || '-'"></b></div>
+                      </div>
+                      <div class="flex gap-2">
+                        <button @click="setMyStatus('waiting')" class="chamfer-sm flex-1 bg-lime-300 px-3 py-3 text-xs font-black text-black" x-text="t('joinQueue')"></button>
+                        <button @click="setMyStatus('paused')" class="chamfer-sm flex-1 border border-white/15 px-3 py-3 text-xs font-black" x-text="t('pause')"></button>
+                      </div>
+                    </div>
                   </template>
-                </tbody>
-              </table>
+                  <template x-if="!myEventPlayer"><p class="mt-2 text-sm text-slate-400" x-text="t('noPlayerYet')"></p></template>
+                </div>
+
+                <div class="chamfer border border-white/10 bg-[#22272d]/90 p-4">
+                  <h3 class="text-lg font-black uppercase" x-text="t('liveQueue')"></h3>
+                  <div class="mt-3 max-h-[360px] space-y-2 overflow-auto no-scrollbar">
+                    <template x-for="(p,idx) in waitingPlayers()" :key="p.id">
+                      <div class="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 p-3 text-sm">
+                        <div><b x-text="(idx+1)+'. '+p.nickname"></b><div class="text-xs text-slate-500" x-text="'ELO '+Math.round(p.elo)+' · '+p.rating_confidence"></div></div>
+                        <span class="text-xs text-lime-300" x-text="p.status"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </aside>
             </div>
-            <div x-show="!players.length" class="border border-dashed border-white/15 p-8 text-center text-sm text-steel" x-text="t('noPlayersYet')"></div>
-          </div>
+          </section>
 
-          <aside class="chamfer-lg border border-white/10 bg-panel/90 p-4 md:p-5">
-            <h3 class="mb-4 text-lg font-black uppercase tracking-widest" x-text="t('playerProfile')"></h3>
-            <label class="block">
-              <span class="mb-1 block text-xs font-black uppercase tracking-widest text-steel" x-text="t('choosePlayer')"></span>
-              <select x-model="selectedStatsPlayerId" class="chamfer w-full border border-white/10 bg-black/25 px-4 py-3 font-bold outline-none focus:border-neonLime/50">
-                <template x-for="player in leaderboard()" :key="player.id">
-                  <option :value="player.id" x-text="player.nickname"></option>
-                </template>
-              </select>
-            </label>
+          <section x-show="tab==='organizer'" x-cloak>
+            <template x-if="!organizerUnlocked">
+              <div class="chamfer mx-auto max-w-md border border-orange-400/40 bg-[#22272d] p-5">
+                <h2 class="text-2xl font-black uppercase" x-text="t('organizerMode')"></h2>
+                <p class="mt-2 text-sm text-slate-400" x-text="t('pinHint')"></p>
+                <input x-model="pinInput" type="password" class="mt-4 w-full rounded-lg border px-3 py-3" placeholder="PIN" />
+                <button @click="unlockOrganizer()" class="chamfer mt-3 w-full bg-orange-400 px-5 py-4 font-black text-black">UNLOCK</button>
+              </div>
+            </template>
 
-            <template x-if="statsPlayer()">
-              <div class="mt-5 space-y-4">
-                <div class="chamfer border border-neonLime/30 bg-neonLime/10 p-4 text-center shadow-glowLime">
-                  <div class="text-2xl font-black" x-text="statsPlayer().nickname"></div>
-                  <div class="mono text-5xl font-black text-neonLime" x-text="statsPlayer().rating"></div>
-                  <div class="text-xs uppercase tracking-widest text-steel" x-text="levelName(statsPlayer())"></div>
+            <template x-if="organizerUnlocked">
+              <div class="space-y-4">
+                <div class="chamfer border border-white/10 bg-[#22272d]/90 p-4">
+                  <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h2 class="text-2xl font-black uppercase" x-text="t('fieldControl')"></h2>
+                      <p class="text-sm text-slate-400" x-text="selectedEvent ? eventName(selectedEvent) : '-' "></p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                      <label class="text-xs text-slate-400"><span x-text="t('courts')"></span><input x-model.number="settings.courts" @change="updateEventSettings()" type="number" min="1" max="12" class="mt-1 w-24 rounded-lg border px-3 py-2"></label>
+                      <label class="text-xs text-slate-400"><span x-text="t('minutes')"></span><input x-model.number="settings.minutes" @change="updateEventSettings()" type="number" min="3" max="60" class="mt-1 w-24 rounded-lg border px-3 py-2"></label>
+                    </div>
+                  </div>
+                  <div class="mt-4 grid gap-2 text-center text-xs font-black uppercase sm:grid-cols-5">
+                    <div class="rounded-xl bg-black/25 p-3"><span class="block text-slate-500" x-text="t('players')"></span><b class="text-xl" x-text="eventPlayers.length"></b></div>
+                    <div class="rounded-xl bg-black/25 p-3"><span class="block text-slate-500" x-text="t('waiting')"></span><b class="text-xl text-lime-300" x-text="waitingPlayers().length"></b></div>
+                    <div class="rounded-xl bg-black/25 p-3"><span class="block text-slate-500" x-text="t('playing')"></span><b class="text-xl text-orange-300" x-text="eventPlayers.filter(p=>p.status==='playing').length"></b></div>
+                    <div class="rounded-xl bg-black/25 p-3"><span class="block text-slate-500" x-text="t('matches')"></span><b class="text-xl" x-text="matches.length"></b></div>
+                    <button @click="matchAllAvailableCourts()" class="chamfer-sm bg-lime-300 p-3 text-black" x-text="t('matchAvailable')"></button>
+                  </div>
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                  <div class="border border-white/10 bg-black/20 p-3"><div class="text-xs text-steel" x-text="t('matches')"></div><div class="mono text-2xl font-black" x-text="statsPlayer().matches"></div></div>
-                  <div class="border border-white/10 bg-black/20 p-3"><div class="text-xs text-steel" x-text="t('winRate')"></div><div class="mono text-2xl font-black" x-text="winRate(statsPlayer()) + '%'"></div></div>
-                  <div class="border border-white/10 bg-black/20 p-3"><div class="text-xs text-steel" x-text="t('avgFor')"></div><div class="mono text-2xl font-black" x-text="avgFor(statsPlayer())"></div></div>
-                  <div class="border border-white/10 bg-black/20 p-3"><div class="text-xs text-steel" x-text="t('avgAgainst')"></div><div class="mono text-2xl font-black" x-text="avgAgainst(statsPlayer())"></div></div>
-                </div>
-                <div>
-                  <div class="mb-1 flex items-center justify-between text-xs font-black uppercase tracking-widest text-steel"><span x-text="t('techScore')"></span><span class="mono" x-text="statsPlayer().tech.toFixed(2)"></span></div>
-                  <div class="power-bar"><div class="power-fill bg-cyberOrange" :style="'width:' + scorePercent(statsPlayer().tech) + '%'"></div></div>
-                </div>
-                <div>
-                  <div class="mb-1 flex items-center justify-between text-xs font-black uppercase tracking-widest text-steel"><span x-text="t('tactScore')"></span><span class="mono" x-text="statsPlayer().tact.toFixed(2)"></span></div>
-                  <div class="power-bar"><div class="power-fill bg-neonLime" :style="'width:' + scorePercent(statsPlayer().tact) + '%'"></div></div>
-                </div>
-                <div>
-                  <div class="mb-2 text-xs font-black uppercase tracking-widest text-steel" x-text="t('lastFive')"></div>
-                  <div class="flex gap-2" x-html="formBadges(statsPlayer(), true)"></div>
+
+                <div class="grid gap-4 lg:grid-cols-[1fr_360px]">
+                  <div class="space-y-4">
+                    <div class="grid gap-4 md:grid-cols-2" :class="settings.courts>=3 ? 'xl:grid-cols-3' : ''">
+                      <template x-for="court in courtNumbers()" :key="court">
+                        <div class="chamfer border border-white/10 bg-[#22272d] p-3">
+                          <div class="hazard mb-3 h-2"></div>
+                          <div class="flex items-center justify-between">
+                            <h3 class="text-xl font-black uppercase">COURT <span x-text="court"></span></h3>
+                            <button @click="matchNext(court)" class="chamfer-sm bg-lime-300 px-3 py-2 text-xs font-black text-black" x-text="t('matchNext')"></button>
+                          </div>
+                          <template x-if="activeMatchByCourt(court)">
+                            <div class="mt-3" x-data="{ get m(){ return activeMatchByCourt(court) } }">
+                              <div class="mb-3 rounded-xl border border-cyan-300/20 bg-cyan-950/10 p-3 text-center">
+                                <div class="text-xs uppercase text-slate-400" x-text="m.match_type"></div>
+                                <div class="text-4xl font-black tabular-nums" :class="timeLeft(m).ended ? 'text-orange-300' : 'text-lime-300'" x-text="timeLeft(m).label"></div>
+                              </div>
+                              <div class="grid gap-3 sm:grid-cols-2">
+                                <div class="rounded-xl border border-orange-400/40 bg-orange-950/10 p-3 glow-orange">
+                                  <div class="mb-2 text-xs font-black text-orange-300">TEAM A</div>
+                                  <template x-for="p in matchTeam(m,'A')" :key="p.id"><div class="py-1 text-sm font-bold" x-text="p.nickname"></div></template>
+                                </div>
+                                <div class="rounded-xl border border-lime-300/40 bg-lime-950/10 p-3 glow-lime">
+                                  <div class="mb-2 text-xs font-black text-lime-300">TEAM B</div>
+                                  <template x-for="p in matchTeam(m,'B')" :key="p.id"><div class="py-1 text-sm font-bold" x-text="p.nickname"></div></template>
+                                </div>
+                              </div>
+                              <div class="mt-3 grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+                                <div><label class="text-xs text-slate-500">A</label><input x-model.number="scoreInputs[m.id].a" type="number" min="0" max="30" class="w-full rounded-lg border px-3 py-3 text-center text-2xl font-black"></div>
+                                <div class="pb-3 text-slate-500">-</div>
+                                <div><label class="text-xs text-slate-500">B</label><input x-model.number="scoreInputs[m.id].b" type="number" min="0" max="30" class="w-full rounded-lg border px-3 py-3 text-center text-2xl font-black"></div>
+                              </div>
+                              <div class="mt-3 grid grid-cols-2 gap-2">
+                                <button @click="confirmScore(m)" class="chamfer-sm bg-lime-300 px-3 py-3 text-xs font-black text-black" x-text="t('confirmScore')"></button>
+                                <button @click="cancelMatch(m)" class="chamfer-sm border border-red-400/40 px-3 py-3 text-xs font-black text-red-200" x-text="t('cancel')"></button>
+                              </div>
+                            </div>
+                          </template>
+                          <template x-if="!activeMatchByCourt(court)">
+                            <div class="mt-3 rounded-xl border border-white/10 bg-black/20 p-6 text-center text-sm text-slate-400" x-text="t('courtReady')"></div>
+                          </template>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+
+                  <aside class="space-y-4">
+                    <div class="chamfer border border-white/10 bg-[#22272d] p-4">
+                      <h3 class="text-lg font-black uppercase" x-text="t('waitingList')"></h3>
+                      <div class="mt-3 max-h-[420px] space-y-2 overflow-auto no-scrollbar">
+                        <template x-for="p in eventPlayersSorted()" :key="p.id">
+                          <div class="rounded-lg border border-white/10 bg-black/20 p-3 text-sm">
+                            <div class="flex items-center justify-between gap-2">
+                              <b x-text="p.nickname"></b>
+                              <span class="text-[10px] uppercase" :class="p.status==='waiting'?'text-lime-300':p.status==='playing'?'text-orange-300':'text-slate-400'" x-text="p.status"></span>
+                            </div>
+                            <div class="mt-1 text-xs text-slate-500" x-text="'ELO '+Math.round(p.elo)+' · '+p.rating_source+' · '+p.rating_confidence"></div>
+                            <div class="mt-2 flex gap-1">
+                              <button @click="setPlayerStatus(p,'waiting')" class="rounded bg-lime-300/15 px-2 py-1 text-[10px] font-bold text-lime-200">QUEUE</button>
+                              <button @click="setPlayerStatus(p,'paused')" class="rounded bg-white/10 px-2 py-1 text-[10px] font-bold">PAUSE</button>
+                              <button @click="setPlayerStatus(p,'left')" class="rounded bg-red-400/10 px-2 py-1 text-[10px] font-bold text-red-200">LEFT</button>
+                            </div>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                    <div class="chamfer border border-orange-400/30 bg-orange-950/10 p-4">
+                      <h3 class="text-lg font-black uppercase text-orange-300" x-text="t('specialMatch')"></h3>
+                      <p class="mt-1 text-xs text-slate-400" x-text="t('specialHint')"></p>
+                      <button @click="openSpecial()" class="chamfer-sm mt-3 w-full border border-orange-300/60 px-4 py-3 text-xs font-black text-orange-200" x-text="t('manualCreate')"></button>
+                    </div>
+                    <div class="chamfer border border-white/10 bg-[#22272d] p-4">
+                      <button @click="endEventSummary()" class="chamfer-sm w-full bg-white px-4 py-3 text-xs font-black text-black" x-text="t('endSummary')"></button>
+                    </div>
+                  </aside>
                 </div>
               </div>
             </template>
-          </aside>
+          </section>
+
+          <section x-show="tab==='stats'" x-cloak>
+            <div class="grid gap-4 lg:grid-cols-[1fr_400px]">
+              <div class="chamfer border border-white/10 bg-[#22272d] p-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <h2 class="text-2xl font-black uppercase" x-text="t('leaderboard')"></h2>
+                  <button @click="copySummary()" class="chamfer-sm bg-lime-300 px-4 py-3 text-xs font-black text-black" x-text="t('copySummary')"></button>
+                </div>
+                <div class="mt-4 overflow-auto">
+                  <table class="w-full min-w-[760px] text-left text-sm">
+                    <thead class="hazard text-[11px] uppercase text-slate-300"><tr><th class="p-3">#</th><th class="p-3" x-text="t('nickname')"></th><th class="p-3">ELO</th><th class="p-3">W-L</th><th class="p-3">WIN%</th><th class="p-3">PF/PA</th><th class="p-3">FORM</th><th class="p-3">SOURCE</th></tr></thead>
+                    <tbody>
+                      <template x-for="(p,idx) in leaderboard()" :key="p.id">
+                        <tr class="border-b border-white/5"><td class="p-3 font-black text-lime-300" x-text="idx+1"></td><td class="p-3 font-bold" x-text="p.nickname"></td><td class="p-3 font-black" x-text="Math.round(p.elo)"></td><td class="p-3" x-text="p.wins+'-'+p.losses"></td><td class="p-3" x-text="winRate(p)+'%'"></td><td class="p-3" x-text="avgPfPa(p)"></td><td class="p-3"><span x-text="(p.last_form||[]).join(' ')"></span></td><td class="p-3 text-xs text-slate-400" x-text="p.rating_source"></td></tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <aside class="space-y-4">
+                <div class="chamfer border border-white/10 bg-[#22272d] p-4">
+                  <h3 class="text-lg font-black uppercase" x-text="t('eventSummary')"></h3>
+                  <pre class="mt-3 whitespace-pre-wrap rounded-xl border border-white/10 bg-black/25 p-3 text-xs leading-5 text-slate-300" x-text="summaryText()"></pre>
+                </div>
+                <div class="chamfer border border-white/10 bg-[#22272d] p-4">
+                  <h3 class="text-lg font-black uppercase" x-text="t('matchHistory')"></h3>
+                  <div class="mt-3 max-h-[420px] space-y-2 overflow-auto no-scrollbar">
+                    <template x-for="m in confirmedMatches()" :key="m.id">
+                      <div class="rounded-lg border border-white/10 bg-black/20 p-3 text-sm">
+                        <div class="flex justify-between"><b>COURT <span x-text="m.court_number"></span></b><span x-text="m.team_a_score+'-'+m.team_b_score"></span></div>
+                        <div class="mt-1 text-xs text-slate-400"><span class="text-orange-300">A</span> <span x-text="matchTeam(m,'A').map(p=>p.nickname).join(' + ')"></span></div>
+                        <div class="text-xs text-slate-400"><span class="text-lime-300">B</span> <span x-text="matchTeam(m,'B').map(p=>p.nickname).join(' + ')"></span></div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </section>
         </div>
-      </section>
+      </template>
     </main>
 
-    <footer class="mx-auto max-w-7xl px-4 pb-8 text-center text-xs text-steel md:px-6">
-      <div class="border-t border-white/10 pt-5">
-        <span class="mono">PICKLEBALL SYSTEMS HUB - ALPHA 02</span>
-        <span> · </span>
-        <span x-text="t('footerNote')"></span>
-        <button @click="resetAllData()" class="ml-2 text-cyberOrange underline decoration-cyberOrange/40" x-text="t('resetData')"></button>
+    <div x-show="specialOpen" x-cloak class="fixed inset-0 z-[80] flex items-end bg-black/70 p-3 sm:items-center sm:justify-center">
+      <div @click.outside="specialOpen=false" class="chamfer max-h-[90vh] w-full max-w-2xl overflow-auto border border-orange-400/40 bg-[#22272d] p-4 shadow-2xl">
+        <h2 class="text-2xl font-black uppercase text-orange-300" x-text="t('specialMatch')"></h2>
+        <p class="mt-1 text-sm text-slate-400" x-text="t('pickFour')"></p>
+        <div class="mt-4 grid gap-2 sm:grid-cols-2">
+          <template x-for="p in selectablePlayers()" :key="p.id">
+            <button @click="toggleSpecialPlayer(p.id)" class="rounded-xl border p-3 text-left text-sm" :class="specialSelected.includes(p.id) ? 'border-orange-300 bg-orange-500/10' : 'border-white/10 bg-black/20'">
+              <b x-text="p.nickname"></b><div class="text-xs text-slate-500" x-text="'ELO '+Math.round(p.elo)+' · '+p.status"></div>
+            </button>
+          </template>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-2">
+          <button @click="createSpecialMatch()" class="chamfer-sm bg-orange-400 px-4 py-3 text-sm font-black text-black" x-text="t('createSpecial')"></button>
+          <button @click="specialOpen=false" class="chamfer-sm border border-white/15 px-4 py-3 text-sm font-black" x-text="t('cancel')"></button>
+        </div>
       </div>
-    </footer>
+    </div>
   </div>
 
-  <script>
-    function pickleballHub() {
-      return {
-        storageKey: 'pickleball-systems-hub-alpha02-v1',
-        lang: 'th',
-        view: 'hub',
-        activeEventId: null,
-        selectedPlayerId: '',
-        selectedStatsPlayerId: '',
-        editingProfileId: null,
-        events: [
-          {
-            id: 'event-sat-open-po',
-            code: 'SOP',
-            title: 'Saturday Open Po',
-            dateTime: { th: 'วันเสาร์ · 15:00 - 17:00', en: 'Saturday · 15:00 - 17:00' },
-            venue: 'Papaya Court 4-5',
-            status: 'live',
-            accent: 'lime'
-          },
-          {
-            id: 'event-friday-smash',
-            code: 'FNS',
-            title: 'Friday Night Smash',
-            dateTime: { th: 'วันศุกร์ · 19:30 - 21:30', en: 'Friday · 19:30 - 21:30' },
-            venue: 'Club46 Indoor Court',
-            status: 'upcoming',
-            accent: 'orange'
-          },
-          {
-            id: 'event-sunday-social',
-            code: 'SSP',
-            title: 'Sunday Social Pickle',
-            dateTime: { th: 'วันอาทิตย์ · 14:00 - 16:00', en: 'Sunday · 14:00 - 16:00' },
-            venue: 'SUKSPACE',
-            status: 'completed',
-            accent: 'lime'
-          }
-        ],
-        players: [],
-        queues: {},
-        matches: {},
-        form: {
-          nickname: '',
-          selfRating: 3,
-          answers: {}
-        },
-        questions: [
-          {
-            id: 'q1', axis: 'tech',
-            text: { th: 'Serve / Return: คุณเสิร์ฟและรับเสิร์ฟได้มั่นใจแค่ไหน?', en: 'Serve / Return: How confident are your serve and return?' },
-            options: [
-              { value: 1, label: { th: 'ยังพลาดบ่อย ต้องฝึกพื้นฐาน', en: 'Still miss often; need basics' } },
-              { value: 2, label: { th: 'ทำได้บ้าง แต่ยังไม่สม่ำเสมอ', en: 'Can do it, but not consistent' } },
-              { value: 3, label: { th: 'คุมลูกได้ดี เล่นเกมจริงได้', en: 'Reliable enough for real games' } },
-              { value: 4, label: { th: 'เสิร์ฟ/รีเทิร์นมีเป้าหมายและกดดันคู่แข่งได้', en: 'Targeted serve/return that creates pressure' } }
-            ]
-          },
-          {
-            id: 'q2', axis: 'tech',
-            text: { th: 'Dinking: คุณเล่นลูกหน้าเน็ตสั้นและคุมจังหวะได้แค่ไหน?', en: 'Dinking: How well can you control soft net play?' },
-            options: [
-              { value: 1, label: { th: 'ยังไม่ค่อยเข้าใจ Dink', en: 'Not familiar with dink yet' } },
-              { value: 2, label: { th: 'ทำได้เป็นบางครั้ง แต่คุมความสูงยาก', en: 'Sometimes works, height control is hard' } },
-              { value: 3, label: { th: 'Dink ต่อเนื่องได้และไม่รีบตีแรง', en: 'Can dink consistently without rushing' } },
-              { value: 4, label: { th: 'ใช้ Dink เปิดช่องและบังคับเกมได้', en: 'Can use dink to create openings' } }
-            ]
-          },
-          {
-            id: 'q3', axis: 'tech',
-            text: { th: 'Third Shot Drop: คุณตีลูกดรอปจากหลังคอร์ทเข้าครัวได้ดีแค่ไหน?', en: 'Third Shot Drop: How well can you drop from the baseline into the kitchen?' },
-            options: [
-              { value: 1, label: { th: 'ยังไม่ใช้หรือยังไม่เข้าใจ', en: 'Do not use it yet' } },
-              { value: 2, label: { th: 'ลองได้ แต่ลูกลอย/ติดเน็ตบ่อย', en: 'Can try, but often floats or hits net' } },
-              { value: 3, label: { th: 'ทำได้ในเกมทั่วไปพอสมควร', en: 'Can use it in regular games' } },
-              { value: 4, label: { th: 'ใช้เป็นอาวุธเพื่อขึ้นหน้าเน็ตได้', en: 'Can use it as a setup weapon' } }
-            ]
-          },
-          {
-            id: 'q4', axis: 'tech',
-            text: { th: 'Overhead / Slam: คุณจัดการลูกสูงและปิดแต้มได้แค่ไหน?', en: 'Overhead / Slam: How well do you finish high balls?' },
-            options: [
-              { value: 1, label: { th: 'ตีพลาดหรือกลัวลูกสูง', en: 'Often miss or avoid high balls' } },
-              { value: 2, label: { th: 'ตีได้แต่ยังไม่ค่อยคม', en: 'Can hit, but not sharp yet' } },
-              { value: 3, label: { th: 'ปิดแต้มได้เมื่อมีโอกาส', en: 'Can finish when given chances' } },
-              { value: 4, label: { th: 'อ่านลูกสูงดีและปิดแต้มได้มั่นใจ', en: 'Strong overhead and confident finish' } }
-            ]
-          },
-          {
-            id: 'q5', axis: 'tech',
-            text: { th: 'Blocking / Reset: คุณรับลูกเร็วและรีเซ็ตเกมได้แค่ไหน?', en: 'Blocking / Reset: How well can you block speed-ups and reset?' },
-            options: [
-              { value: 1, label: { th: 'โดนลูกเร็วแล้วหลุดง่าย', en: 'Fast balls often break me down' } },
-              { value: 2, label: { th: 'รับได้บางลูก แต่ยังคุมยาก', en: 'Can block some, but control is hard' } },
-              { value: 3, label: { th: 'รับลูกเร็วและวางกลับได้พอสมควร', en: 'Can block and place back fairly well' } },
-              { value: 4, label: { th: 'รีเซ็ตเกมได้ดีและเปลี่ยนรับเป็นรุกได้', en: 'Can reset well and turn defense into offense' } }
-            ]
-          },
-          {
-            id: 'q6', axis: 'tact',
-            text: { th: 'Positioning: คุณยืนตำแหน่งและขยับคู่กับพาร์ตเนอร์ได้แค่ไหน?', en: 'Positioning: How well do you move with your partner?' },
-            options: [
-              { value: 1, label: { th: 'ยังยืนสับสน/ชนคู่บ่อย', en: 'Often confused or overlap with partner' } },
-              { value: 2, label: { th: 'พอเข้าใจ แต่ยังหลุดตำแหน่ง', en: 'Understand basics but drift out of position' } },
-              { value: 3, label: { th: 'ยืนคู่และปิดพื้นที่ได้ดี', en: 'Cover space well with partner' } },
-              { value: 4, label: { th: 'อ่านเกมและขยับเป็นทีมได้ดีมาก', en: 'Read the game and move as a unit' } }
-            ]
-          },
-          {
-            id: 'q7', axis: 'tact',
-            text: { th: 'Rules / Scoring: คุณเข้าใจกติกา Kitchen, Serve, Scoring แค่ไหน?', en: 'Rules / Scoring: How well do you know kitchen, serve, and scoring rules?' },
-            options: [
-              { value: 1, label: { th: 'ยังต้องให้คนช่วยบอกบ่อย', en: 'Need help often' } },
-              { value: 2, label: { th: 'เข้าใจคร่าวๆ แต่ยังสับสนบางจังหวะ', en: 'Know roughly, but still confused sometimes' } },
-              { value: 3, label: { th: 'เล่นและนับคะแนนได้ถูกต้อง', en: 'Can play and score correctly' } },
-              { value: 4, label: { th: 'ช่วยอธิบายกติกาให้คนอื่นได้', en: 'Can explain rules to others' } }
-            ]
-          },
-          {
-            id: 'q8', axis: 'tact',
-            text: { th: 'Fitness: วันนี้คุณพร้อมเล่นต่อเนื่องแค่ไหน?', en: 'Fitness: How ready are you to play multiple rounds today?' },
-            options: [
-              { value: 1, label: { th: 'อยากเล่นเบาๆ เหนื่อยง่าย', en: 'Light play only; get tired easily' } },
-              { value: 2, label: { th: 'เล่นได้ แต่ต้องพักเป็นช่วงๆ', en: 'Can play, need breaks' } },
-              { value: 3, label: { th: 'พร้อมเล่นหลายเกมปกติ', en: 'Ready for several games' } },
-              { value: 4, label: { th: 'ฟิตมาก พร้อมเกมเร็ว/หนัก', en: 'Very fit; ready for fast games' } }
-            ]
-          },
-          {
-            id: 'q9', axis: 'tact',
-            text: { th: 'Transition: คุณขึ้นจากหลังคอร์ทไปหน้าเน็ตได้ดีแค่ไหน?', en: 'Transition: How well do you move from baseline to kitchen?' },
-            options: [
-              { value: 1, label: { th: 'มักค้างอยู่หลังคอร์ท', en: 'Often stay back too long' } },
-              { value: 2, label: { th: 'พยายามขึ้นหน้า แต่ timing ยังไม่ดี', en: 'Try to move up, timing is not stable' } },
-              { value: 3, label: { th: 'เลือกจังหวะขึ้นหน้าได้ดี', en: 'Choose transition timing well' } },
-              { value: 4, label: { th: 'เปลี่ยนโซนและคุมพื้นที่ได้เป็นระบบ', en: 'Transition and control space systematically' } }
-            ]
-          },
-          {
-            id: 'q10', axis: 'tact',
-            text: { th: 'Match Experience: คุณมีประสบการณ์เกมจริง/แข่งมากแค่ไหน?', en: 'Match Experience: How much real match or tournament experience do you have?' },
-            options: [
-              { value: 1, label: { th: 'เพิ่งเริ่มเล่น ยังไม่ค่อยลงเกมจริง', en: 'New player; limited real games' } },
-              { value: 2, label: { th: 'เล่น Open Play บ้าง', en: 'Some open play experience' } },
-              { value: 3, label: { th: 'เล่นเกมนับคะแนนเป็นประจำ', en: 'Regular scored games' } },
-              { value: 4, label: { th: 'เคยแข่งหรือเล่นเกมจริงจังบ่อย', en: 'Tournament or frequent competitive games' } }
-            ]
-          }
-        ],
-        dict: {
-          th: {
-            freeLocal: 'ใช้ฟรี · เก็บข้อมูลในเครื่องด้วย localStorage · เหมาะกับมือถือ/แท็บเล็ตหน้าสนาม',
-            navEvents: 'อีเวนต์', navPlayers: 'ผู้เล่น', navCourt: 'หน้าสนาม', navStats: 'สถิติ', fieldMode: 'FIELD MODE',
-            hubTitle: 'Event Selection Hub', hubSub: 'เลือกอีเวนต์ของก๊วน ดูสถานะ คิว ผลแข่ง และกดเข้าร่วม Open Play ได้ทันที',
-            onboardingTitle: 'Onboarding & 2-Axis Analysis', onboardingSub: 'สร้างโปรไฟล์ผู้เล่นด้วย Self-Rating และแบบทดสอบ 10 ข้อ เพื่อแยก Tech Score + Tactical/Physical Score',
-            queueTitle: 'Self-Service Smart Matchmaking', queueSub: 'ผู้เล่นต่อคิวเอง ผู้จัดกด Match Next Game ระบบเลือก 4 คนที่ระดับเกาะกลุ่มและแบ่งทีมให้สมดุลที่สุด',
-            statsTitle: 'Pro Stats & Leaderboard', statsSub: 'สรุปอันดับ Elo, Win Rate, แต้มเฉลี่ย และฟอร์ม 5 นัดหลังสุด หลังคะแนนได้รับการยืนยันแล้ว',
-            live: 'LIVE', upcoming: 'UPCOMING', completed: 'COMPLETED', joinEvent: 'JOIN EVENT', waiting: 'รอคิว', matches: 'แมตช์', players: 'ผู้เล่น',
-            systemRulesTitle: 'GDSQ Fair Play Logic', rule1Head: '1. Join ง่าย', rule1: 'สแกน QR เข้างาน กรอกชื่อ และเข้าคิวเองได้', rule2Head: '2. วิเคราะห์ 2 แกน', rule2: 'แยก Technical กับ Tactical/Physical เพื่อจับคู่แม่นกว่า self-rating อย่างเดียว', rule3Head: '3. Match แฟร์', rule3: 'เลือก 4 คนคะแนนใกล้กัน แล้วสลับทีมให้พลังรวมใกล้ที่สุด', rule4Head: '4. ยืนยันผลสองฝั่ง', rule4: 'คะแนนต้องมีอีกฝั่งกดยืนยันก่อนอัปเดต Elo',
-            registeredPlayers: 'Registered Players', loadDemo: 'โหลดผู้เล่นตัวอย่าง', noPlayersYet: 'ยังไม่มีผู้เล่น กดสร้างโปรไฟล์ใหม่หรือโหลดตัวอย่าง', retestPlayer: 'Retest Player Power', newPlayerSetup: 'New Player Setup', onboardingHint: 'ตอบครบ 10 ข้อ ระบบจะคำนวณพลัง 2 แกนและ Elo เริ่มต้น ผู้เล่นเก่าทำใหม่ได้เสมอ', clearForm: 'ล้างฟอร์ม', nickname: 'ชื่อเล่น', nicknamePlaceholder: 'เช่น Don, Golf, Ice', selfRating: 'Self-Rating', techScore: 'Technical Score', tactScore: 'Tactical / Physical Score', initialElo: 'Initial Elo', saveRetest: 'SAVE RETEST', createProfile: 'CREATE PROFILE',
-            selectEventFirst: 'กรุณาเลือกอีเวนต์ก่อนจากหน้า Event Hub', liveGames: 'เกมสด', confirmed: 'ยืนยันแล้ว', selfService: 'Self-Service Queue', choosePlayer: 'เลือกผู้เล่น', selectPlayer: 'เลือกชื่อผู้เล่น', joinQueue: 'JOIN QUEUE', pause: 'PAUSE', addNewPlayer: 'เพิ่มผู้เล่นใหม่', waitingList: 'Waiting List', matchNext: 'MATCH NEXT GAME', emptyQueue: 'ยังไม่มีคนในคิว', currentMatches: 'Current Matches', matchId: 'Match', active: 'ACTIVE', pendingVerification: 'PENDING VERIFICATION', enterScore: 'กรอกคะแนนหลังแข่ง', submitByA: 'Submit by Team A', submitByB: 'Submit by Team B', confirm: 'CONFIRM', editScore: 'EDIT', noCurrentMatches: 'ยังไม่มีแมตช์ที่กำลังเล่นหรือรอยืนยัน', confirmedResults: 'Confirmed Results', exportJson: 'Export JSON', time: 'เวลา', score: 'คะแนน', eloDelta: 'Elo Δ', noResultsYet: 'ยังไม่มีผลแข่งที่ยืนยันแล้ว',
-            leaderboard: 'Leaderboard', player: 'ผู้เล่น', level: 'ระดับ', tech: 'Tech', tact: 'Tact', winRate: 'Win Rate', form5: 'ฟอร์ม 5 นัด', playerProfile: 'Player Profile', avgFor: 'แต้มทำเฉลี่ย', avgAgainst: 'แต้มเสียเฉลี่ย', lastFive: 'Last 5 Matches', footerNote: 'Single File App · Tailwind CSS · Alpine.js · localStorage', resetData: 'Reset Data',
-            alertNeedName: 'กรุณากรอกชื่อเล่น', alertNeedAnswers: 'กรุณาตอบคำถามให้ครบ 10 ข้อ', alertSaved: 'บันทึกโปรไฟล์แล้ว', alertSelectPlayer: 'กรุณาเลือกผู้เล่นก่อน', alertNeedFour: 'ต้องมีผู้เล่น waiting อย่างน้อย 4 คน', alertBadScore: 'กรุณากรอกคะแนนให้ถูกต้อง และคะแนนห้ามเสมอ', alertSubmitted: 'ส่งคะแนนแล้ว รออีกฝั่งกดยืนยัน', alertConfirmed: 'ยืนยันผลแล้ว ระบบอัปเดต Elo และส่งผู้เล่นกลับท้ายคิว', alertDemoLoaded: 'โหลดผู้เล่นตัวอย่างแล้ว', alertReset: 'ต้องการล้างข้อมูลทั้งหมดใช่ไหม?', alertExport: 'คัดลอกข้อมูล JSON แล้ว'
-          },
-          en: {
-            freeLocal: 'Free to use · localStorage data · Built for mobile/tablet court-side operation',
-            navEvents: 'EVENTS', navPlayers: 'PLAYERS', navCourt: 'COURT', navStats: 'STATS', fieldMode: 'FIELD MODE',
-            hubTitle: 'Event Selection Hub', hubSub: 'Select a community event, view status, queue, results, and join open play instantly.',
-            onboardingTitle: 'Onboarding & 2-Axis Analysis', onboardingSub: 'Create a player profile using self-rating and a 10-question test to separate Tech Score and Tactical/Physical Score.',
-            queueTitle: 'Self-Service Smart Matchmaking', queueSub: 'Players join the queue themselves. Organizer taps Match Next Game. The engine selects four close-level players and balances teams.',
-            statsTitle: 'Pro Stats & Leaderboard', statsSub: 'See Elo ranking, win rate, average points, and last-five form after results are verified.',
-            live: 'LIVE', upcoming: 'UPCOMING', completed: 'COMPLETED', joinEvent: 'JOIN EVENT', waiting: 'Waiting', matches: 'Matches', players: 'Players',
-            systemRulesTitle: 'GDSQ Fair Play Logic', rule1Head: '1. Easy Join', rule1: 'Scan QR, enter profile, and join the queue by yourself.', rule2Head: '2. 2-Axis Analysis', rule2: 'Separate Technical and Tactical/Physical power for better matching than self-rating alone.', rule3Head: '3. Fair Match', rule3: 'Pick four similar-level players and balance team power.', rule4Head: '4. Double Verify', rule4: 'Scores need confirmation before Elo updates.',
-            registeredPlayers: 'Registered Players', loadDemo: 'Load Demo Players', noPlayersYet: 'No players yet. Create a profile or load demo players.', retestPlayer: 'Retest Player Power', newPlayerSetup: 'New Player Setup', onboardingHint: 'Complete 10 questions to calculate two-axis power and initial Elo. Existing players can retest anytime.', clearForm: 'Clear Form', nickname: 'Nickname', nicknamePlaceholder: 'e.g. Don, Golf, Ice', selfRating: 'Self-Rating', techScore: 'Technical Score', tactScore: 'Tactical / Physical Score', initialElo: 'Initial Elo', saveRetest: 'SAVE RETEST', createProfile: 'CREATE PROFILE',
-            selectEventFirst: 'Please select an event from the Event Hub first.', liveGames: 'Live Games', confirmed: 'Confirmed', selfService: 'Self-Service Queue', choosePlayer: 'Choose Player', selectPlayer: 'Select player', joinQueue: 'JOIN QUEUE', pause: 'PAUSE', addNewPlayer: 'Add New Player', waitingList: 'Waiting List', matchNext: 'MATCH NEXT GAME', emptyQueue: 'No players in queue yet.', currentMatches: 'Current Matches', matchId: 'Match', active: 'ACTIVE', pendingVerification: 'PENDING VERIFICATION', enterScore: 'Enter match score', submitByA: 'Submit by Team A', submitByB: 'Submit by Team B', confirm: 'CONFIRM', editScore: 'EDIT', noCurrentMatches: 'No active or pending matches.', confirmedResults: 'Confirmed Results', exportJson: 'Export JSON', time: 'Time', score: 'Score', eloDelta: 'Elo Δ', noResultsYet: 'No confirmed results yet.',
-            leaderboard: 'Leaderboard', player: 'Player', level: 'Level', tech: 'Tech', tact: 'Tact', winRate: 'Win Rate', form5: 'Last 5', playerProfile: 'Player Profile', avgFor: 'Avg Points For', avgAgainst: 'Avg Points Against', lastFive: 'Last 5 Matches', footerNote: 'Single File App · Tailwind CSS · Alpine.js · localStorage', resetData: 'Reset Data',
-            alertNeedName: 'Please enter a nickname.', alertNeedAnswers: 'Please answer all 10 questions.', alertSaved: 'Profile saved.', alertSelectPlayer: 'Please choose a player first.', alertNeedFour: 'At least 4 waiting players are required.', alertBadScore: 'Please enter valid scores. A match cannot end in a tie.', alertSubmitted: 'Score submitted. Waiting for the other side to confirm.', alertConfirmed: 'Result confirmed. Elo updated and players returned to the queue tail.', alertDemoLoaded: 'Demo players loaded.', alertReset: 'Reset all data?', alertExport: 'JSON data copied to clipboard.'
-          }
-        },
-
-        init() {
-          const saved = localStorage.getItem(this.storageKey);
-          if (saved) {
-            try {
-              const data = JSON.parse(saved);
-              this.lang = data.lang || 'th';
-              this.view = data.view || 'hub';
-              this.activeEventId = data.activeEventId || null;
-              this.players = Array.isArray(data.players) ? data.players : [];
-              this.queues = data.queues || {};
-              this.matches = data.matches || {};
-              this.selectedPlayerId = data.selectedPlayerId || '';
-              this.selectedStatsPlayerId = data.selectedStatsPlayerId || '';
-            } catch (err) {
-              console.warn('Failed to load saved data', err);
-            }
-          }
-          this.events.forEach(event => {
-            if (!this.queues[event.id]) this.queues[event.id] = [];
-            if (!this.matches[event.id]) this.matches[event.id] = [];
-          });
-          if (!this.selectedStatsPlayerId && this.players[0]) this.selectedStatsPlayerId = this.players[0].id;
-          this.persist();
-        },
-
-        persist() {
-          localStorage.setItem(this.storageKey, JSON.stringify({
-            lang: this.lang,
-            view: this.view,
-            activeEventId: this.activeEventId,
-            selectedPlayerId: this.selectedPlayerId,
-            selectedStatsPlayerId: this.selectedStatsPlayerId,
-            players: this.players,
-            queues: this.queues,
-            matches: this.matches
-          }));
-        },
-
-        t(key) { return (this.dict[this.lang] && this.dict[this.lang][key]) || key; },
-        toggleLang() { this.lang = this.lang === 'th' ? 'en' : 'th'; this.persist(); },
-        go(view) { this.view = view; this.persist(); },
-        pageTitle() { return this.t(this.view === 'hub' ? 'hubTitle' : this.view === 'onboarding' ? 'onboardingTitle' : this.view === 'queue' ? 'queueTitle' : 'statsTitle'); },
-        pageSubtitle() { return this.t(this.view === 'hub' ? 'hubSub' : this.view === 'onboarding' ? 'onboardingSub' : this.view === 'queue' ? 'queueSub' : 'statsSub'); },
-        navClass(view) { return this.view === view ? 'border border-neonLime/50 bg-neonLime/15 text-neonLime shadow-glowLime' : 'border border-white/10 bg-white/5 text-steel hover:bg-white/10 hover:text-white'; },
-        statusLabel(status) { return this.t(status || 'upcoming'); },
-
-        activeEvent() { return this.events.find(e => e.id === this.activeEventId); },
-        selectEvent(eventId) { this.activeEventId = eventId; this.view = 'queue'; this.persist(); },
-        eventQueues() { if (!this.activeEventId) return []; return this.queues[this.activeEventId] || []; },
-        eventMatches() { if (!this.activeEventId) return []; return this.matches[this.activeEventId] || []; },
-        activeMatches() { return this.eventMatches().filter(m => m.status === 'active' || m.status === 'pending'); },
-        confirmedMatches() { return this.eventMatches().filter(m => m.status === 'confirmed'); },
-        countEventQueue(eventId) { return (this.queues[eventId] || []).filter(q => q.status === 'waiting').length; },
-        countEventMatches(eventId) { return (this.matches[eventId] || []).filter(m => m.status === 'confirmed').length; },
-        countEventPlayers(eventId) {
-          const ids = new Set();
-          (this.queues[eventId] || []).forEach(q => ids.add(q.playerId));
-          (this.matches[eventId] || []).forEach(m => [...m.teamA, ...m.teamB].forEach(id => ids.add(id)));
-          return ids.size;
-        },
-
-        playersSortedByName() { return this.players.slice().sort((a, b) => a.nickname.localeCompare(b.nickname)); },
-        leaderboard() { return this.players.slice().sort((a, b) => b.rating - a.rating || a.nickname.localeCompare(b.nickname)); },
-        getPlayer(id) { return this.players.find(p => p.id === id); },
-        statsPlayer() { return this.getPlayer(this.selectedStatsPlayerId) || this.leaderboard()[0]; },
-        scorePercent(score) { return Math.max(0, Math.min(100, (Number(score || 0) / 4) * 100)); },
-        formatPower(player) { if (!player) return '-'; return (Number(player.tech || 0) + Number(player.tact || 0)).toFixed(1); },
-        levelName(player) {
-          if (!player) return '-';
-          const r = Number(player.rating || 0);
-          if (r < 1100) return 'New Player';
-          if (r < 1300) return 'Social Player';
-          if (r < 1500) return 'Rally Player';
-          if (r < 1700) return 'Strong Player';
-          return 'Advanced Player';
-        },
-        winRate(player) { if (!player || !player.matches) return 0; return Math.round((player.wins / player.matches) * 100); },
-        avgFor(player) { if (!player || !player.matches) return '0.0'; return (player.pointsFor / player.matches).toFixed(1); },
-        avgAgainst(player) { if (!player || !player.matches) return '0.0'; return (player.pointsAgainst / player.matches).toFixed(1); },
-        formBadges(player, large = false) {
-          const form = player && player.form && player.form.length ? player.form.slice(0, 5) : [];
-          if (!form.length) return '<span class="text-steel">-</span>';
-          return form.map(r => {
-            const cls = r === 'W' ? 'border-neonLime/40 bg-neonLime/15 text-neonLime' : 'border-cyberOrange/40 bg-cyberOrange/15 text-cyberOrange';
-            return `<span class="chamfer inline-flex ${large ? 'h-11 w-11 text-base' : 'h-7 w-7 text-xs'} items-center justify-center border ${cls} mono font-black">${r}</span>`;
-          }).join(' ');
-        },
-
-        resetForm() {
-          this.editingProfileId = null;
-          this.form = { nickname: '', selfRating: 3, answers: {} };
-        },
-        editPlayer(playerId) {
-          const p = this.getPlayer(playerId);
-          if (!p) return;
-          this.editingProfileId = p.id;
-          this.form.nickname = p.nickname;
-          this.form.selfRating = p.selfRating || 3;
-          this.form.answers = { ...(p.answers || {}) };
-        },
-        answeredCount() { return Object.keys(this.form.answers).filter(k => this.form.answers[k]).length; },
-        axisAverage(axis) {
-          const qs = this.questions.filter(q => q.axis === axis);
-          const values = qs.map(q => Number(this.form.answers[q.id] || 0)).filter(Boolean);
-          if (!values.length) return 0;
-          return values.reduce((sum, value) => sum + value, 0) / qs.length;
-        },
-        previewScore(axis) {
-          const value = this.axisAverage(axis);
-          return value ? value.toFixed(2) : '-';
-        },
-        calculateInitialElo(tech, tact, selfRating) {
-          const combined = (Number(selfRating) * 0.4) + (Number(tech) * 0.3) + (Number(tact) * 0.3);
-          return Math.round(650 + combined * 275);
-        },
-        previewElo() {
-          const tech = this.axisAverage('tech');
-          const tact = this.axisAverage('tact');
-          if (!tech || !tact) return '-';
-          return this.calculateInitialElo(tech, tact, this.form.selfRating);
-        },
-        savePlayerProfile() {
-          if (!this.form.nickname) { alert(this.t('alertNeedName')); return; }
-          if (this.answeredCount() < this.questions.length) { alert(this.t('alertNeedAnswers')); return; }
-          const tech = Number(this.axisAverage('tech').toFixed(2));
-          const tact = Number(this.axisAverage('tact').toFixed(2));
-          const initialElo = this.calculateInitialElo(tech, tact, this.form.selfRating);
-          if (this.editingProfileId) {
-            const p = this.getPlayer(this.editingProfileId);
-            if (p) {
-              p.nickname = this.form.nickname;
-              p.selfRating = Number(this.form.selfRating);
-              p.tech = tech;
-              p.tact = tact;
-              p.answers = { ...this.form.answers };
-              if (!p.matches) p.rating = initialElo;
-            }
-          } else {
-            const id = 'p-' + Date.now() + '-' + Math.random().toString(16).slice(2);
-            this.players.push({
-              id,
-              nickname: this.form.nickname,
-              selfRating: Number(this.form.selfRating),
-              tech,
-              tact,
-              answers: { ...this.form.answers },
-              rating: initialElo,
-              matches: 0,
-              wins: 0,
-              losses: 0,
-              pointsFor: 0,
-              pointsAgainst: 0,
-              form: []
-            });
-            this.selectedPlayerId = id;
-            this.selectedStatsPlayerId = id;
-          }
-          this.persist();
-          alert(this.t('alertSaved'));
-          this.resetForm();
-        },
-
-        queueEntry(playerId) { return this.eventQueues().find(q => q.playerId === playerId); },
-        joinQueue() {
-          if (!this.activeEventId) { alert(this.t('selectEventFirst')); return; }
-          if (!this.selectedPlayerId) { alert(this.t('alertSelectPlayer')); return; }
-          const existing = this.queueEntry(this.selectedPlayerId);
-          if (existing) {
-            existing.status = 'waiting';
-            existing.joinedAt = existing.joinedAt || Date.now();
-          } else {
-            this.queues[this.activeEventId].push({ playerId: this.selectedPlayerId, status: 'waiting', joinedAt: Date.now() });
-          }
-          this.persist();
-        },
-        pauseQueue() {
-          if (!this.selectedPlayerId) { alert(this.t('alertSelectPlayer')); return; }
-          const existing = this.queueEntry(this.selectedPlayerId);
-          if (existing) existing.status = 'paused';
-          this.persist();
-        },
-        removeFromQueue(playerId) {
-          this.queues[this.activeEventId] = this.eventQueues().filter(q => q.playerId !== playerId);
-          this.persist();
-        },
-
-        matchNextGame() {
-          const waiting = this.eventQueues().filter(q => q.status === 'waiting' && this.getPlayer(q.playerId));
-          if (waiting.length < 4) { alert(this.t('alertNeedFour')); return; }
-          const selectedEntries = this.pickBestFour(waiting);
-          const selectedPlayers = selectedEntries.map(e => this.getPlayer(e.playerId));
-          const teams = this.balanceTeams(selectedPlayers);
-          selectedEntries.forEach(e => this.removeFromQueue(e.playerId));
-          const match = {
-            id: 'm-' + Date.now() + '-' + Math.random().toString(16).slice(2),
-            eventId: this.activeEventId,
-            teamA: teams.teamA,
-            teamB: teams.teamB,
-            status: 'active',
-            scoreA: null,
-            scoreB: null,
-            submittedBy: null,
-            createdAt: Date.now(),
-            confirmedAt: null,
-            deltaA: 0
-          };
-          this.matches[this.activeEventId].push(match);
-          this.persist();
-        },
-        pickBestFour(waiting) {
-          const ordered = waiting.slice().sort((a, b) => a.joinedAt - b.joinedAt);
-          const pool = ordered.slice(0, Math.min(ordered.length, 12));
-          const combos = [];
-          for (let a = 0; a < pool.length - 3; a++) {
-            for (let b = a + 1; b < pool.length - 2; b++) {
-              for (let c = b + 1; c < pool.length - 1; c++) {
-                for (let d = c + 1; d < pool.length; d++) {
-                  combos.push([pool[a], pool[b], pool[c], pool[d]]);
-                }
-              }
-            }
-          }
-          const now = Date.now();
-          let best = combos[0];
-          let bestScore = Infinity;
-          combos.forEach(combo => {
-            const ratings = combo.map(e => this.getPlayer(e.playerId).rating);
-            const spread = Math.max(...ratings) - Math.min(...ratings);
-            const avgIndex = combo.reduce((sum, e) => sum + ordered.findIndex(x => x.playerId === e.playerId), 0) / 4;
-            const avgWaitMinutes = combo.reduce((sum, e) => sum + ((now - e.joinedAt) / 60000), 0) / 4;
-            const earliestPenalty = combo.some(e => e.playerId === ordered[0].playerId) ? 0 : 120;
-            const score = spread + avgIndex * 35 + earliestPenalty - avgWaitMinutes * 5;
-            if (score < bestScore) { bestScore = score; best = combo; }
-          });
-          return best;
-        },
-        balanceTeams(players) {
-          const options = [
-            [[players[0], players[1]], [players[2], players[3]]],
-            [[players[0], players[2]], [players[1], players[3]]],
-            [[players[0], players[3]], [players[1], players[2]]]
-          ];
-          let best = options[0];
-          let bestScore = Infinity;
-          options.forEach(option => {
-            const powerA = option[0].reduce((s, p) => s + p.tech + p.tact, 0);
-            const powerB = option[1].reduce((s, p) => s + p.tech + p.tact, 0);
-            const eloA = option[0].reduce((s, p) => s + p.rating, 0);
-            const eloB = option[1].reduce((s, p) => s + p.rating, 0);
-            const score = Math.abs(powerA - powerB) * 100 + Math.abs(eloA - eloB) / 10;
-            if (score < bestScore) { bestScore = score; best = option; }
-          });
-          return { teamA: best[0].map(p => p.id), teamB: best[1].map(p => p.id) };
-        },
-        teamPower(teamIds) {
-          const total = teamIds.reduce((sum, id) => {
-            const p = this.getPlayer(id);
-            return sum + (p ? p.tech + p.tact : 0);
-          }, 0);
-          return total.toFixed(1);
-        },
-        teamNames(teamIds) { return teamIds.map(id => this.getPlayer(id)?.nickname || 'Unknown').join(' + '); },
-
-        getMatch(matchId) { return this.eventMatches().find(m => m.id === matchId); },
-        submitScore(matchId, side) {
-          const match = this.getMatch(matchId);
-          if (!match) return;
-          const a = Number(match.scoreA);
-          const b = Number(match.scoreB);
-          if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b < 0 || a === b) {
-            alert(this.t('alertBadScore'));
-            return;
-          }
-          match.scoreA = Math.round(a);
-          match.scoreB = Math.round(b);
-          match.submittedBy = side;
-          match.status = 'pending';
-          this.persist();
-          alert(this.t('alertSubmitted'));
-        },
-        cancelScore(matchId) {
-          const match = this.getMatch(matchId);
-          if (!match) return;
-          match.status = 'active';
-          match.submittedBy = null;
-          this.persist();
-        },
-        confirmScore(matchId) {
-          const match = this.getMatch(matchId);
-          if (!match || match.status !== 'pending') return;
-          const deltaA = this.calculateAndApplyElo(match);
-          match.deltaA = deltaA;
-          match.status = 'confirmed';
-          match.confirmedAt = Date.now();
-          [...match.teamA, ...match.teamB].forEach(pid => {
-            if (!this.queueEntry(pid)) this.queues[this.activeEventId].push({ playerId: pid, status: 'waiting', joinedAt: Date.now() });
-          });
-          this.persist();
-          alert(this.t('alertConfirmed'));
-        },
-        teamRating(teamIds) {
-          return teamIds.reduce((sum, id) => sum + (this.getPlayer(id)?.rating || 1200), 0) / teamIds.length;
-        },
-        calculateAndApplyElo(match) {
-          const ratingA = this.teamRating(match.teamA);
-          const ratingB = this.teamRating(match.teamB);
-          const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
-          const actualA = match.scoreA > match.scoreB ? 1 : 0;
-          const margin = Math.abs(match.scoreA - match.scoreB);
-          const ratingDiff = Math.abs(ratingA - ratingB);
-          const movMultiplier = Math.log(margin + 1) * (2.2 / ((ratingDiff * 0.001) + 2.2));
-          const k = 28;
-          let deltaA = Math.round(k * movMultiplier * (actualA - expectedA));
-          if (actualA === 1 && deltaA < 1) deltaA = 1;
-          if (actualA === 0 && deltaA > -1) deltaA = -1;
-          const deltaB = -deltaA;
-          const aWin = actualA === 1;
-          match.teamA.forEach(pid => this.applyPlayerResult(pid, deltaA, aWin, match.scoreA, match.scoreB));
-          match.teamB.forEach(pid => this.applyPlayerResult(pid, deltaB, !aWin, match.scoreB, match.scoreA));
-          return deltaA;
-        },
-        applyPlayerResult(playerId, delta, won, pointsFor, pointsAgainst) {
-          const p = this.getPlayer(playerId);
-          if (!p) return;
-          p.rating = Math.max(500, Math.round((p.rating || 1200) + delta));
-          p.matches = (p.matches || 0) + 1;
-          p.wins = (p.wins || 0) + (won ? 1 : 0);
-          p.losses = (p.losses || 0) + (won ? 0 : 1);
-          p.pointsFor = (p.pointsFor || 0) + Number(pointsFor || 0);
-          p.pointsAgainst = (p.pointsAgainst || 0) + Number(pointsAgainst || 0);
-          p.form = [won ? 'W' : 'L', ...(p.form || [])].slice(0, 5);
-        },
-
-        formatDateTime(ts) {
-          if (!ts) return '-';
-          return new Intl.DateTimeFormat(this.lang === 'th' ? 'th-TH' : 'en-US', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' }).format(new Date(ts));
-        },
-        shortId(id) { return String(id).slice(-6).toUpperCase(); },
-
-        seedDemoPlayers() {
-          if (this.players.length && !confirm(this.lang === 'th' ? 'เพิ่มผู้เล่นตัวอย่างเข้าไปในข้อมูลปัจจุบัน?' : 'Add demo players to current data?')) return;
-          const demos = [
-            ['Don', 3.5, 3.4, 3.2], ['Golf', 3, 3.0, 3.1], ['Ice', 2.5, 2.5, 2.6], ['Nan', 2, 2.1, 2.2],
-            ['Mike', 4, 3.8, 3.7], ['Fern', 3, 3.1, 2.9], ['Aom', 2.5, 2.7, 2.4], ['Benz', 3.5, 3.6, 3.4]
-          ];
-          demos.forEach(([name, self, tech, tact]) => {
-            const id = 'p-' + Date.now() + '-' + Math.random().toString(16).slice(2);
-            this.players.push({
-              id,
-              nickname: name,
-              selfRating: self,
-              tech,
-              tact,
-              answers: {},
-              rating: this.calculateInitialElo(tech, tact, self),
-              matches: 0,
-              wins: 0,
-              losses: 0,
-              pointsFor: 0,
-              pointsAgainst: 0,
-              form: []
-            });
-          });
-          if (!this.selectedPlayerId && this.players[0]) this.selectedPlayerId = this.players[0].id;
-          if (!this.selectedStatsPlayerId && this.players[0]) this.selectedStatsPlayerId = this.players[0].id;
-          this.persist();
-          alert(this.t('alertDemoLoaded'));
-        },
-        exportData() {
-          const payload = JSON.stringify({ events: this.events, players: this.players, queues: this.queues, matches: this.matches }, null, 2);
-          navigator.clipboard?.writeText(payload).then(() => alert(this.t('alertExport'))).catch(() => {
-            const blob = new Blob([payload], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'pickleball-systems-hub-alpha02-data.json';
-            a.click();
-            URL.revokeObjectURL(url);
-          });
-        },
-        resetAllData() {
-          if (!confirm(this.t('alertReset'))) return;
-          localStorage.removeItem(this.storageKey);
-          this.players = [];
-          this.queues = {};
-          this.matches = {};
-          this.activeEventId = null;
-          this.selectedPlayerId = '';
-          this.selectedStatsPlayerId = '';
-          this.view = 'hub';
-          this.events.forEach(event => { this.queues[event.id] = []; this.matches[event.id] = []; });
-          this.resetForm();
-          this.persist();
-        }
-      }
-    }
-  </script>
+<script>
+function pshApp(){
+  const DICT={
+    th:{online:'ออนไลน์ / เรียลไทม์',setupNeeded:'ต้องตั้งค่า Supabase',setupTitle:'ต้องใส่ Supabase Config ก่อน',setupDesc:'ไฟล์นี้เป็น Online Sync Mode ต้องรัน SQL Schema ใน Supabase และใส่ URL + Publishable Key เพื่อให้ทุกเครื่องใช้ข้อมูลร่วมกันแบบเรียลไทม์',events:'กิจกรรม',player:'ผู้เล่น',organizer:'ผู้จัด',stats:'สถิติ',selectEvent:'เลือกกิจกรรม',selectEventHint:'ทุกคนใช้ลิงก์เดียวกัน เลือกกิจกรรมแล้วเข้าร่วมได้ทันที',time:'เวลา',venue:'สนาม',courts:'คอร์ท',joinEvent:'JOIN EVENT',joinAsPlayer:'เข้าร่วมเล่น',joinDesc:'ใส่ชื่อ เลือกระดับตัวเอง ถ้าไม่ชัวร์ให้ระบบช่วยประเมินก่อน',nickname:'ชื่อเล่น',nicknamePh:'เช่น Don / Golf / Nan',selfRating:'ประเมินตัวเอง',notSure:'ไม่แน่ใจระดับตัวเอง?',assessmentHint:'ทำแบบสอบถาม 10 ข้อ เพื่อให้ระบบช่วยประเมินร่วมกับ Self Rating',hide:'ซ่อน',takeAssessment:'ทำแบบประเมิน',aiEstimate:'AI Assisted Estimate',saving:'กำลังบันทึก...',addJoinQueue:'Add & Join Queue',myStatus:'สถานะของฉัน',joinQueue:'เข้าคิว',pause:'พักคิว',noPlayerYet:'ยังไม่ได้ลงชื่อในกิจกรรมนี้',liveQueue:'คิวรอเล่น',organizerMode:'Organizer Mode',pinHint:'ใส่ PIN สำหรับผู้จัด เพื่อคุมคอร์ท จัดคู่ และกรอกผล',fieldControl:'Field Control',minutes:'นาที',players:'ผู้เล่น',waiting:'รอเล่น',playing:'กำลังเล่น',matches:'แมตช์',matchAvailable:'Match Available Courts',matchNext:'Match Next',confirmScore:'Confirm Score',cancel:'ยกเลิก',courtReady:'คอร์ทว่าง พร้อมจัดคู่',waitingList:'รายชื่อทั้งหมด',specialMatch:'Special Match',specialHint:'ใช้สำหรับเกมพิเศษ ผู้จัดเลือก 4 คนเอง แล้วระบบบาลานซ์ทีมให้',manualCreate:'สร้างเกมพิเศษ',endSummary:'สรุปจบอีเวนท์',leaderboard:'Leaderboard',copySummary:'Copy Summary',eventSummary:'สรุปอีเวนท์',matchHistory:'ประวัติแมตช์',pickFour:'เลือกผู้เล่น 4 คน ระบบจะแบ่งทีมให้สมดุลที่สุด',createSpecial:'Create Special Match'},
+    en:{online:'ONLINE / REAL-TIME',setupNeeded:'SUPABASE SETUP NEEDED',setupTitle:'Supabase Config Required',setupDesc:'This Online Sync Mode needs the SQL schema in Supabase plus URL and publishable key so all devices share the same real-time data.',events:'Events',player:'Player',organizer:'Organizer',stats:'Stats',selectEvent:'Select Event',selectEventHint:'Everyone uses the same link, selects an event, and joins instantly.',time:'Time',venue:'Venue',courts:'Courts',joinEvent:'JOIN EVENT',joinAsPlayer:'Join as Player',joinDesc:'Enter nickname, choose self rating, or take optional assessment if unsure.',nickname:'Nickname',nicknamePh:'Don / Golf / Nan',selfRating:'Self Rating',notSure:'Not sure about your level?',assessmentHint:'Take 10 quick questions so the system can estimate with your self rating.',hide:'Hide',takeAssessment:'Take Assessment',aiEstimate:'AI Assisted Estimate',saving:'Saving...',addJoinQueue:'Add & Join Queue',myStatus:'My Status',joinQueue:'Join Queue',pause:'Pause',noPlayerYet:'No player profile for this event yet.',liveQueue:'Live Queue',organizerMode:'Organizer Mode',pinHint:'Enter organizer PIN to manage courts, matchmaking, and scoring.',fieldControl:'Field Control',minutes:'Minutes',players:'Players',waiting:'Waiting',playing:'Playing',matches:'Matches',matchAvailable:'Match Available Courts',matchNext:'Match Next',confirmScore:'Confirm Score',cancel:'Cancel',courtReady:'Court ready for next match',waitingList:'All Players',specialMatch:'Special Match',specialHint:'For organizer-created games. Pick 4 players and the system balances teams.',manualCreate:'Create Manual Match',endSummary:'End Event Summary',leaderboard:'Leaderboard',copySummary:'Copy Summary',eventSummary:'Event Summary',matchHistory:'Match History',pickFour:'Pick 4 players. The system will balance teams automatically.',createSpecial:'Create Special Match'}
+  };
+  return {
+    SUPABASE_URL:'https://zzeikmrrlfvwnwsprmjy.supabase.co',
+    SUPABASE_KEY:'sb_publishable_xSAZX5dgZ_3Qr3nzoOtqYA_Z0l8yOaX',
+    db:null,channel:null,configured:false,online:false,busy:false,toast:'',showSql:false,
+    lang:localStorage.getItem('psh_lang')||'th',tab:'hub',events:[],selectedEventId:localStorage.getItem('psh_selected_event')||null,
+    eventPlayers:[],matches:[],matchPlayers:[],tick:Date.now(),organizerUnlocked:localStorage.getItem('psh_org_unlocked')==='1',pinInput:'',
+    settings:{courts:1,minutes:12},setup:{url:'',key:''},scoreInputs:{},specialOpen:false,specialSelected:[],
+    join:{nickname:localStorage.getItem('psh_last_nickname')||'',selfRating:2.5,useAssessment:false,answers:{}},
+    questions:[
+      {key:'serve',axis:'tech',th:'เสิร์ฟและรับเสิร์ฟได้สม่ำเสมอแค่ไหน',en:'How consistent are your serve and return?'},
+      {key:'dink',axis:'tech',th:'เล่น Dink / หน้าเน็ต คุมลูกเบาได้แค่ไหน',en:'How well can you dink and control soft shots?'},
+      {key:'third',axis:'tech',th:'ทำ Third Shot Drop / Transition Shot ได้แค่ไหน',en:'How well can you hit third shot drops / transition shots?'},
+      {key:'slam',axis:'tech',th:'ตีลูกสูง / Overhead / Finish Ball ได้แค่ไหน',en:'How well can you finish overheads or high balls?'},
+      {key:'block',axis:'tech',th:'บล็อกลูกเร็วและรับเกมหน้าเน็ตได้แค่ไหน',en:'How well can you block fast shots at the net?'},
+      {key:'pos',axis:'tact',th:'ยืนตำแหน่งคู่และหมุนตำแหน่งได้ดีแค่ไหน',en:'How well do you position and rotate with a partner?'},
+      {key:'rules',axis:'tact',th:'เข้าใจกติกา คะแนน และ Kitchen แค่ไหน',en:'How well do you understand scoring, rules, and the kitchen?'},
+      {key:'fitness',axis:'tact',th:'ความฟิตและการเคลื่อนที่ระหว่างเกมเป็นอย่างไร',en:'How is your fitness and movement during games?'},
+      {key:'transition',axis:'tact',th:'เปลี่ยนจากหลังคอร์ทขึ้นหน้าเน็ตได้ดีแค่ไหน',en:'How well do you transition from baseline to kitchen?'},
+      {key:'match',axis:'tact',th:'มีประสบการณ์เล่น Open Play / Match จริงแค่ไหน',en:'How much open play or match experience do you have?'}
+    ],
+    t(k){return (DICT[this.lang]&&DICT[this.lang][k])||k},
+    saveLocal(){localStorage.setItem('psh_lang',this.lang); if(this.selectedEventId)localStorage.setItem('psh_selected_event',this.selectedEventId)},
+    init(){
+      const savedUrl=localStorage.getItem('psh_supabase_url'); const savedKey=localStorage.getItem('psh_supabase_key');
+      if(savedUrl&&savedKey){this.SUPABASE_URL=savedUrl;this.SUPABASE_KEY=savedKey}
+      this.setup.url=this.SUPABASE_URL.includes('PASTE_')?'':this.SUPABASE_URL; this.setup.key=this.SUPABASE_KEY.includes('PASTE_')?'':this.SUPABASE_KEY;
+      this.configured=!!(this.setup.url&&this.setup.key);
+      setInterval(()=>{this.tick=Date.now()},1000);
+      if(this.configured)this.connect();
+    },
+    async saveConfig(){if(!this.setup.url||!this.setup.key)return this.flash('Missing Supabase URL or Key'); localStorage.setItem('psh_supabase_url',this.setup.url.trim()); localStorage.setItem('psh_supabase_key',this.setup.key.trim()); this.SUPABASE_URL=this.setup.url.trim(); this.SUPABASE_KEY=this.setup.key.trim(); this.configured=true; await this.connect()},
+    async connect(){try{this.db=supabase.createClient(this.SUPABASE_URL,this.SUPABASE_KEY); this.online=true; await this.refreshAll(); this.subscribe()}catch(e){this.online=false;this.flash('Supabase connect error: '+e.message)}},
+    subscribe(){if(!this.db)return; if(this.channel)this.db.removeChannel(this.channel); this.channel=this.db.channel('psh_live').on('postgres_changes',{event:'*',schema:'public',table:'psh_events'},()=>this.refreshAll()).on('postgres_changes',{event:'*',schema:'public',table:'psh_event_players'},()=>this.refreshAll()).on('postgres_changes',{event:'*',schema:'public',table:'psh_matches'},()=>this.refreshAll()).on('postgres_changes',{event:'*',schema:'public',table:'psh_match_players'},()=>this.refreshAll()).subscribe();},
+    async refreshAll(){if(!this.db)return; await this.loadEvents(); if(this.selectedEventId) await this.loadEventData();},
+    async loadEvents(){const {data,error}=await this.db.from('psh_events').select('*').order('created_at',{ascending:true}); if(error)return this.flash(error.message); this.events=data||[]; if(!this.selectedEventId&&this.events[0])this.selectEvent(this.events[0].id,false);},
+    async loadEventData(){if(!this.selectedEventId)return; const [ep,ma,mp]=await Promise.all([this.db.from('psh_event_players').select('*').eq('event_id',this.selectedEventId).order('queue_joined_at',{ascending:true,nullsFirst:false}),this.db.from('psh_matches').select('*').eq('event_id',this.selectedEventId).order('created_at',{ascending:false}),this.db.from('psh_match_players').select('*')]); if(ep.error)this.flash(ep.error.message); if(ma.error)this.flash(ma.error.message); if(mp.error)this.flash(mp.error.message); this.eventPlayers=ep.data||[]; this.matches=ma.data||[]; this.matchPlayers=(mp.data||[]).filter(x=>this.matches.some(m=>m.id===x.match_id)); this.syncScoreInputs(); const ev=this.selectedEvent; if(ev){this.settings.courts=ev.courts_count;this.settings.minutes=ev.match_minutes;}},
+    syncScoreInputs(){for(const m of this.matches){if(!this.scoreInputs[m.id])this.scoreInputs[m.id]={a:m.team_a_score||0,b:m.team_b_score||0}}},
+    go(tab){this.tab=tab},
+    selectEvent(id,goPlayer=true){this.selectedEventId=id; this.saveLocal(); this.loadEventData(); if(goPlayer)this.go('player')},
+    get selectedEvent(){return this.events.find(e=>e.id===this.selectedEventId)},
+    eventName(ev){return this.lang==='th'?ev.name_th:ev.name_en},
+    flash(msg){this.toast=msg; clearTimeout(this._to); this._to=setTimeout(()=>this.toast='',2600)},
+    slugName(n){return (n||'').trim().toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9ก-๙_-]/gi,'')},
+    previewEstimate(){let self=Number(this.join.selfRating)||2.5; let tech=0,tact=0,tc=0,ac=0; for(const q of this.questions){const v=Number(this.join.answers[q.key]||0); if(!v)continue; if(q.axis==='tech'){tech+=v;tc++}else{tact+=v;ac++}} tech=tc?tech/tc:0; tact=ac?tact/ac:0; const assessment=(tech&&tact)?((tech+tact)/2):0; const level=assessment?((self*.55)+(assessment*.45)):self; return {level,tech,tact,assessment};},
+    eloFromLevel(level){return Math.round(1000+(level-2)*350)},
+    confidence(matches,assessment){if(matches>=5)return'high'; if(matches>=2||assessment)return'medium'; return'low'},
+    async submitPlayer(){if(!this.selectedEventId)return this.flash('Select event first'); const nick=(this.join.nickname||'').trim(); if(!nick)return this.flash('Nickname required'); this.busy=true; try{const key=this.slugName(nick); let {data:player}=await this.db.from('psh_players').select('*').eq('nickname_key',key).maybeSingle(); if(!player){const ins=await this.db.from('psh_players').insert({nickname:nick,nickname_key:key}).select('*').single(); if(ins.error)throw ins.error; player=ins.data;} const est=this.previewEstimate(); const source=this.join.useAssessment&&est.assessment?'ai_assisted':'self_rated'; const payload={event_id:this.selectedEventId,player_id:player.id,nickname:nick,self_rating:Number(this.join.selfRating),tech_score:est.tech,tact_score:est.tact,estimated_level:est.level,elo:this.eloFromLevel(est.level),rating_source:source,rating_confidence:this.confidence(0,!!est.assessment),status:'waiting',queue_joined_at:new Date().toISOString()}; const up=await this.db.from('psh_event_players').upsert(payload,{onConflict:'event_id,player_id'}).select('*').single(); if(up.error)throw up.error; localStorage.setItem('psh_player_id',player.id); localStorage.setItem('psh_last_nickname',nick); this.flash('Joined queue'); await this.refreshAll();}catch(e){this.flash(e.message)}finally{this.busy=false}},
+    get myEventPlayer(){const pid=localStorage.getItem('psh_player_id'); return this.eventPlayers.find(p=>p.player_id===pid)},
+    myQueuePosition(){const m=this.myEventPlayer; if(!m)return null; const q=this.waitingPlayers(); const i=q.findIndex(p=>p.id===m.id); return i>=0?i+1:null},
+    async setMyStatus(status){const p=this.myEventPlayer; if(!p)return; await this.setPlayerStatus(p,status)},
+    async setPlayerStatus(p,status){const payload={status,queue_joined_at:status==='waiting'?new Date().toISOString():null}; const {error}=await this.db.from('psh_event_players').update(payload).eq('id',p.id); if(error)this.flash(error.message); else this.flash(status); await this.refreshAll()},
+    waitingPlayers(){return this.eventPlayers.filter(p=>p.status==='waiting').sort((a,b)=>new Date(a.queue_joined_at||0)-new Date(b.queue_joined_at||0))},
+    eventPlayersSorted(){return [...this.eventPlayers].sort((a,b)=>({waiting:0,playing:1,paused:2,registered:3,left:4}[a.status]??9)-({waiting:0,playing:1,paused:2,registered:3,left:4}[b.status]??9)||b.elo-a.elo)},
+    leaderboard(){return [...this.eventPlayers].sort((a,b)=>b.elo-a.elo)},
+    winRate(p){return p.matches_played?Math.round((p.wins/p.matches_played)*100):0},
+    avgPfPa(p){return p.matches_played?`${(p.points_for/p.matches_played).toFixed(1)} / ${(p.points_against/p.matches_played).toFixed(1)}`:'-'},
+    unlockOrganizer(){const ev=this.selectedEvent; if(!ev)return; if(this.pinInput===ev.organizer_pin){this.organizerUnlocked=true;localStorage.setItem('psh_org_unlocked','1');this.flash('Organizer unlocked')}else this.flash('Wrong PIN')},
+    async updateEventSettings(){const {error}=await this.db.from('psh_events').update({courts_count:Number(this.settings.courts)||1,match_minutes:Number(this.settings.minutes)||12}).eq('id',this.selectedEventId); if(error)this.flash(error.message); else this.flash('Settings updated'); await this.refreshAll()},
+    courtNumbers(){return Array.from({length:Number(this.settings.courts)||1},(_,i)=>i+1)},
+    activeMatches(){return this.matches.filter(m=>m.status==='live'||m.status==='pending')},
+    activeMatchByCourt(c){return this.activeMatches().find(m=>m.court_number===c)},
+    confirmedMatches(){return this.matches.filter(m=>m.status==='confirmed')},
+    matchRows(m){return this.matchPlayers.filter(r=>r.match_id===m.id)},
+    matchTeam(m,team){const ids=this.matchRows(m).filter(r=>r.team===team).map(r=>r.event_player_id); return ids.map(id=>this.eventPlayers.find(p=>p.id===id)).filter(Boolean)},
+    timeLeft(m){this.tick; const dur=(m.duration_seconds||720)*1000; const start=new Date(m.started_at).getTime(); const left=Math.max(0,start+dur-Date.now()); const mm=Math.floor(left/60000); const ss=Math.floor((left%60000)/1000); return {ended:left<=0,label:`${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`}},
+    power(p){return Number(p.elo||1200)+(Number(p.tech_score||0)*16)+(Number(p.tact_score||0)*16)+(p.rating_confidence==='low'?-20:0)},
+    combos(arr,k){const res=[]; const rec=(start,c)=>{if(c.length===k){res.push([...c]);return} for(let i=start;i<=arr.length-(k-c.length);i++){c.push(arr[i]);rec(i+1,c);c.pop()}}; rec(0,[]); return res},
+    chooseFour(){const q=this.waitingPlayers(); if(q.length<4)return null; const pool=q.slice(0,Math.min(10,q.length)); const combos=this.combos(pool,4); let best=null,bestScore=Infinity; const now=Date.now(); for(const c of combos){const ratings=c.map(p=>this.power(p)); const range=Math.max(...ratings)-Math.min(...ratings); const avgWait=c.reduce((s,p)=>s+(now-new Date(p.queue_joined_at||now).getTime())/60000,0)/4; const beginners=c.filter(p=>p.estimated_level<2.55||p.rating_confidence==='low').length; const adv=c.filter(p=>p.estimated_level>=3.75).length; let protect=(beginners>=2&&adv>=1)?120:0; let score=range+protect-(avgWait*1.4); if(score<bestScore){bestScore=score;best=c}} return best},
+    balanceTeams(four){const ps=[...four].sort((a,b)=>this.power(b)-this.power(a)); const pairings=[[[0,3],[1,2]],[[0,2],[1,3]],[[0,1],[2,3]]]; let best=null,bestDiff=Infinity; for(const pr of pairings){const A=[ps[pr[0][0]],ps[pr[0][1]]],B=[ps[pr[1][0]],ps[pr[1][1]]]; const diff=Math.abs(A.reduce((s,p)=>s+this.power(p),0)-B.reduce((s,p)=>s+this.power(p),0)); if(diff<bestDiff){bestDiff=diff;best={A,B,diff}}} return best},
+    async matchAllAvailableCourts(){for(const c of this.courtNumbers()){if(!this.activeMatchByCourt(c)) await this.matchNext(c)}},
+    async matchNext(court){const four=this.chooseFour(); if(!four)return this.flash('Need at least 4 waiting players'); await this.createMatch(court,four,'fair')},
+    async createMatch(court,four,type='fair'){const teams=this.balanceTeams(four); const dur=(Number(this.settings.minutes)||12)*60; const ins=await this.db.from('psh_matches').insert({event_id:this.selectedEventId,court_number:court,status:'live',match_type:type,duration_seconds:dur,started_at:new Date().toISOString()}).select('*').single(); if(ins.error)return this.flash(ins.error.message); const m=ins.data; const rows=[...teams.A.map(p=>({match_id:m.id,event_player_id:p.id,team:'A',rating_before:p.elo})),...teams.B.map(p=>({match_id:m.id,event_player_id:p.id,team:'B',rating_before:p.elo}))]; const mp=await this.db.from('psh_match_players').insert(rows); if(mp.error)return this.flash(mp.error.message); const ids=four.map(p=>p.id); await this.db.from('psh_event_players').update({status:'playing',queue_joined_at:null}).in('id',ids); this.flash('Match created'); await this.refreshAll()},
+    expected(a,b){return 1/(1+Math.pow(10,(b-a)/400))},
+    async confirmScore(m){const input=this.scoreInputs[m.id]||{}; const a=Number(input.a),b=Number(input.b); if(Number.isNaN(a)||Number.isNaN(b)||a===b)return this.flash('Invalid score'); const A=this.matchTeam(m,'A'),B=this.matchTeam(m,'B'); if(A.length!==2||B.length!==2)return this.flash('Match players missing'); const aAvg=A.reduce((s,p)=>s+Number(p.elo),0)/2,bAvg=B.reduce((s,p)=>s+Number(p.elo),0)/2; const aWin=a>b; const expA=this.expected(aAvg,bAvg); const margin=Math.min(Math.abs(a-b),10); const mult=1+margin/20; const k=32; const delta=Math.round(k*mult*((aWin?1:0)-expA)); const updates=[]; const rows=this.matchRows(m); for(const p of [...A,...B]){const isA=A.some(x=>x.id===p.id); const won=isA?aWin:!aWin; const pf=isA?a:b, pa=isA?b:a; const newElo=Number(p.elo)+(isA?delta:-delta); const form=[...(p.last_form||[]),won?'W':'L'].slice(-5); updates.push(this.db.from('psh_event_players').update({elo:newElo,matches_played:p.matches_played+1,wins:p.wins+(won?1:0),losses:p.losses+(won?0:1),points_for:p.points_for+pf,points_against:p.points_against+pa,last_form:form,status:'waiting',queue_joined_at:new Date().toISOString(),rating_confidence:this.confidence(p.matches_played+1,false)}).eq('id',p.id)); const row=rows.find(r=>r.event_player_id===p.id); if(row)updates.push(this.db.from('psh_match_players').update({rating_after:newElo,result:won?'W':'L',points_for:pf,points_against:pa}).eq('id',row.id)); }
+      updates.push(this.db.from('psh_matches').update({status:'confirmed',team_a_score:a,team_b_score:b,ended_at:new Date().toISOString()}).eq('id',m.id)); const res=await Promise.all(updates); const err=res.find(r=>r.error); if(err)this.flash(err.error.message); else this.flash('Score confirmed'); await this.refreshAll();},
+    async cancelMatch(m){const ids=this.matchRows(m).map(r=>r.event_player_id); await this.db.from('psh_matches').update({status:'cancelled',ended_at:new Date().toISOString()}).eq('id',m.id); if(ids.length)await this.db.from('psh_event_players').update({status:'waiting',queue_joined_at:new Date().toISOString()}).in('id',ids); this.flash('Cancelled'); await this.refreshAll()},
+    openSpecial(){this.specialSelected=[];this.specialOpen=true},
+    selectablePlayers(){return this.eventPlayers.filter(p=>p.status==='waiting'||p.status==='paused'||p.status==='registered')},
+    toggleSpecialPlayer(id){if(this.specialSelected.includes(id))this.specialSelected=this.specialSelected.filter(x=>x!==id); else if(this.specialSelected.length<4)this.specialSelected.push(id)},
+    async createSpecialMatch(){if(this.specialSelected.length!==4)return this.flash('Pick exactly 4 players'); const court=this.courtNumbers().find(c=>!this.activeMatchByCourt(c))||1; const four=this.specialSelected.map(id=>this.eventPlayers.find(p=>p.id===id)).filter(Boolean); this.specialOpen=false; await this.createMatch(court,four,'special')},
+    summaryText(){const ev=this.selectedEvent; const lb=this.leaderboard(); const top=lb.slice(0,5).map((p,i)=>`${i+1}. ${p.nickname} · ELO ${Math.round(p.elo)} · ${p.wins}-${p.losses}`).join('\n'); return `${ev?this.eventName(ev):'GDSQ OPEN PLAY'}\nPlayers: ${this.eventPlayers.length}\nMatches: ${this.confirmedMatches().length}\nWaiting: ${this.waitingPlayers().length}\n\nTOP RANKING\n${top||'-'}`},
+    async copySummary(){await navigator.clipboard.writeText(this.summaryText()); this.flash('Summary copied')},
+    endEventSummary(){this.go('stats');this.flash('Event summary ready')}
+  }
+}
+</script>
 </body>
 </html>
