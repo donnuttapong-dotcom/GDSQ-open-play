@@ -1,12 +1,13 @@
 <!doctype html>
-<html lang="th">
+<html lang="th" x-data="hub()" x-init="init()">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>GDSQ Play System Hub</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <style>
-body{background:#11161b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif}.cut{clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px)}.card{background:#222931;border:1px solid #39434d}.lime{color:#c7ff2e}.bg-lime{background:#c7ff2e;color:#111}.soft{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.1);border-radius:18px}.btn{border:1px solid rgba(255,255,255,.14);font-weight:900}.mini{font-size:12px;color:#94a3b8}.glow{box-shadow:0 0 32px rgba(199,255,46,.12)}
+body{background:#11161b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif}.cut{clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px)}.card{background:#222931;border:1px solid #39434d}.lime{color:#c7ff2e}.bg-lime{background:#c7ff2e;color:#111}.soft{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.1);border-radius:18px}.btn{border:1px solid rgba(255,255,255,.14);font-weight:900}.mini{font-size:12px;color:#94a3b8}.glow{box-shadow:0 0 32px rgba(199,255,46,.12)}[x-cloak]{display:none!important}
 </style>
 </head>
 <body>
@@ -14,9 +15,9 @@ body{background:#11161b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-s
   <div class="max-w-6xl mx-auto flex justify-between items-center gap-3">
     <div>
       <div class="text-[10px] tracking-[.28em] lime">GDSQ PICKLEBALL</div>
-      <b class="text-lg">PLAY SYSTEM HUB</b>
+      <b class="text-lg" x-text="tx('hub')"></b>
     </div>
-    <a class="cut btn bg-white/5 px-4 py-2 text-xs" href="./openplay.html">OPEN PLAY</a>
+    <button class="cut bg-orange-400 text-black px-4 py-2 font-black" @click="toggle()" x-text="lang==='th'?'EN':'TH'"></button>
   </div>
 </header>
 
@@ -24,9 +25,9 @@ body{background:#11161b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-s
   <section class="cut card p-6 md:p-8 glow">
     <div class="grid lg:grid-cols-[1.1fr_.9fr] gap-6 items-end">
       <div>
-        <div class="text-[11px] tracking-[.25em] lime mb-2">CHOOSE YOUR PLAY MODE</div>
-        <h1 class="text-4xl md:text-6xl font-black leading-tight">เลือกโหมด<br>การเล่นของคุณ</h1>
-        <p class="text-slate-300 mt-4 max-w-2xl">รวมระบบ GDSQ ไว้ในหน้าเดียว เลือกว่าจะใช้งานแบบเล่นทั่วไป จัดแข่งจริง หรือแบ่งทีมสีสำหรับกิจกรรมคลับ</p>
+        <div class="text-[11px] tracking-[.25em] lime mb-2" x-text="tx('choose')"></div>
+        <h1 class="text-4xl md:text-6xl font-black leading-tight" x-html="tx('headline')"></h1>
+        <p class="text-slate-300 mt-4 max-w-2xl" x-text="tx('intro')"></p>
       </div>
       <div class="grid grid-cols-3 gap-2 text-center">
         <div class="soft p-4"><b class="text-2xl lime">01</b><div class="mini mt-1">Open Play</div></div>
@@ -40,59 +41,62 @@ body{background:#11161b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-s
     <a href="./openplay.html" class="cut card p-5 hover:ring-2 hover:ring-lime-300 transition block">
       <div class="text-[10px] tracking-[.25em] lime">MODE 01</div>
       <h2 class="text-3xl font-black mt-2">OPEN PLAY</h2>
-      <p class="text-slate-300 mt-3">เล่นทั่วไป จับคู่ให้แฟร์ ให้ทุกคนได้เล่นใกล้เคียงกัน เหมาะกับกิจกรรมประจำวัน</p>
+      <p class="text-slate-300 mt-3" x-text="tx('openDesc')"></p>
       <div class="grid gap-2 mt-5 text-sm">
-        <div class="soft p-3">จับคู่ Auto / Manual</div>
-        <div class="soft p-3">เก็บคะแนนและสถิติ</div>
-        <div class="soft p-3">ดูย้อนหลังหลังจบ Event</div>
+        <div class="soft p-3" x-text="tx('open1')"></div>
+        <div class="soft p-3" x-text="tx('open2')"></div>
+        <div class="soft p-3" x-text="tx('open3')"></div>
       </div>
-      <div class="cut bg-lime p-4 mt-5 text-center font-black">เข้า Open Play</div>
+      <div class="cut bg-lime p-4 mt-5 text-center font-black" x-text="tx('enterOpen')"></div>
     </a>
 
     <a href="./tournament.html" class="cut card p-5 hover:ring-2 hover:ring-lime-300 transition block">
       <div class="text-[10px] tracking-[.25em] lime">MODE 02</div>
       <h2 class="text-3xl font-black mt-2">TOURNAMENT</h2>
-      <p class="text-slate-300 mt-3">แข่งจริง มีสาย มีตาราง มีแชมป์ เหมาะกับการแข่งขันแบบเป็นรายการ</p>
+      <p class="text-slate-300 mt-3" x-text="tx('tourDesc')"></p>
       <div class="grid gap-2 mt-5 text-sm">
         <div class="soft p-3">Single Elimination</div>
         <div class="soft p-3">Round Robin</div>
-        <div class="soft p-3">Save Cloud / Public View</div>
+        <div class="soft p-3" x-text="tx('tour3')"></div>
       </div>
-      <div class="cut bg-lime p-4 mt-5 text-center font-black">เข้า Tournament</div>
+      <div class="cut bg-lime p-4 mt-5 text-center font-black" x-text="tx('enterTour')"></div>
     </a>
 
     <a href="./team-battle.html" class="cut card p-5 hover:ring-2 hover:ring-lime-300 transition block">
       <div class="text-[10px] tracking-[.25em] lime">MODE 03</div>
       <h2 class="text-3xl font-black mt-2">TEAM BATTLE</h2>
-      <p class="text-slate-300 mt-3">แบ่งทีมสี รวมคะแนนทีม เหมาะกับอีเวนท์สนุกในคลับ ไม่จริงจังเท่า Tournament</p>
+      <p class="text-slate-300 mt-3" x-text="tx('battleDesc')"></p>
       <div class="grid gap-2 mt-5 text-sm">
-        <div class="soft p-3">แบ่งทีมตาม Rating</div>
-        <div class="soft p-3">รวมคะแนนทีม</div>
-        <div class="soft p-3">สรุป Champion Team</div>
+        <div class="soft p-3" x-text="tx('battle1')"></div>
+        <div class="soft p-3" x-text="tx('battle2')"></div>
+        <div class="soft p-3" x-text="tx('battle3')"></div>
       </div>
-      <div class="cut bg-lime p-4 mt-5 text-center font-black">เข้า Team Battle</div>
+      <div class="cut bg-lime p-4 mt-5 text-center font-black" x-text="tx('enterBattle')"></div>
     </a>
   </section>
 
   <section class="grid lg:grid-cols-[1fr_.8fr] gap-4 mt-5">
     <div class="cut card p-5">
-      <h3 class="text-2xl font-black lime">ใช้โหมดไหนดี?</h3>
+      <h3 class="text-2xl font-black lime" x-text="tx('which')"></h3>
       <div class="grid gap-3 mt-4">
-        <div class="soft p-4"><b>ถ้าวันนี้มีคนมาเล่นหลายคน และอยากจับคู่ให้แฟร์</b><p class="mini mt-1">ใช้ Open Play</p></div>
-        <div class="soft p-4"><b>ถ้าต้องการแข่งจริง มีแชมป์ มีสายแข่ง</b><p class="mini mt-1">ใช้ Tournament</p></div>
-        <div class="soft p-4"><b>ถ้าต้องการกิจกรรมทีมสี เล่นสนุก รวมคะแนนทีม</b><p class="mini mt-1">ใช้ Team Battle</p></div>
+        <div class="soft p-4"><b x-text="tx('whichOpen')"></b><p class="mini mt-1">Open Play</p></div>
+        <div class="soft p-4"><b x-text="tx('whichTour')"></b><p class="mini mt-1">Tournament</p></div>
+        <div class="soft p-4"><b x-text="tx('whichBattle')"></b><p class="mini mt-1">Team Battle</p></div>
       </div>
     </div>
     <div class="cut card p-5">
       <h3 class="text-2xl font-black lime">Public Result</h3>
-      <p class="text-slate-300 mt-3">สำหรับ Tournament ที่บันทึกขึ้น Cloud แล้ว สามารถเปิดหน้า Public View เพื่อให้คนอื่นดูผลอย่างเดียวได้</p>
+      <p class="text-slate-300 mt-3" x-text="tx('publicDesc')"></p>
       <div class="soft p-4 mt-4">
         <div class="mini">URL Format</div>
         <code class="text-xs break-all text-lime-200">tournament-view.html?id=TOURNAMENT_ID</code>
       </div>
-      <a class="cut btn bg-white/5 p-4 mt-4 block text-center" href="./tournament-view.html">เปิด Public Viewer</a>
+      <a class="cut btn bg-white/5 p-4 mt-4 block text-center" href="./tournament-view.html" x-text="tx('openPublic')"></a>
     </div>
   </section>
 </main>
+<script>
+function hub(){return{lang:'th',dict:{th:{hub:'PLAY SYSTEM HUB',choose:'เลือกโหมดการใช้งาน',headline:'เลือกโหมด<br>การเล่นของคุณ',intro:'รวมระบบ GDSQ ไว้ในหน้าเดียว เลือกว่าจะเล่นทั่วไป จัดแข่งจริง หรือแบ่งทีมสีสำหรับกิจกรรมคลับ',openDesc:'เล่นทั่วไป จับคู่ให้แฟร์ ให้ทุกคนได้เล่นใกล้เคียงกัน เหมาะกับกิจกรรมประจำวัน',open1:'จับคู่ Auto / Manual',open2:'เก็บคะแนนและสถิติ',open3:'ดูย้อนหลังหลังจบ Event',tourDesc:'แข่งจริง มีสาย มีตาราง มีแชมป์ เหมาะกับการแข่งขันแบบเป็นรายการ',tour3:'บันทึกออนไลน์ / ลิงก์ดูผล',battleDesc:'แบ่งทีมสี รวมคะแนนทีม เหมาะกับอีเวนท์สนุกในคลับ',battle1:'แบ่งทีมตาม Rating',battle2:'รวมคะแนนทีม',battle3:'สรุป Champion Team',enterOpen:'เข้า Open Play',enterTour:'เข้า Tournament',enterBattle:'เข้า Team Battle',which:'ใช้โหมดไหนดี?',whichOpen:'ถ้าวันนี้มีคนมาเล่นหลายคน และอยากจับคู่ให้แฟร์',whichTour:'ถ้าต้องการแข่งจริง มีแชมป์ มีสายแข่ง',whichBattle:'ถ้าต้องการกิจกรรมทีมสี เล่นสนุก รวมคะแนนทีม',publicDesc:'สำหรับ Tournament ที่บันทึกออนไลน์แล้ว สามารถเปิดหน้า Public View เพื่อให้คนอื่นดูผลอย่างเดียวได้',openPublic:'เปิด Public Viewer'},en:{hub:'PLAY SYSTEM HUB',choose:'CHOOSE YOUR PLAY MODE',headline:'Choose your<br>play mode',intro:'All GDSQ systems in one place. Pick casual open play, a real tournament, or a team battle for club activities.',openDesc:'Casual play with fair matchmaking so everyone gets similar play time. Best for regular sessions.',open1:'Auto / Manual matchmaking',open2:'Scores and player stats',open3:'Event history after finish',tourDesc:'Real competition with bracket, schedule, champion, and public results.',tour3:'Cloud save / public result link',battleDesc:'Color-team style club activity with team scoring and a champion team.',battle1:'Balance teams by rating',battle2:'Team score tracking',battle3:'Champion team summary',enterOpen:'Enter Open Play',enterTour:'Enter Tournament',enterBattle:'Enter Team Battle',which:'Which mode should I use?',whichOpen:'Use this when many players join and you want fair rotation.',whichTour:'Use this when you need a real competition with a champion.',whichBattle:'Use this for fun club team activities and team scoring.',publicDesc:'For cloud-saved tournaments, use Public View so others can view results without editing.',openPublic:'Open Public Viewer'}} ,init(){this.lang=localStorage.gdsq_hub_lang||'th'},tx(k){return this.dict[this.lang][k]||k},toggle(){this.lang=this.lang==='th'?'en':'th';localStorage.gdsq_hub_lang=this.lang}}}
+</script>
 </body>
 </html>
