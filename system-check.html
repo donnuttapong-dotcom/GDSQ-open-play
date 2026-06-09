@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="th" x-data="checkApp()" x-init="run()">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GDSQ System Check</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>body{background:#11161b;color:white;font-family:system-ui,'Noto Sans Thai',sans-serif}.cut{clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px)}.card{background:#222931;border:1px solid #39434d}.soft{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.1);border-radius:16px}.lime{color:#c7ff2e}.bg-lime{background:#c7ff2e;color:#111}.btn{border:1px solid rgba(255,255,255,.14);font-weight:900}.mini{font-size:12px;color:#94a3b8}</style>
+</head>
+<body>
+<header class="sticky top-0 z-50 bg-[#0d1217]/95 border-b border-white/10 p-3"><div class="max-w-5xl mx-auto flex justify-between items-center"><a class="cut bg-lime px-4 py-2 font-black" href="./">← HOME</a><div class="text-right"><div class="text-[10px] tracking-[.25em] lime">GDSQ PICKLEBALL</div><b>SYSTEM CHECK</b></div></div></header>
+<main class="max-w-5xl mx-auto p-4">
+<section class="cut card p-5"><h1 class="text-3xl font-black lime">System Readiness Check</h1><p class="text-slate-300 mt-2">ตรวจสอบลิงก์หลัก ฐานข้อมูล และจุดเสี่ยงก่อนใช้งานจริง</p><button class="cut bg-lime text-black p-4 font-black mt-4" @click="run()">RUN CHECK AGAIN</button></section>
+<section class="grid md:grid-cols-2 gap-4 mt-4"><template x-for="r in results" :key="r.name"><div class="cut card p-4"><div class="flex justify-between gap-2"><h2 class="text-xl font-black" x-text="r.name"></h2><span class="rounded-full px-3 py-1 text-xs font-black" :class="r.ok?'bg-lime text-black':'bg-red-500'" x-text="r.ok?'OK':'CHECK'"></span></div><p class="mini mt-2" x-text="r.note"></p><a class="cut btn bg-white/5 p-3 mt-3 block text-center" :href="r.url" x-show="r.url">OPEN</a></div></template></section>
+<section class="cut card p-5 mt-4"><h2 class="text-2xl font-black lime">Priority Fix List</h2><div class="grid gap-3 mt-3"><div class="soft p-3"><b>1. Open Play</b><p class="mini mt-1">ยังเป็น Legacy Stable Mode / loader. ควรย้ายโค้ด Open Play ตัวจริงกลับมาเป็นไฟล์ openplay.html โดยตรงในรอบถัดไป เพื่อไม่ต้องพึ่ง external raw fallback.</p></div><div class="soft p-3"><b>2. Supabase Security</b><p class="mini mt-1">Tournament tables เปิด public write สำหรับ prototype. ก่อนใช้หลายสนามจริง ต้องเพิ่ม Organizer/Admin permission.</p></div><div class="soft p-3"><b>3. Data Consistency</b><p class="mini mt-1">Open Play ใช้ psh_* tables, Tournament ใช้ psh_tournament_* tables, Team Battle ยังใช้ localStorage. ต้องค่อยรวม data model ในอนาคต.</p></div><div class="soft p-3"><b>4. Mobile Test</b><p class="mini mt-1">ต้องทดสอบบนมือถือจริง: iPhone Safari, Android Chrome, LINE browser, Facebook in-app browser.</p></div></div></section>
+</main>
+<script>
+function checkApp(){return{url:'https://zzeikmrrlfvwnwsprmjy.supabase.co',key:'sb_publishable_xSAZX5dgZ_3Qr3nzoOtqYA_Z0l8yOaX',db:null,results:[],async run(){this.results=[];this.add('Home Hub',true,'หน้าแรกต้องเปิดเป็น Play System Hub','./');this.add('Open Play',true,'เปิดผ่าน openplay.html แต่ยังเป็น legacy loader ต้องทดสอบจริงบนเครื่อง','./openplay.html');this.add('Tournament',true,'Standalone + Supabase Cloud Save + Public Link','./tournament.html');this.add('Team Battle',true,'Standalone + localStorage + TH/EN','./team-battle.html');this.add('Public Viewer',true,'ดูผล Tournament แบบ read-only ต้องมี id ถึงจะเห็นข้อมูล','./tournament-view.html');try{this.db=supabase.createClient(this.url,this.key);let r=await this.db.from('psh_events').select('id').limit(1);this.add('Supabase psh_events',!r.error,r.error?r.error.message:'Open Play database reachable','');let t=await this.db.from('psh_tournaments').select('id').limit(1);this.add('Supabase tournament tables',!t.error,t.error?t.error.message:'Tournament database reachable','');}catch(e){this.add('Supabase connection',false,e.message,'')}} ,add(name,ok,note,url){this.results.push({name,ok,note,url})}}}
+</script>
+</body>
+</html>
