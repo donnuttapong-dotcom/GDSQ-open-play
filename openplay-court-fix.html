@@ -11,7 +11,7 @@
   </style>
 </head>
 <body>
-  <iframe id="appFrame" src="./openplay.html?v=end-event-archive-051a97b-court-fix-core"></iframe>
+  <iframe id="appFrame" src="./openplay.html?v=end-event-archive-051a97b-court-fix-clock"></iframe>
   <div class="badge" id="badge">COURT FIX LOADING</div>
 
   <script>
@@ -38,6 +38,18 @@
       }
     }
 
+    function elapsedClock(start, now){
+      const startMs = new Date(start || 0).getTime();
+      if(!Number.isFinite(startMs) || startMs <= 0) return '-';
+      const totalSeconds = Math.max(0, Math.floor((now - startMs) / 1000));
+      const m = Math.floor(totalSeconds / 60);
+      const s = totalSeconds % 60;
+      if(m < 60) return m + ':' + String(s).padStart(2,'0');
+      const h = Math.floor(m / 60);
+      const mm = m % 60;
+      return h + ':' + String(mm).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    }
+
     function applyCourtFix(){
       const app = getApp();
       const doc = frame.contentDocument;
@@ -50,6 +62,11 @@
         const originalLoadCurrent = app.loadCurrent ? app.loadCurrent.bind(app) : null;
 
         app.clampCourtCount = clampCourt;
+        app.__courtClock = Date.now();
+
+        app.elapsed = function(m){
+          return elapsedClock(m?.started_at || m?.created_at, this.__courtClock || Date.now());
+        };
 
         app.courtNums = function(){
           const count = clampCourt(this.courts || this.event?.courts_count || 1);
@@ -114,6 +131,12 @@
         app.__courtFixPatched = true;
       }
 
+      if(!app.__courtClockInterval){
+        app.__courtClockInterval = setInterval(() => {
+          app.__courtClock = Date.now();
+        }, 1000);
+      }
+
       const input = [...doc.querySelectorAll('input[type="number"]')].find(el => {
         const m = el.getAttribute('x-model.number') || el.getAttribute('x-model') || '';
         return m === 'courts';
@@ -134,7 +157,7 @@
         input.__courtFixInput = true;
       }
 
-      badge.textContent = 'COURT FIX ACTIVE · 1-10';
+      badge.textContent = 'COURT + CLOCK FIX ACTIVE';
       return true;
     }
 
