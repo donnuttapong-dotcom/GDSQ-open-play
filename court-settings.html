@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="th" x-data="courtSettings()" x-init="init()">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GDSQ Open Play · Court Settings</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body{background:#11161b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif}
+    .cut{clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}
+    .card{background:#222931;border:1px solid #39434d}.lime{color:#c7ff2e}.bg-lime{background:#c7ff2e;color:#111}
+    .mini{font-size:12px;color:#94a3b8}.soft{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.1);border-radius:16px}
+    select{background:#10151b!important;color:#fff!important;border-color:#3a424a!important}
+  </style>
+</head>
+<body>
+  <main class="max-w-3xl mx-auto p-4 space-y-4">
+    <section class="cut card p-4">
+      <div class="flex justify-between items-start gap-3">
+        <div>
+          <div class="text-[10px] tracking-[.25em] lime">GDSQ PICKLEBALL</div>
+          <h1 class="text-3xl font-black">ตั้งค่าจำนวนคอร์ท</h1>
+          <p class="mini mt-1">ใช้หน้านี้ตั้งคอร์ทก่อนเปิด Open Play เพื่อไม่ให้ช่องคอร์ทเด้งกลับ</p>
+        </div>
+        <a class="cut bg-lime text-black px-4 py-2 font-black" href="./openplay.html?v=openplay">OPEN PLAY</a>
+      </div>
+    </section>
+
+    <section class="cut card p-4 space-y-3">
+      <label class="mini">เลือกอีเว้นท์สด</label>
+      <select class="w-full rounded-lg border p-3" x-model="eventId" @change="selectEvent()">
+        <option value="">เลือกอีเว้นท์</option>
+        <template x-for="e in events" :key="e.id">
+          <option :value="e.id" x-text="(e.name_th||e.name_en)+' · '+(e.courts_count||1)+' courts'"></option>
+        </template>
+      </select>
+
+      <template x-if="event">
+        <div class="soft p-4 space-y-3">
+          <div class="flex justify-between items-center gap-3">
+            <div>
+              <b class="text-xl" x-text="event.name_th||event.name_en"></b>
+              <p class="mini" x-text="'สถานะ: '+event.status+' · คอร์ทปัจจุบัน: '+event.courts_count"></p>
+              <p class="mini" x-text="'ผู้เล่นรอ/พร้อม: '+readyCount+' คน · Match Preview สูงสุดตามคน: '+Math.floor(readyCount/4)+' คอร์ท'"></p>
+            </div>
+            <button class="cut bg-white/10 px-3 py-2 font-black" @click="load()">รีเฟรช</button>
+          </div>
+
+          <div>
+            <div class="mini mb-2">เลือกจำนวนคอร์ท 1–10</div>
+            <div class="grid grid-cols-5 gap-2">
+              <template x-for="n in 10" :key="n">
+                <button class="cut p-4 font-black" :class="Number(event.courts_count)===n?'bg-lime text-black':'bg-white/10'" @click="setCourts(n)" x-text="n"></button>
+              </template>
+            </div>
+          </div>
+
+          <div class="soft p-3">
+            <b class="lime">ผลลัพธ์ที่ควรได้</b>
+            <p class="mini mt-1" x-text="'ถ้าตั้ง '+event.courts_count+' คอร์ท และมีผู้เล่น '+readyCount+' คน ระบบควรสร้าง Match Preview ได้ไม่เกิน '+Math.min(Number(event.courts_count)||1, Math.floor(readyCount/4))+' คอร์ท'"></p>
+          </div>
+
+          <a class="cut bg-lime text-black w-full block text-center p-4 font-black" :href="'./openplay.html?v=courts-'+Date.now()+'&tab=manage'" @click="rememberEvent()">เปิดหน้า Organizer</a>
+        </div>
+      </template>
+    </section>
+
+    <div x-show="msg" class="cut border border-lime-300/40 bg-lime-300/10 p-3 text-lime-200 whitespace-pre-wrap" x-text="msg"></div>
+  </main>
+
+  <script>
+    function courtSettings(){
+      return {
+        url:'https://zzeikmrrlfvwnwsprmjy.supabase.co',
+        key:'sb_publishable_xSAZX5dgZ_3Qr3nzoOtqYA_Z0l8yOaX',
+        db:null,
+        events:[],
+        eventId:'',
+        event:null,
+        readyCount:0,
+        msg:'',
+        async init(){
+          this.db=supabase.createClient(this.url,this.key);
+          await this.load();
+        },
+        flash(m){this.msg=m;setTimeout(()=>this.msg='',3500)},
+        async load(){
+          const ev=await this.db.from('psh_events').select('id,name_th,name_en,status,courts_count,event_mode,created_at').eq('status','live').order('created_at',{ascending:false});
+          if(ev.error){this.flash(ev.error.message);return;}
+          this.events=ev.data||[];
+          if(!this.eventId&&this.events[0])this.eventId=this.events[0].id;
+          this.selectEvent();
+        },
+        async selectEvent(){
+          this.event=this.events.find(e=>e.id===this.eventId)||null;
+          this.readyCount=0;
+          if(!this.event)return;
+          const p=await this.db.from('psh_event_players').select('id,status').eq('event_id',this.eventId).in('status',['waiting','ready']);
+          if(p.error){this.flash(p.error.message);return;}
+          this.readyCount=(p.data||[]).length;
+          this.rememberEvent();
+        },
+        rememberEvent(){
+          if(this.eventId)localStorage.psh_event=this.eventId;
+        },
+        async setCourts(n){
+          if(!this.event)return;
+          const count=Math.max(1,Math.min(10,Number(n)||1));
+          const old=this.event.courts_count;
+          this.event.courts_count=count;
+          const idx=this.events.findIndex(e=>e.id===this.eventId);
+          if(idx>=0)this.events[idx].courts_count=count;
+          this.rememberEvent();
+          const res=await this.db.from('psh_events').update({courts_count:count}).eq('id',this.eventId).eq('status','live').select('id,name_th,name_en,status,courts_count,event_mode,created_at').single();
+          if(res.error){
+            this.event.courts_count=old;
+            if(idx>=0)this.events[idx].courts_count=old;
+            this.flash(res.error.message);
+            return;
+          }
+          this.event=res.data;
+          if(idx>=0)this.events[idx]=res.data;
+          this.flash('บันทึกจำนวนคอร์ทเป็น '+count+' แล้ว');
+        }
+      }
+    }
+  </script>
+</body>
+</html>
