@@ -7,158 +7,149 @@
   <style>
     html,body{margin:0;width:100%;height:100%;background:#0d1217;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;overflow:hidden}
     iframe{width:100%;height:100%;border:0;display:block;background:#11161b}
-    .badge{position:fixed;right:12px;bottom:12px;z-index:999999;background:#c7ff2e;color:#111;border-radius:14px;padding:10px 12px;font-size:12px;font-weight:900;box-shadow:0 10px 28px rgba(0,0,0,.35)}
-    .badge small{display:block;font-weight:700;opacity:.75}
+    .badge{position:fixed;right:12px;bottom:12px;z-index:999999;background:#c7ff2e;color:#111;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:900;box-shadow:0 6px 20px rgba(0,0,0,.35)}
   </style>
 </head>
 <body>
-  <iframe id="core" src="./openplay.html?v=end-event-archive-051a97b"></iframe>
-  <div class="badge" id="badge">COURT FIX <small>loading...</small></div>
+  <iframe id="appFrame" src="./openplay.html?v=end-event-archive-051a97b-court-fix-core"></iframe>
+  <div class="badge" id="badge">COURT FIX LOADING</div>
 
   <script>
-    const iframe = document.getElementById('core');
+    const frame = document.getElementById('appFrame');
     const badge = document.getElementById('badge');
+    const COURT_MIN = 1;
+    const COURT_MAX = 10;
 
-    function setBadge(text, sub){
-      badge.innerHTML = text + '<small>' + sub + '</small>';
+    function clampCourt(value){
+      const n = Math.floor(Number(value) || 1);
+      return Math.max(COURT_MIN, Math.min(COURT_MAX, n));
     }
 
-    function clampCourts(v){
-      const n = Number(v || 1);
-      if (!Number.isFinite(n)) return 1;
-      return Math.max(1, Math.min(10, Math.round(n)));
+    function getApp(){
+      try{
+        const win = frame.contentWindow;
+        const doc = frame.contentDocument;
+        if(!win || !doc || !win.Alpine) return null;
+        const root = doc.querySelector('html[x-data]');
+        if(!root || !win.Alpine.$data) return null;
+        return win.Alpine.$data(root);
+      }catch(e){
+        return null;
+      }
     }
 
-    function installCourtFix(){
-      const w = iframe.contentWindow;
-      const d = iframe.contentDocument;
+    function applyCourtFix(){
+      const app = getApp();
+      const doc = frame.contentDocument;
+      if(!app || !doc) return false;
+
+      const keyFor = () => app.eventId ? 'psh_courts_' + app.eventId : 'psh_courts_global';
+
+      if(!app.__courtFixPatched){
+        const originalPick = app.pick ? app.pick.bind(app) : null;
+        const originalLoadCurrent = app.loadCurrent ? app.loadCurrent.bind(app) : null;
+
+        app.clampCourtCount = clampCourt;
+
+        app.courtNums = function(){
+          const count = clampCourt(this.courts || this.event?.courts_count || 1);
+          this.courts = count;
+          return Array.from({length:count}, (_,i)=>i+1);
+        };
+
+        app.freeCourts = function(){
+          return this.courtNums().filter(c=>!this.courtMatch(c) && !this.previews.some(p=>p.court===c));
+        };
+
+        app.maxPreviewCount = function(){
+          if(this.isEventCompleted && this.isEventCompleted()) return 0;
+          const courtLimit = clampCourt(this.courts || this.event?.courts_count || 1);
+          const playerLimit = Math.floor((this.readyPlayers ? this.readyPlayers().length : 0) / 4);
+          const freeLimit = this.freeCourts ? this.freeCourts().length : courtLimit;
+          return Math.max(0, Math.min(courtLimit, playerLimit, freeLimit));
+        };
+
+        app.saveCourtSettings = async function(){
+          if(!this.eventId || (this.isEventCompleted && this.isEventCompleted())) return;
+          const n = clampCourt(this.courts);
+          this.courts = n;
+          if(this.event) this.event.courts_count = n;
+          localStorage.setItem(keyFor(), String(n));
+          this.previews = (this.previews || []).filter(p => Number(p.court) <= n);
+          this.__courtFixSaving = true;
+          try{
+            await this.chk('courts', this.db.from('psh_events').update({courts_count:n}).eq('id', this.eventId));
+            if(this.event) this.event.courts_count = n;
+            this.flash('Courts saved: '+n+' / บันทึกจำนวนคอร์ทแล้ว');
+          }catch(e){
+            this.flash('Courts save failed: '+(e.message || e));
+          }finally{
+            setTimeout(()=>{ this.__courtFixSaving = false; }, 1200);
+          }
+        };
+
+        if(originalPick){
+          app.pick = async function(id, show=true){
+            const savedBefore = localStorage.getItem('psh_courts_' + id);
+            await originalPick(id, show);
+            const savedAfter = localStorage.getItem('psh_courts_' + id) || savedBefore;
+            const n = clampCourt(savedAfter || this.event?.courts_count || this.courts || 1);
+            this.courts = n;
+            if(this.event) this.event.courts_count = n;
+          };
+        }
+
+        if(originalLoadCurrent){
+          app.loadCurrent = async function(show=true){
+            const keep = this.eventId ? localStorage.getItem('psh_courts_' + this.eventId) : null;
+            await originalLoadCurrent(show);
+            if(keep){
+              const n = clampCourt(keep);
+              this.courts = n;
+              if(this.event) this.event.courts_count = n;
+            }
+          };
+        }
+
+        app.__courtFixPatched = true;
+      }
+
+      const input = [...doc.querySelectorAll('input[type="number"]')].find(el => {
+        const m = el.getAttribute('x-model.number') || el.getAttribute('x-model') || '';
+        return m === 'courts';
+      });
+
+      if(input && !input.__courtFixInput){
+        input.setAttribute('min','1');
+        input.setAttribute('max','10');
+        input.setAttribute('step','1');
+        input.addEventListener('input', () => {
+          const n = clampCourt(input.value);
+          app.courts = n;
+          if(app.event) app.event.courts_count = n;
+          localStorage.setItem(keyFor(), String(n));
+        });
+        input.addEventListener('blur', () => app.saveCourtSettings && app.saveCourtSettings());
+        input.addEventListener('change', () => app.saveCourtSettings && app.saveCourtSettings());
+        input.__courtFixInput = true;
+      }
+
+      badge.textContent = 'COURT FIX ACTIVE · 1-10';
+      return true;
+    }
+
+    function startPatchLoop(){
       let tries = 0;
-
       const timer = setInterval(() => {
         tries++;
-        try {
-          const root = d.querySelector('[x-data]');
-          if (!root || !w.Alpine || !w.Alpine.$data) {
-            if (tries > 80) {
-              clearInterval(timer);
-              setBadge('COURT FIX', 'Alpine not ready');
-            }
-            return;
-          }
-
-          const app = w.Alpine.$data(root);
-          if (!app || app.__courtFixInstalled) return;
-
-          app.__courtFixInstalled = true;
-          app.__courtFixEditing = false;
-          app.__courtFixSaving = false;
-          app.__courtFixTimer = null;
-          app.__courtFixLastValue = clampCourts(app.courts || app.event?.courts_count || 1);
-          app.clampCourts = clampCourts;
-
-          const oldPick = app.pick.bind(app);
-          app.pick = async function(id, show = true){
-            const keep = this.__courtFixEditing ? clampCourts(this.courts) : null;
-            await oldPick(id, show);
-            if (keep) {
-              this.courts = keep;
-            } else {
-              this.courts = clampCourts(this.event?.courts_count || this.courts || 1);
-            }
-            return true;
-          };
-
-          const oldLoadCurrent = app.loadCurrent.bind(app);
-          app.loadCurrent = async function(show = true){
-            if (this.__courtFixEditing || this.__courtFixSaving) return true;
-            return oldLoadCurrent(show);
-          };
-
-          app.courtNums = function(){
-            const count = clampCourts(this.courts || this.event?.courts_count || 1);
-            return Array.from({ length: count }, (_, i) => i + 1);
-          };
-
-          app.freeCourts = function(){
-            return this.courtNums().filter(c => !this.courtMatch(c) && !this.previews.some(p => Number(p.court) === c));
-          };
-
-          app.maxPreviewCount = function(){
-            if (this.isEventCompleted && this.isEventCompleted()) return 0;
-            const byCourts = this.freeCourts().length;
-            const byPlayers = Math.floor(this.readyPlayers().length / 4);
-            return Math.max(0, Math.min(byCourts, byPlayers));
-          };
-
-          app.saveCourtSettings = async function(){
-            if (!this.eventId || (this.isEventCompleted && this.isEventCompleted())) return;
-            const c = clampCourts(this.courts);
-            this.courts = c;
-            this.__courtFixLastValue = c;
-            this.__courtFixSaving = true;
-            this.previews = (this.previews || []).filter(p => Number(p.court) <= c);
-            const res = await this.db.from('psh_events').update({ courts_count: c }).eq('id', this.eventId);
-            this.__courtFixSaving = false;
-            if (res.error) {
-              this.flash('Courts save error: ' + res.error.message);
-              throw res.error;
-            }
-            if (this.event) this.event.courts_count = c;
-            this.flash('Courts saved: ' + c + ' / บันทึกจำนวนคอร์ทแล้ว');
-          };
-
-          function bindCourtInput(){
-            const inputs = Array.from(d.querySelectorAll('input[type="number"]'));
-            const courtInput = inputs.find(el => (el.getAttribute('x-model.number') || '').includes('courts')) || inputs[0];
-            if (!courtInput || courtInput.dataset.courtFixBound === '1') return;
-            courtInput.dataset.courtFixBound = '1';
-            courtInput.min = '1';
-            courtInput.max = '10';
-            courtInput.step = '1';
-
-            const scheduleSave = () => {
-              clearTimeout(app.__courtFixTimer);
-              app.__courtFixTimer = setTimeout(async () => {
-                await app.saveCourtSettings();
-                app.__courtFixEditing = false;
-                setBadge('COURT FIX', '1–10 · saved ' + app.courts + ' court(s)');
-              }, 450);
-            };
-
-            courtInput.addEventListener('input', (e) => {
-              const c = clampCourts(e.target.value);
-              app.__courtFixEditing = true;
-              app.courts = c;
-              app.__courtFixLastValue = c;
-              e.target.value = c;
-              app.previews = (app.previews || []).filter(p => Number(p.court) <= c);
-              setBadge('COURT FIX', 'editing ' + c + ' court(s)');
-              scheduleSave();
-            }, true);
-
-            courtInput.addEventListener('blur', async () => {
-              await app.saveCourtSettings();
-              app.__courtFixEditing = false;
-              setBadge('COURT FIX', '1–10 · saved ' + app.courts + ' court(s)');
-            }, true);
-          }
-
-          bindCourtInput();
-          const observer = new MutationObserver(bindCourtInput);
-          observer.observe(d.body, { childList: true, subtree: true });
-
-          clearInterval(timer);
-          setBadge('COURT FIX', '1–10 · preview follows courts + players');
-        } catch (err) {
-          if (tries > 80) {
-            clearInterval(timer);
-            setBadge('COURT FIX', 'error: ' + err.message);
-          }
-        }
-      }, 250);
+        const ok = applyCourtFix();
+        if(ok && tries > 4) clearInterval(timer);
+        if(tries > 40 && !ok) badge.textContent = 'COURT FIX WAITING';
+      }, 500);
     }
 
-    iframe.addEventListener('load', installCourtFix);
+    frame.addEventListener('load', startPatchLoop);
+    startPatchLoop();
   </script>
 </body>
 </html>
