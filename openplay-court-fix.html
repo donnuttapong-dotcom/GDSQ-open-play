@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GDSQ Open Play · Court Fix</title>
+  <style>
+    html,body{margin:0;height:100%;background:#0d1217;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;overflow:hidden}
+    .bar{height:42px;background:#11161b;border-bottom:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:space-between;padding:0 12px;box-sizing:border-box;font-size:12px}
+    .ok{color:#c7ff2e;font-weight:900}.warn{color:#fb923c;font-weight:900}iframe{width:100%;height:calc(100% - 42px);border:0;display:block;background:#11161b}
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <div><span class="ok">COURT FIX ACTIVE</span> · คอร์ทเลือกได้ 1–10 · Preview ตามจำนวนคอร์ทและจำนวนผู้เล่น</div>
+    <div id="status" class="warn">loading...</div>
+  </div>
+  <iframe id="appFrame" src="./openplay.html?v=end-event-archive-051a97b-core"></iframe>
+
+  <script>
+    const frame = document.getElementById('appFrame');
+    const statusEl = document.getElementById('status');
+    const clampCourt = (value) => Math.max(1, Math.min(10, Number(value) || 1));
+    const appData = () => {
+      try {
+        const doc = frame.contentDocument;
+        const root = doc && doc.documentElement;
+        return root && root._x_dataStack && root._x_dataStack[0];
+      } catch (e) {
+        return null;
+      }
+    };
+
+    function patchAlpineData(data) {
+      if (!data || data.__courtFixApplied) return;
+      data.__courtFixApplied = true;
+      data.__courtFixSaving = false;
+      data.__courtFixLastLocal = clampCourt(data.courts || data.event?.courts_count || 1);
+      data.courts = data.__courtFixLastLocal;
+
+      const originalPick = data.pick ? data.pick.bind(data) : null;
+      if (originalPick) {
+        data.pick = async function(id, show = true) {
+          const before = this.__courtFixLastLocal || clampCourt(this.courts || 1);
+          await originalPick(id, show);
+          const saved = Number(localStorage.getItem('psh_courts_' + id));
+          const next = clampCourt(saved || this.event?.courts_count || before || this.courts || 1);
+          this.courts = next;
+          this.__courtFixLastLocal = next;
+        };
+      }
+
+      data.courtNums = function() {
+        const count = clampCourt(this.courts || this.event?.courts_count || 1);
+        return Array.from({ length: count }, (_, i) => i + 1);
+      };
+
+      data.maxPreviewCount = function() {
+        if (this.isEventCompleted && this.isEventCompleted()) return 0;
+        const courtLimit = clampCourt(this.courts || this.event?.courts_count || 1);
+        const playerLimit = Math.floor((this.readyPlayers ? this.readyPlayers().length : 0) / 4);
+        const freeLimit = this.freeCourts ? this.freeCourts().length : courtLimit;
+        return Math.max(0, Math.min(courtLimit, playerLimit, freeLimit));
+      };
+
+      data.saveCourtSettings = async function() {
+        if (!this.eventId || (this.isEventCompleted && this.isEventCompleted())) return;
+        const next = clampCourt(this.courts);
+        this.courts = next;
+        this.__courtFixLastLocal = next;
+        localStorage.setItem('psh_courts_' + this.eventId, String(next));
+        this.previews = [];
+        this.__courtFixSaving = true;
+        try {
+          await this.chk('courts', this.db.from('psh_events').update({ courts_count: next }).eq('id', this.eventId));
+          if (this.event) this.event.courts_count = next;
+          this.flash('บันทึกจำนวนคอร์ทแล้ว: ' + next + ' / Courts saved: ' + next);
+        } finally {
+          this.__courtFixSaving = false;
+        }
+      };
+    }
+
+    function patchCourtInput() {
+      const doc = frame.contentDocument;
+      const data = appData();
+      if (!doc || !data) return false;
+      patchAlpineData(data);
+
+      const inputs = [...doc.querySelectorAll('input[type="number"]')];
+      const courtInput = inputs.find(input => input.getAttribute('min') === '1');
+      if (!courtInput) return false;
+
+      courtInput.setAttribute('max', '10');
+      courtInput.setAttribute('step', '1');
+      courtInput.value = clampCourt(data.courts || data.event?.courts_count || 1);
+
+      if (!courtInput.__courtFixBound) {
+        courtInput.__courtFixBound = true;
+        let timer = null;
+        courtInput.addEventListener('input', () => {
+          const value = clampCourt(courtInput.value);
+          data.courts = value;
+          data.__courtFixLastLocal = value;
+          localStorage.setItem('psh_courts_' + data.eventId, String(value));
+          clearTimeout(timer);
+          timer = setTimeout(() => data.saveCourtSettings && data.saveCourtSettings(), 250);
+        });
+        courtInput.addEventListener('blur', () => {
+          const value = clampCourt(courtInput.value);
+          courtInput.value = value;
+          data.courts = value;
+          data.saveCourtSettings && data.saveCourtSettings();
+        });
+      }
+
+      statusEl.textContent = 'patched · courts ' + clampCourt(data.courts || 1);
+      return true;
+    }
+
+    function startPatchLoop() {
+      setInterval(() => {
+        try { patchCourtInput(); } catch (e) { statusEl.textContent = 'patch retry'; }
+      }, 600);
+    }
+
+    frame.addEventListener('load', () => {
+      statusEl.textContent = 'loaded · patching';
+      setTimeout(startPatchLoop, 600);
+    });
+  </script>
+</body>
+</html>
