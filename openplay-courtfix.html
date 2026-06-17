@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GDSQ Open Play · Court Fix</title>
+  <style>
+    html,body{margin:0;height:100%;background:#11161b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif}
+    #loading{display:flex;height:100%;align-items:center;justify-content:center;flex-direction:column;gap:10px}
+    .lime{color:#c7ff2e}.mini{font-size:12px;color:#94a3b8}
+    iframe{width:100%;height:100%;border:0;display:none;background:#11161b}
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <b class="lime">GDSQ OPEN PLAY</b>
+    <div>กำลังโหลดระบบคอร์ท...</div>
+    <div class="mini">Court count fix: 1–10 courts, preview follows court/player count</div>
+  </div>
+  <iframe id="appFrame" title="GDSQ Open Play Court Fix"></iframe>
+
+  <script>
+    (async function(){
+      const loading = document.getElementById('loading');
+      const frame = document.getElementById('appFrame');
+
+      try {
+        let html = await fetch('./openplay.html?v=core-051a97b-' + Date.now(), { cache: 'no-store' }).then(r => r.text());
+
+        // UI max: court count must be 1-10, not 12.
+        html = html.replaceAll('max="12"', 'max="10"');
+
+        // Save while typing/changing so the value does not jump back on realtime refresh.
+        html = html.replace(
+          '@change="saveCourtSettings();previews=[]"',
+          '@input.debounce.450ms="saveCourtSettings();previews=[]" @change="saveCourtSettings();previews=[]"'
+        );
+
+        // Add a flag so realtime reload does not overwrite the court input while saving.
+        html = html.replace(
+          "scores:{},previews:[],selectedPlayer:null",
+          "scores:{},previews:[],courtSaving:false,selectedPlayer:null"
+        );
+
+        // Clamp loaded court value to 1-10 and avoid overwriting while the user is saving.
+        html = html.replace(
+          "this.courts=+(this.event?.courts_count||this.courts||1);",
+          "if(!this.courtSaving){this.courts=Math.max(1,Math.min(10,+(this.event?.courts_count||this.courts||1)));}"
+        );
+
+        // Robust save: clamp value, update local event immediately, then persist to DB.
+        html = html.replace(
+          "async saveCourtSettings(){if(!this.eventId||this.isEventCompleted())return;await this.chk('courts',this.db.from('psh_events').update({courts_count:+this.courts||1}).eq('id',this.eventId));this.flash('Courts saved')}",
+          "async saveCourtSettings(){if(!this.eventId||this.isEventCompleted())return;const next=Math.max(1,Math.min(10,parseInt(this.courts,10)||1));this.courtSaving=true;this.courts=next;if(this.event)this.event.courts_count=next;this.previews=(this.previews||[]).filter(p=>(+p.court||1)<=next);try{await this.chk('courts',this.db.from('psh_events').update({courts_count:next}).eq('id',this.eventId));this.flash('Courts saved: '+next);}finally{setTimeout(()=>{this.courtSaving=false},900)}}"
+        );
+
+        // Court list must respect 1-10 only.
+        html = html.replace(
+          "courtNums(){return Array.from({length:Math.max(1,+this.courts||1)},(_,i)=>i+1)}",
+          "courtNums(){const n=Math.max(1,Math.min(10,parseInt(this.courts,10)||1));return Array.from({length:n},(_,i)=>i+1)}"
+        );
+
+        // Ensure max preview is based on available courts AND complete groups of 4 players.
+        html = html.replace(
+          "maxPreviewCount(){return this.isEventCompleted()?0:Math.min(this.freeCourts().length,Math.floor(this.readyPlayers().length/4))}",
+          "maxPreviewCount(){if(this.isEventCompleted())return 0;const courtLimit=Math.max(1,Math.min(10,parseInt(this.courts,10)||1));return Math.min(courtLimit,this.freeCourts().length,Math.floor(this.readyPlayers().length/4))}"
+        );
+
+        // Cache-bust all relative navigation inside the app frame for this wrapper.
+        html = html.replace('</body>', '<script>window.__GDSQ_COURT_FIX__=true;<\\/script></body>');
+
+        frame.srcdoc = html;
+        frame.onload = () => {
+          loading.style.display = 'none';
+          frame.style.display = 'block';
+        };
+      } catch (err) {
+        loading.innerHTML = '<b style="color:#fb923c">โหลดไม่สำเร็จ</b><div class="mini">' + String(err && err.message ? err.message : err) + '</div>';
+      }
+    })();
+  </script>
+</body>
+</html>
