@@ -8,20 +8,34 @@
     html,body{margin:0;width:100%;height:100%;background:#0d1217;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;overflow:hidden}
     iframe{width:100%;height:100%;border:0;display:block;background:#11161b}
     .badge{position:fixed;right:12px;bottom:12px;z-index:999999;background:#c7ff2e;color:#111;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:900;box-shadow:0 6px 20px rgba(0,0,0,.35)}
-    .shareBtn{position:fixed;right:12px;bottom:58px;z-index:999999;background:#38bdf8;color:#071017;border:0;padding:10px 14px;border-radius:999px;font-size:12px;font-weight:1000;box-shadow:0 6px 20px rgba(0,0,0,.35);display:none;cursor:pointer}
+    .sharebar{position:fixed;right:12px;top:12px;z-index:999999;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+    .sharebtn{border:0;background:#c7ff2e;color:#111;padding:10px 14px;border-radius:999px;font-size:12px;font-weight:1000;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer}
+    .sharehint{background:rgba(0,0,0,.72);color:#fff;border:1px solid rgba(255,255,255,.16);padding:8px 10px;border-radius:999px;font-size:11px;font-weight:800;max-width:72vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   </style>
 </head>
 <body>
-  <iframe id="appFrame" src="./openplay.html?v=end-event-archive-051a97b-court-fix-clock-share"></iframe>
-  <button class="shareBtn" id="eventShareBtn" type="button">COPY EVENT STATS LINK</button>
+  <iframe id="appFrame" src="about:blank"></iframe>
+  <div class="sharebar">
+    <div class="sharehint" id="shareHint">Event Stats Link</div>
+    <button class="sharebtn" id="copyEventStats">COPY EVENT STATS LINK</button>
+  </div>
   <div class="badge" id="badge">COURT FIX LOADING</div>
 
   <script>
     const frame = document.getElementById('appFrame');
     const badge = document.getElementById('badge');
-    const eventShareBtn = document.getElementById('eventShareBtn');
+    const copyEventStats = document.getElementById('copyEventStats');
+    const shareHint = document.getElementById('shareHint');
     const COURT_MIN = 1;
     const COURT_MAX = 10;
+    const params = new URLSearchParams(location.search);
+    const initialEventId = params.get('event') || params.get('eventId') || '';
+    const initialTab = params.get('tab') || (initialEventId ? 'stats' : 'events');
+
+    if(initialEventId){
+      localStorage.setItem('psh_event', initialEventId);
+    }
+    frame.src = './openplay.html?tab=' + encodeURIComponent(initialTab) + '&v=end-event-archive-051a97b-court-fix-share-clock';
 
     function clampCourt(value){
       const n = Math.floor(Number(value) || 1);
@@ -53,21 +67,19 @@
       return h + ':' + String(mm).padStart(2,'0') + ':' + String(s).padStart(2,'0');
     }
 
-    function eventStatsUrl(app){
-      const eventId = app && app.eventId ? app.eventId : '';
-      const url = new URL(location.href);
-      url.pathname = url.pathname.replace(/[^/]*$/, 'openplay-court-fix.html');
-      url.search = '';
-      if(eventId){
-        url.searchParams.set('event', eventId);
-        url.searchParams.set('tab', 'stats');
-        url.searchParams.set('v', 'event-share');
-      }
-      url.hash = '';
-      return url.toString();
+    function currentEventId(){
+      const app = getApp();
+      return app?.eventId || localStorage.getItem('psh_event') || initialEventId || '';
+    }
+
+    function eventStatsUrl(){
+      const id = currentEventId();
+      if(!id) return '';
+      return location.origin + location.pathname + '?event=' + encodeURIComponent(id) + '&tab=stats';
     }
 
     async function copyText(text){
+      if(!text) return false;
       try{
         await navigator.clipboard.writeText(text);
         return true;
@@ -84,34 +96,26 @@
       }
     }
 
-    function updateShareButton(app){
-      if(!app || !app.eventId){
-        eventShareBtn.style.display = 'none';
+    copyEventStats.addEventListener('click', async () => {
+      const url = eventStatsUrl();
+      if(!url){
+        shareHint.textContent = 'เลือกอีเว้นท์ก่อน / Select event first';
         return;
       }
-      eventShareBtn.style.display = 'block';
-      eventShareBtn.onclick = async () => {
-        const link = eventStatsUrl(app);
-        const ok = await copyText(link);
-        if(app.flash) app.flash(ok ? 'คัดลอกลิงก์สถิติอีเว้นท์แล้ว / Event stats link copied' : link);
-        badge.textContent = ok ? 'EVENT STATS LINK COPIED' : 'COPY MANUALLY';
-      };
-    }
+      const ok = await copyText(url);
+      shareHint.textContent = ok ? 'Copied: ' + url : url;
+      const app = getApp();
+      if(app && app.flash) app.flash(ok ? 'คัดลอกลิงก์สถิติอีเว้นท์แล้ว / Event stats link copied' : 'Copy failed');
+    });
 
-    async function applyIncomingStatsLink(app){
-      if(!app || app.__eventStatsLinkApplied) return;
-      const params = new URLSearchParams(location.search);
-      const eventId = params.get('event');
-      const tab = params.get('tab');
-      if(eventId){
-        app.__eventStatsLinkApplied = true;
-        try{
-          await app.pick(eventId, false);
-          app.tab = tab || 'stats';
-          localStorage.psh_event = eventId;
-        }catch(e){
-          if(app.flash) app.flash('เปิดลิงก์สถิติไม่ได้ / Cannot open stats link');
-        }
+    function updateShareHint(){
+      const app = getApp();
+      const url = eventStatsUrl();
+      if(app?.event){
+        const name = app.event.name_th || app.event.name_en || 'Event';
+        shareHint.textContent = 'Share Stats: ' + name;
+      }else if(url){
+        shareHint.textContent = 'Event Stats Link Ready';
       }
     }
 
@@ -120,6 +124,7 @@
       const doc = frame.contentDocument;
       if(!app || !doc) return false;
 
+      updateShareHint();
       const keyFor = () => app.eventId ? 'psh_courts_' + app.eventId : 'psh_courts_global';
 
       if(!app.__courtFixPatched){
@@ -128,6 +133,16 @@
 
         app.clampCourtCount = clampCourt;
         app.__courtClock = Date.now();
+
+        app.eventStatsShareUrl = function(){
+          return eventStatsUrl();
+        };
+
+        app.copyEventStatsLink = async function(){
+          const url = eventStatsUrl();
+          const ok = await copyText(url);
+          this.flash(ok ? 'คัดลอกลิงก์สถิติอีเว้นท์แล้ว / Event stats link copied' : 'Copy failed');
+        };
 
         app.elapsed = function(m){
           return elapsedClock(m?.started_at || m?.created_at, this.__courtClock || Date.now());
@@ -178,6 +193,7 @@
             const n = clampCourt(savedAfter || this.event?.courts_count || this.courts || 1);
             this.courts = n;
             if(this.event) this.event.courts_count = n;
+            updateShareHint();
           };
         }
 
@@ -190,6 +206,7 @@
               this.courts = n;
               if(this.event) this.event.courts_count = n;
             }
+            updateShareHint();
           };
         }
 
@@ -199,6 +216,7 @@
       if(!app.__courtClockInterval){
         app.__courtClockInterval = setInterval(() => {
           app.__courtClock = Date.now();
+          updateShareHint();
         }, 1000);
       }
 
@@ -222,9 +240,7 @@
         input.__courtFixInput = true;
       }
 
-      applyIncomingStatsLink(app);
-      updateShareButton(app);
-      badge.textContent = 'COURT + CLOCK + SHARE ACTIVE';
+      badge.textContent = 'COURT + CLOCK + SHARE FIX ACTIVE';
       return true;
     }
 
