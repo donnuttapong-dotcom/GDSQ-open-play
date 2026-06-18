@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GDSQ Event Stats</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body{background:#11161b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif}.cut{clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}.card{background:#222931;border:1px solid #39434d}.lime{color:#c7ff2e}.bg-lime{background:#c7ff2e;color:#111}.mini{font-size:12px;color:#94a3b8}.soft{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.1);border-radius:16px}.row:hover{background:rgba(199,255,46,.08)}
+  </style>
+</head>
+<body>
+  <main class="max-w-6xl mx-auto p-4 space-y-4">
+    <header class="cut card p-4 flex flex-wrap justify-between gap-3 items-start">
+      <div>
+        <div class="text-[10px] tracking-[.25em] lime font-black">GDSQ PICKLEBALL</div>
+        <h1 class="text-3xl font-black">Event Stats Summary</h1>
+        <p id="eventInfo" class="mini">Loading...</p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <button id="copyBtn" class="cut bg-lime px-4 py-3 font-black text-black">COPY LINK</button>
+        <a id="openApp" class="cut bg-orange-400 px-4 py-3 font-black text-black no-underline" href="./openplay-court-fix.html">OPEN APP</a>
+      </div>
+    </header>
+
+    <section class="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div class="soft p-4"><div class="mini">Players</div><b id="sumPlayers" class="text-2xl">-</b></div>
+      <div class="soft p-4"><div class="mini">Confirmed Matches</div><b id="sumMatches" class="text-2xl">-</b></div>
+      <div class="soft p-4"><div class="mini">Total Games</div><b id="sumGames" class="text-2xl">-</b></div>
+      <div class="soft p-4"><div class="mini">Top Score</div><b id="sumTop" class="text-2xl lime">-</b></div>
+      <div class="soft p-4"><div class="mini">Status</div><b id="sumStatus" class="text-2xl">-</b></div>
+    </section>
+
+    <section class="cut card p-4">
+      <h2 class="text-xl font-black lime">Player Ranking</h2>
+      <p class="mini mb-3">คะแนนคิดจากสถิติที่บันทึกในอีเว้นท์นี้</p>
+      <div class="overflow-auto">
+        <table class="w-full text-sm">
+          <thead class="text-slate-400 border-b border-white/10">
+            <tr><th class="text-left p-2">#</th><th class="text-left p-2">Player</th><th class="text-right p-2">Score</th><th class="text-right p-2">W-L</th><th class="text-right p-2">Win%</th><th class="text-right p-2">PF</th><th class="text-right p-2">PA</th><th class="text-right p-2">Diff</th></tr>
+          </thead>
+          <tbody id="playersBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="cut card p-4">
+      <h2 class="text-xl font-black text-orange-300">Match History</h2>
+      <p class="mini mb-3">เฉพาะแมตช์ที่ยืนยันคะแนนแล้ว</p>
+      <div id="matchesBody" class="grid gap-2"></div>
+    </section>
+  </main>
+
+<script>
+const SUPABASE_URL='https://zzeikmrrlfvwnwsprmjy.supabase.co';
+const SUPABASE_KEY='sb_publishable_xSAZX5dgZ_3Qr3nzoOtqYA_Z0l8yOaX';
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const params=new URLSearchParams(location.search);
+const eventId=params.get('event')||localStorage.psh_event||'';
+
+function num(v){return Number(v||0)}
+function score(p){return num(p.wins)*10 + num(p.matches_played)*2 + (num(p.points_for)-num(p.points_against));}
+function diff(p){return num(p.points_for)-num(p.points_against)}
+function winRate(p){return num(p.matches_played)?Math.round(num(p.wins)/num(p.matches_played)*100):0}
+function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function eventStatsUrl(id){const u=new URL(location.href);u.pathname=u.pathname.replace(/[^/]*$/,'event-stats.html');u.search='';u.searchParams.set('event',id);return u.toString()}
+
+async function load(){
+  if(!eventId){document.getElementById('eventInfo').textContent='No event selected';return;}
+  localStorage.psh_event=eventId;
+  const [eventRes, playersRes, matchesRes]=await Promise.all([
+    db.from('psh_events').select('*').eq('id',eventId).single(),
+    db.from('psh_event_players').select('*').eq('event_id',eventId),
+    db.from('psh_matches').select('*').eq('event_id',eventId).order('created_at',{ascending:false})
+  ]);
+  if(eventRes.error){document.getElementById('eventInfo').textContent=eventRes.error.message;return;}
+  const event=eventRes.data;
+  const players=playersRes.data||[];
+  const matches=(matchesRes.data||[]).filter(m=>m.status==='confirmed');
+  const matchIds=matches.map(m=>m.id);
+  let mps=[];
+  if(matchIds.length){
+    const mpRes=await db.from('psh_match_players').select('*').in('match_id',matchIds);
+    mps=mpRes.data||[];
+  }
+
+  document.title='GDSQ Event Stats · '+(event.name_th||event.name_en||'Event');
+  document.getElementById('eventInfo').textContent=(event.name_th||event.name_en||'-')+' · '+(event.event_time||'-')+' · '+(event.venue||'-');
+  document.getElementById('openApp').href='./openplay-court-fix.html?event='+encodeURIComponent(eventId)+'&tab=stats';
+  document.getElementById('sumPlayers').textContent=players.length;
+  document.getElementById('sumMatches').textContent=matches.length;
+  document.getElementById('sumGames').textContent=players.reduce((s,p)=>s+num(p.matches_played),0);
+  document.getElementById('sumStatus').textContent=event.status==='completed'?'ARCHIVED':String(event.status||'-').toUpperCase();
+
+  const ranked=[...players].sort((a,b)=>score(b)-score(a)||num(b.wins)-num(a.wins)||diff(b)-diff(a)||String(a.nickname).localeCompare(String(b.nickname)));
+  document.getElementById('sumTop').textContent=ranked[0]?ranked[0].nickname+' · '+score(ranked[0]):'-';
+  document.getElementById('playersBody').innerHTML=ranked.map((p,i)=>`<tr class="row border-b border-white/5"><td class="p-2 font-black text-slate-400">${i+1}</td><td class="p-2 font-black">${esc(p.nickname)}</td><td class="p-2 text-right lime font-black">${score(p)}</td><td class="p-2 text-right">${num(p.wins)}-${num(p.losses)}</td><td class="p-2 text-right">${winRate(p)}%</td><td class="p-2 text-right">${num(p.points_for)}</td><td class="p-2 text-right">${num(p.points_against)}</td><td class="p-2 text-right ${diff(p)>=0?'lime':'text-red-400'} font-black">${diff(p)}</td></tr>`).join('');
+
+  document.getElementById('matchesBody').innerHTML=matches.length?matches.map(m=>{
+    const namesA=mps.filter(x=>x.match_id===m.id&&x.team==='A').map(x=>x.nickname).join(' / ');
+    const namesB=mps.filter(x=>x.match_id===m.id&&x.team==='B').map(x=>x.nickname).join(' / ');
+    const winner=num(m.team_a_score)>num(m.team_b_score)?'Team A':num(m.team_b_score)>num(m.team_a_score)?'Team B':'Draw';
+    return `<div class="soft p-3"><div class="flex justify-between gap-2"><b>Court ${m.court_number||'-'}</b><span class="lime font-black">${winner}</span></div><div class="mini">Team A: ${esc(namesA||'-')}</div><div class="mini">Team B: ${esc(namesB||'-')}</div><div class="text-lg font-black mt-1">${num(m.team_a_score)} - ${num(m.team_b_score)}</div></div>`;
+  }).join(''):'<div class="mini">ยังไม่มีแมตช์ที่ยืนยันคะแนน</div>';
+}
+
+document.getElementById('copyBtn').addEventListener('click',async()=>{
+  if(!eventId)return;
+  const link=eventStatsUrl(eventId);
+  try{await navigator.clipboard.writeText(link);document.getElementById('copyBtn').textContent='COPIED';setTimeout(()=>document.getElementById('copyBtn').textContent='COPY LINK',1500)}catch(e){prompt('Copy link',link)}
+});
+
+load();
+</script>
+</body>
+</html>
