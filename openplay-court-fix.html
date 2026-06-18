@@ -29,7 +29,7 @@
     const initialTab = pageParams.get('tab') || '';
 
     if(initialEventId){ localStorage.setItem('psh_event', initialEventId); }
-    frame.src = './openplay.html?v=end-event-archive-051a97b-court-fix-clock-share' + (initialTab ? '&tab=' + encodeURIComponent(initialTab) : '');
+    frame.src = './openplay.html?v=end-event-archive-051a97b-court-fix-clock-share-2' + (initialTab ? '&tab=' + encodeURIComponent(initialTab) : '');
 
     function clampCourt(value){ const n = Math.floor(Number(value) || 1); return Math.max(COURT_MIN, Math.min(COURT_MAX, n)); }
 
@@ -42,6 +42,18 @@
         if(!root || !win.Alpine.$data) return null;
         return win.Alpine.$data(root);
       }catch(e){ return null; }
+    }
+
+    function elapsedClock(start, now){
+      const startMs = new Date(start || 0).getTime();
+      if(!Number.isFinite(startMs) || startMs <= 0) return '-';
+      const totalSeconds = Math.max(0, Math.floor((now - startMs) / 1000));
+      const m = Math.floor(totalSeconds / 60);
+      const s = totalSeconds % 60;
+      if(m < 60) return m + ':' + String(s).padStart(2,'0');
+      const h = Math.floor(m / 60);
+      const mm = m % 60;
+      return h + ':' + String(mm).padStart(2,'0') + ':' + String(s).padStart(2,'0');
     }
 
     async function copyText(text){
@@ -68,7 +80,7 @@
       badge.textContent = ok ? 'EVENT STATS LINK COPIED' : 'COPY FAILED';
       const old = copyEventStatsBtn.textContent;
       copyEventStatsBtn.textContent = ok ? 'คัดลอกแล้ว / COPIED' : 'COPY FAILED';
-      setTimeout(()=>{ copyEventStatsBtn.textContent = old; badge.textContent = 'COURT + SHARE ACTIVE'; }, 1800);
+      setTimeout(()=>{ copyEventStatsBtn.textContent = old; badge.textContent = 'COURT + CLOCK + SHARE ACTIVE'; }, 1800);
     }
 
     copyEventStatsBtn.addEventListener('click', copyEventStatsLink);
@@ -83,6 +95,8 @@
         const originalPick = app.pick ? app.pick.bind(app) : null;
         const originalLoadCurrent = app.loadCurrent ? app.loadCurrent.bind(app) : null;
         app.clampCourtCount = clampCourt;
+        app.__liveClockNow = Date.now();
+        app.elapsed = function(m){ return elapsedClock(m?.started_at || m?.created_at, this.__liveClockNow || Date.now()); };
         app.courtNums = function(){ const count = clampCourt(this.courts || this.event?.courts_count || 1); this.courts = count; return Array.from({length:count}, (_,i)=>i+1); };
         app.freeCourts = function(){ return this.courtNums().filter(c=>!this.courtMatch(c) && !this.previews.some(p=>p.court===c)); };
         app.maxPreviewCount = function(){ if(this.isEventCompleted && this.isEventCompleted()) return 0; const courtLimit = clampCourt(this.courts || this.event?.courts_count || 1); const playerLimit = Math.floor((this.readyPlayers ? this.readyPlayers().length : 0) / 4); const freeLimit = this.freeCourts ? this.freeCourts().length : courtLimit; return Math.max(0, Math.min(courtLimit, playerLimit, freeLimit)); };
@@ -101,6 +115,13 @@
         app.__courtFixPatched = true;
       }
 
+      if(!app.__liveClockInterval){
+        app.__liveClockInterval = setInterval(() => {
+          app.__liveClockNow = Date.now();
+          if(Array.isArray(app.matches)) app.matches = app.matches.slice();
+        }, 1000);
+      }
+
       const input = [...doc.querySelectorAll('input[type="number"]')].find(el => (el.getAttribute('x-model.number') || el.getAttribute('x-model') || '') === 'courts');
       if(input && !input.__courtFixInput){
         input.setAttribute('min','1'); input.setAttribute('max','10'); input.setAttribute('step','1');
@@ -109,7 +130,7 @@
         input.addEventListener('change', () => app.saveCourtSettings && app.saveCourtSettings());
         input.__courtFixInput = true;
       }
-      badge.textContent = 'COURT + SHARE ACTIVE';
+      badge.textContent = 'COURT + CLOCK + SHARE ACTIVE';
       return true;
     }
 
