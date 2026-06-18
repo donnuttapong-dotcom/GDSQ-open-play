@@ -2,24 +2,22 @@
 <html lang="th">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>GDSQ Open Play · Court Fix</title>
   <style>
-    html,body{margin:0;width:100%;height:100%;background:#0d1217;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;overflow:hidden}
-    iframe{width:100%;height:100%;border:0;display:block;background:#11161b}
-    .badge{position:fixed;right:12px;bottom:12px;z-index:999999;background:#c7ff2e;color:#111;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:900;box-shadow:0 6px 20px rgba(0,0,0,.35)}
-    .sharebtn{position:fixed;right:12px;bottom:58px;z-index:999999;background:#38bdf8;color:#06121a;padding:10px 14px;border-radius:999px;font-size:12px;font-weight:1000;border:0;box-shadow:0 6px 20px rgba(0,0,0,.35);display:none}
+    html,body{margin:0;width:100%;height:100dvh;min-height:100svh;background:#0d1217;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;overflow:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%;overscroll-behavior:none}
+    iframe{width:100%;height:100dvh;min-height:100svh;border:0;display:block;background:#11161b}
+    .badge{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:999999;background:#c7ff2e;color:#111;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:900;box-shadow:0 6px 20px rgba(0,0,0,.35);opacity:.92}
+    @media (min-width:768px) and (max-width:1180px){.badge{font-size:11px;padding:7px 10px}}
   </style>
 </head>
 <body>
-  <iframe id="appFrame" src="./openplay.html?v=end-event-archive-051a97b-court-fix-share"></iframe>
-  <button class="sharebtn" id="shareBtn">COPY EVENT STATS LINK</button>
+  <iframe id="appFrame" src="./openplay.html?v=end-event-archive-051a97b-court-fix-clock-ipad"></iframe>
   <div class="badge" id="badge">COURT FIX LOADING</div>
 
   <script>
     const frame = document.getElementById('appFrame');
     const badge = document.getElementById('badge');
-    const shareBtn = document.getElementById('shareBtn');
     const COURT_MIN = 1;
     const COURT_MAX = 10;
 
@@ -41,27 +39,6 @@
       }
     }
 
-    function copyText(text){
-      if(navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
-      const t = document.createElement('textarea');
-      t.value = text;
-      document.body.appendChild(t);
-      t.select();
-      document.execCommand('copy');
-      t.remove();
-      return Promise.resolve();
-    }
-
-    function eventShareUrl(app){
-      const url = new URL(location.href);
-      url.pathname = url.pathname.replace(/[^/]+$/, 'openplay-court-fix.html');
-      url.search = '';
-      url.searchParams.set('event', app.eventId || '');
-      url.searchParams.set('tab', 'stats');
-      url.searchParams.set('v', 'event-stats-share-834231d');
-      return url.toString();
-    }
-
     function elapsedClock(start, now){
       const startMs = new Date(start || 0).getTime();
       if(!Number.isFinite(startMs) || startMs <= 0) return '-';
@@ -74,31 +51,31 @@
       return h + ':' + String(mm).padStart(2,'0') + ':' + String(s).padStart(2,'0');
     }
 
+    function applyIpadStyle(doc){
+      if(!doc || doc.getElementById('gdsq-ipad-style')) return;
+      const style = doc.createElement('style');
+      style.id = 'gdsq-ipad-style';
+      style.textContent = `
+        html,body{min-height:100dvh!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;overscroll-behavior:none!important;}
+        button,input,select,textarea{font-size:16px!important;}
+        input,select,textarea{touch-action:manipulation!important;}
+        main{width:100%!important;}
+        @media (min-width:768px) and (max-width:1180px){
+          body{overflow-x:hidden!important;}
+          header{padding-left:max(12px,env(safe-area-inset-left))!important;padding-right:max(12px,env(safe-area-inset-right))!important;}
+          main{padding-left:max(12px,env(safe-area-inset-left))!important;padding-right:max(12px,env(safe-area-inset-right))!important;max-width:100%!important;}
+          .card,.soft,.chip{box-sizing:border-box!important;}
+          nav button{min-height:52px!important;}
+        }
+      `;
+      doc.head.appendChild(style);
+    }
+
     function applyCourtFix(){
       const app = getApp();
       const doc = frame.contentDocument;
       if(!app || !doc) return false;
-
-      const params = new URLSearchParams(location.search);
-      const targetEvent = params.get('event');
-      const targetTab = params.get('tab');
-      if(targetEvent && !app.__shareOpened){
-        app.__shareOpened = true;
-        app.pick(targetEvent, false).then(()=>{
-          app.tab = targetTab || 'stats';
-          if(app.openPlayerFromUrl) app.openPlayerFromUrl();
-        });
-      }
-
-      shareBtn.style.display = app.eventId ? 'block' : 'none';
-      shareBtn.onclick = () => {
-        const link = eventShareUrl(app);
-        copyText(link).then(()=>{
-          if(app.flash) app.flash('คัดลอกลิงก์สรุปอีเว้นท์แล้ว / Event stats link copied');
-          badge.textContent = 'EVENT LINK COPIED';
-          setTimeout(()=>badge.textContent='COURT + SHARE FIX ACTIVE',1500);
-        });
-      };
+      applyIpadStyle(doc);
 
       const keyFor = () => app.eventId ? 'psh_courts_' + app.eventId : 'psh_courts_global';
 
@@ -202,7 +179,7 @@
         input.__courtFixInput = true;
       }
 
-      badge.textContent = 'COURT + SHARE FIX ACTIVE';
+      badge.textContent = 'IPAD + COURT + CLOCK ACTIVE';
       return true;
     }
 
