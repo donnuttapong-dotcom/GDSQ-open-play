@@ -8,30 +8,29 @@
     html,body{margin:0;width:100%;height:100%;background:#0d1217;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;overflow:hidden}
     iframe{width:100%;height:100%;border:0;display:block;background:#11161b}
     .badge{position:fixed;right:12px;bottom:12px;z-index:999999;background:#c7ff2e;color:#111;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:900;box-shadow:0 6px 20px rgba(0,0,0,.35)}
-    .sharebar{position:fixed;left:12px;bottom:12px;z-index:999999;display:flex;gap:8px;align-items:center}
-    .sharebtn{border:1px solid rgba(255,255,255,.18);background:#111;color:#fff;padding:9px 12px;border-radius:999px;font-size:12px;font-weight:900;box-shadow:0 6px 20px rgba(0,0,0,.35)}
-    .sharebtn:hover{background:#c7ff2e;color:#111}
+    .share-btn{position:fixed;left:12px;bottom:12px;z-index:999999;background:#38bdf8;color:#07131a;padding:10px 14px;border-radius:999px;font-size:12px;font-weight:1000;border:0;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer}
+    .share-btn:active{transform:translateY(1px)}
   </style>
 </head>
 <body>
-  <iframe id="appFrame"></iframe>
-  <div class="sharebar"><button class="sharebtn" id="copyEventStats">คัดลอกลิงก์สถิติรวม / COPY EVENT STATS</button></div>
+  <iframe id="appFrame" src="./openplay.html?v=end-event-archive-051a97b-court-fix-clock-share"></iframe>
+  <button class="share-btn" id="shareEventBtn">COPY EVENT STATS LINK</button>
   <div class="badge" id="badge">COURT FIX LOADING</div>
 
   <script>
     const frame = document.getElementById('appFrame');
     const badge = document.getElementById('badge');
-    const copyEventStatsBtn = document.getElementById('copyEventStats');
+    const shareEventBtn = document.getElementById('shareEventBtn');
     const COURT_MIN = 1;
     const COURT_MAX = 10;
     const pageParams = new URLSearchParams(location.search);
-    const initialEventId = pageParams.get('event') || pageParams.get('event_id') || '';
-    const initialTab = pageParams.get('tab') || '';
+    const targetEventId = pageParams.get('event') || '';
+    const targetTab = pageParams.get('tab') || '';
 
-    if(initialEventId){ localStorage.setItem('psh_event', initialEventId); }
-    frame.src = './openplay.html?v=end-event-archive-051a97b-court-fix-clock-share-2' + (initialTab ? '&tab=' + encodeURIComponent(initialTab) : '');
-
-    function clampCourt(value){ const n = Math.floor(Number(value) || 1); return Math.max(COURT_MIN, Math.min(COURT_MAX, n)); }
+    function clampCourt(value){
+      const n = Math.floor(Number(value) || 1);
+      return Math.max(COURT_MIN, Math.min(COURT_MAX, n));
+    }
 
     function getApp(){
       try{
@@ -41,7 +40,9 @@
         const root = doc.querySelector('html[x-data]');
         if(!root || !win.Alpine.$data) return null;
         return win.Alpine.$data(root);
-      }catch(e){ return null; }
+      }catch(e){
+        return null;
+      }
     }
 
     function elapsedClock(start, now){
@@ -56,50 +57,82 @@
       return h + ':' + String(mm).padStart(2,'0') + ':' + String(s).padStart(2,'0');
     }
 
+    function eventStatsUrl(eventId){
+      const url = new URL(location.href);
+      url.pathname = url.pathname.replace(/[^/]*$/, 'openplay-court-fix.html');
+      url.search = '';
+      url.searchParams.set('event', eventId);
+      url.searchParams.set('tab', 'stats');
+      url.searchParams.set('v', 'event-stats-share');
+      return url.toString();
+    }
+
     async function copyText(text){
-      try{ await navigator.clipboard.writeText(text); return true; }
-      catch(e){
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.left = '-9999px';
-        document.body.appendChild(ta);
-        ta.focus(); ta.select();
+      try{
+        await navigator.clipboard.writeText(text);
+        return true;
+      }catch(e){
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.left = '-9999px';
+        document.body.appendChild(area);
+        area.focus();
+        area.select();
         const ok = document.execCommand('copy');
-        document.body.removeChild(ta);
+        document.body.removeChild(area);
         return ok;
       }
     }
 
-    async function copyEventStatsLink(){
+    shareEventBtn.addEventListener('click', async () => {
       const app = getApp();
-      const eventId = app?.eventId || localStorage.getItem('psh_event') || initialEventId;
-      if(!eventId){ badge.textContent = 'NO EVENT SELECTED'; return; }
-      const url = location.origin + location.pathname + '?event=' + encodeURIComponent(eventId) + '&tab=stats&v=event-stats';
-      const ok = await copyText(url);
+      const eventId = app?.eventId || targetEventId;
+      if(!eventId){
+        badge.textContent = 'NO EVENT SELECTED';
+        return;
+      }
+      const ok = await copyText(eventStatsUrl(eventId));
       badge.textContent = ok ? 'EVENT STATS LINK COPIED' : 'COPY FAILED';
-      const old = copyEventStatsBtn.textContent;
-      copyEventStatsBtn.textContent = ok ? 'คัดลอกแล้ว / COPIED' : 'COPY FAILED';
-      setTimeout(()=>{ copyEventStatsBtn.textContent = old; badge.textContent = 'COURT + CLOCK + SHARE ACTIVE'; }, 1800);
-    }
-
-    copyEventStatsBtn.addEventListener('click', copyEventStatsLink);
+      setTimeout(()=>badge.textContent='COURT + CLOCK + SHARE ACTIVE',1800);
+    });
 
     function applyCourtFix(){
       const app = getApp();
       const doc = frame.contentDocument;
       if(!app || !doc) return false;
+
       const keyFor = () => app.eventId ? 'psh_courts_' + app.eventId : 'psh_courts_global';
 
       if(!app.__courtFixPatched){
         const originalPick = app.pick ? app.pick.bind(app) : null;
         const originalLoadCurrent = app.loadCurrent ? app.loadCurrent.bind(app) : null;
+
         app.clampCourtCount = clampCourt;
-        app.__liveClockNow = Date.now();
-        app.elapsed = function(m){ return elapsedClock(m?.started_at || m?.created_at, this.__liveClockNow || Date.now()); };
-        app.courtNums = function(){ const count = clampCourt(this.courts || this.event?.courts_count || 1); this.courts = count; return Array.from({length:count}, (_,i)=>i+1); };
-        app.freeCourts = function(){ return this.courtNums().filter(c=>!this.courtMatch(c) && !this.previews.some(p=>p.court===c)); };
-        app.maxPreviewCount = function(){ if(this.isEventCompleted && this.isEventCompleted()) return 0; const courtLimit = clampCourt(this.courts || this.event?.courts_count || 1); const playerLimit = Math.floor((this.readyPlayers ? this.readyPlayers().length : 0) / 4); const freeLimit = this.freeCourts ? this.freeCourts().length : courtLimit; return Math.max(0, Math.min(courtLimit, playerLimit, freeLimit)); };
+        app.__courtClock = Date.now();
+
+        app.elapsed = function(m){
+          return elapsedClock(m?.started_at || m?.created_at, this.__courtClock || Date.now());
+        };
+
+        app.courtNums = function(){
+          const count = clampCourt(this.courts || this.event?.courts_count || 1);
+          this.courts = count;
+          return Array.from({length:count}, (_,i)=>i+1);
+        };
+
+        app.freeCourts = function(){
+          return this.courtNums().filter(c=>!this.courtMatch(c) && !this.previews.some(p=>p.court===c));
+        };
+
+        app.maxPreviewCount = function(){
+          if(this.isEventCompleted && this.isEventCompleted()) return 0;
+          const courtLimit = clampCourt(this.courts || this.event?.courts_count || 1);
+          const playerLimit = Math.floor((this.readyPlayers ? this.readyPlayers().length : 0) / 4);
+          const freeLimit = this.freeCourts ? this.freeCourts().length : courtLimit;
+          return Math.max(0, Math.min(courtLimit, playerLimit, freeLimit));
+        };
+
         app.saveCourtSettings = async function(){
           if(!this.eventId || (this.isEventCompleted && this.isEventCompleted())) return;
           const n = clampCourt(this.courts);
@@ -107,29 +140,78 @@
           if(this.event) this.event.courts_count = n;
           localStorage.setItem(keyFor(), String(n));
           this.previews = (this.previews || []).filter(p => Number(p.court) <= n);
-          try{ await this.chk('courts', this.db.from('psh_events').update({courts_count:n}).eq('id', this.eventId)); if(this.event) this.event.courts_count = n; this.flash('Courts saved: '+n+' / บันทึกจำนวนคอร์ทแล้ว'); }
-          catch(e){ this.flash('Courts save failed: '+(e.message || e)); }
+          this.__courtFixSaving = true;
+          try{
+            await this.chk('courts', this.db.from('psh_events').update({courts_count:n}).eq('id', this.eventId));
+            if(this.event) this.event.courts_count = n;
+            this.flash('Courts saved: '+n+' / บันทึกจำนวนคอร์ทแล้ว');
+          }catch(e){
+            this.flash('Courts save failed: '+(e.message || e));
+          }finally{
+            setTimeout(()=>{ this.__courtFixSaving = false; }, 1200);
+          }
         };
-        if(originalPick){ app.pick = async function(id, show=true){ const savedBefore = localStorage.getItem('psh_courts_' + id); await originalPick(id, show); const savedAfter = localStorage.getItem('psh_courts_' + id) || savedBefore; const n = clampCourt(savedAfter || this.event?.courts_count || this.courts || 1); this.courts = n; if(this.event) this.event.courts_count = n; }; }
-        if(originalLoadCurrent){ app.loadCurrent = async function(show=true){ const keep = this.eventId ? localStorage.getItem('psh_courts_' + this.eventId) : null; await originalLoadCurrent(show); if(keep){ const n = clampCourt(keep); this.courts = n; if(this.event) this.event.courts_count = n; } }; }
+
+        if(originalPick){
+          app.pick = async function(id, show=true){
+            const savedBefore = localStorage.getItem('psh_courts_' + id);
+            await originalPick(id, show);
+            const savedAfter = localStorage.getItem('psh_courts_' + id) || savedBefore;
+            const n = clampCourt(savedAfter || this.event?.courts_count || this.courts || 1);
+            this.courts = n;
+            if(this.event) this.event.courts_count = n;
+          };
+        }
+
+        if(originalLoadCurrent){
+          app.loadCurrent = async function(show=true){
+            const keep = this.eventId ? localStorage.getItem('psh_courts_' + this.eventId) : null;
+            await originalLoadCurrent(show);
+            if(keep){
+              const n = clampCourt(keep);
+              this.courts = n;
+              if(this.event) this.event.courts_count = n;
+            }
+          };
+        }
+
         app.__courtFixPatched = true;
       }
 
-      if(!app.__liveClockInterval){
-        app.__liveClockInterval = setInterval(() => {
-          app.__liveClockNow = Date.now();
-          if(Array.isArray(app.matches)) app.matches = app.matches.slice();
+      if(targetEventId && !app.__eventSummaryLoaded){
+        app.__eventSummaryLoaded = true;
+        localStorage.psh_event = targetEventId;
+        Promise.resolve(app.pick(targetEventId, false)).then(()=>{
+          if(targetTab === 'stats') app.tab = 'stats';
+        }).catch(()=>{});
+      }
+
+      if(!app.__courtClockInterval){
+        app.__courtClockInterval = setInterval(() => {
+          app.__courtClock = Date.now();
         }, 1000);
       }
 
-      const input = [...doc.querySelectorAll('input[type="number"]')].find(el => (el.getAttribute('x-model.number') || el.getAttribute('x-model') || '') === 'courts');
+      const input = [...doc.querySelectorAll('input[type="number"]')].find(el => {
+        const m = el.getAttribute('x-model.number') || el.getAttribute('x-model') || '';
+        return m === 'courts';
+      });
+
       if(input && !input.__courtFixInput){
-        input.setAttribute('min','1'); input.setAttribute('max','10'); input.setAttribute('step','1');
-        input.addEventListener('input', () => { const n = clampCourt(input.value); app.courts = n; if(app.event) app.event.courts_count = n; localStorage.setItem(keyFor(), String(n)); });
+        input.setAttribute('min','1');
+        input.setAttribute('max','10');
+        input.setAttribute('step','1');
+        input.addEventListener('input', () => {
+          const n = clampCourt(input.value);
+          app.courts = n;
+          if(app.event) app.event.courts_count = n;
+          localStorage.setItem(keyFor(), String(n));
+        });
         input.addEventListener('blur', () => app.saveCourtSettings && app.saveCourtSettings());
         input.addEventListener('change', () => app.saveCourtSettings && app.saveCourtSettings());
         input.__courtFixInput = true;
       }
+
       badge.textContent = 'COURT + CLOCK + SHARE ACTIVE';
       return true;
     }
@@ -139,7 +221,7 @@
       const timer = setInterval(() => {
         tries++;
         const ok = applyCourtFix();
-        if(ok && tries > 4) clearInterval(timer);
+        if(ok && tries > 6) clearInterval(timer);
         if(tries > 40 && !ok) badge.textContent = 'COURT FIX WAITING';
       }, 500);
     }
