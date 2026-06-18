@@ -8,15 +8,18 @@
     html,body{margin:0;width:100%;height:100%;background:#0d1217;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;overflow:hidden}
     iframe{width:100%;height:100%;border:0;display:block;background:#11161b}
     .badge{position:fixed;right:12px;bottom:12px;z-index:999999;background:#c7ff2e;color:#111;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:900;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+    .share{position:fixed;right:12px;bottom:54px;z-index:999999;background:#38bdf8;color:#061018;border:0;padding:10px 14px;border-radius:999px;font-size:12px;font-weight:1000;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer}
   </style>
 </head>
 <body>
   <iframe id="appFrame" src="./openplay.html?v=end-event-archive-051a97b-court-fix-clock"></iframe>
+  <button class="share" id="shareEventBtn">COPY EVENT STATS LINK</button>
   <div class="badge" id="badge">COURT FIX LOADING</div>
 
   <script>
     const frame = document.getElementById('appFrame');
     const badge = document.getElementById('badge');
+    const shareEventBtn = document.getElementById('shareEventBtn');
     const COURT_MIN = 1;
     const COURT_MAX = 10;
 
@@ -50,10 +53,66 @@
       return h + ':' + String(mm).padStart(2,'0') + ':' + String(s).padStart(2,'0');
     }
 
+    function eventStatsLink(){
+      const app = getApp();
+      const eventId = app?.eventId || new URLSearchParams(location.search).get('event') || '';
+      const url = new URL(location.origin + location.pathname);
+      if(eventId) url.searchParams.set('event', eventId);
+      url.searchParams.set('tab', 'stats');
+      url.searchParams.set('v', 'event-stats-834231d');
+      return url.toString();
+    }
+
+    async function copyText(text){
+      try{
+        await navigator.clipboard.writeText(text);
+        return true;
+      }catch(e){
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        ta.remove();
+        return ok;
+      }
+    }
+
+    async function copyEventStatsLink(){
+      const link = eventStatsLink();
+      const ok = await copyText(link);
+      const app = getApp();
+      if(app?.flash) app.flash(ok ? 'คัดลอกลิงก์สถิติรวมแล้ว / Event stats link copied' : link);
+      shareEventBtn.textContent = ok ? 'COPIED EVENT STATS LINK' : 'COPY FAILED';
+      setTimeout(()=>shareEventBtn.textContent='COPY EVENT STATS LINK', 1800);
+    }
+
+    shareEventBtn.addEventListener('click', copyEventStatsLink);
+
+    function applyDeepLink(app){
+      if(app.__eventStatsDeepLinkDone) return;
+      const q = new URLSearchParams(location.search);
+      const eventId = q.get('event');
+      const tab = q.get('tab');
+      if(eventId && app.pick){
+        app.__eventStatsDeepLinkDone = true;
+        app.pick(eventId, false).then(()=>{
+          if(tab && app.tabs && app.tabs.includes(tab)) app.tab = tab;
+        });
+      }else if(tab && app.tabs && app.tabs.includes(tab)){
+        app.__eventStatsDeepLinkDone = true;
+        app.tab = tab;
+      }
+    }
+
     function applyCourtFix(){
       const app = getApp();
       const doc = frame.contentDocument;
       if(!app || !doc) return false;
+
+      applyDeepLink(app);
 
       const keyFor = () => app.eventId ? 'psh_courts_' + app.eventId : 'psh_courts_global';
 
@@ -157,7 +216,7 @@
         input.__courtFixInput = true;
       }
 
-      badge.textContent = 'COURT + CLOCK FIX ACTIVE';
+      badge.textContent = 'COURT + CLOCK + SHARE FIX ACTIVE';
       return true;
     }
 
