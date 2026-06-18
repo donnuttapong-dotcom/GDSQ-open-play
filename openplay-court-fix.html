@@ -8,24 +8,20 @@
     html,body{margin:0;width:100%;height:100%;background:#0d1217;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;overflow:hidden}
     iframe{width:100%;height:100%;border:0;display:block;background:#11161b}
     .badge{position:fixed;right:12px;bottom:12px;z-index:999999;background:#c7ff2e;color:#111;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:900;box-shadow:0 6px 20px rgba(0,0,0,.35)}
-    .share-btn{position:fixed;left:12px;bottom:12px;z-index:999999;background:#38bdf8;color:#07131a;padding:10px 14px;border-radius:999px;font-size:12px;font-weight:1000;border:0;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer}
-    .share-btn:active{transform:translateY(1px)}
+    .sharebtn{position:fixed;right:12px;bottom:58px;z-index:999999;background:#38bdf8;color:#06121a;padding:10px 14px;border-radius:999px;font-size:12px;font-weight:1000;border:0;box-shadow:0 6px 20px rgba(0,0,0,.35);display:none}
   </style>
 </head>
 <body>
-  <iframe id="appFrame" src="./openplay.html?v=end-event-archive-051a97b-court-fix-clock-share"></iframe>
-  <button class="share-btn" id="shareEventBtn">COPY EVENT STATS LINK</button>
+  <iframe id="appFrame" src="./openplay.html?v=end-event-archive-051a97b-court-fix-share"></iframe>
+  <button class="sharebtn" id="shareBtn">COPY EVENT STATS LINK</button>
   <div class="badge" id="badge">COURT FIX LOADING</div>
 
   <script>
     const frame = document.getElementById('appFrame');
     const badge = document.getElementById('badge');
-    const shareEventBtn = document.getElementById('shareEventBtn');
+    const shareBtn = document.getElementById('shareBtn');
     const COURT_MIN = 1;
     const COURT_MAX = 10;
-    const pageParams = new URLSearchParams(location.search);
-    const targetEventId = pageParams.get('event') || '';
-    const targetTab = pageParams.get('tab') || '';
 
     function clampCourt(value){
       const n = Math.floor(Number(value) || 1);
@@ -45,6 +41,27 @@
       }
     }
 
+    function copyText(text){
+      if(navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+      const t = document.createElement('textarea');
+      t.value = text;
+      document.body.appendChild(t);
+      t.select();
+      document.execCommand('copy');
+      t.remove();
+      return Promise.resolve();
+    }
+
+    function eventShareUrl(app){
+      const url = new URL(location.href);
+      url.pathname = url.pathname.replace(/[^/]+$/, 'openplay-court-fix.html');
+      url.search = '';
+      url.searchParams.set('event', app.eventId || '');
+      url.searchParams.set('tab', 'stats');
+      url.searchParams.set('v', 'event-stats-share-834231d');
+      return url.toString();
+    }
+
     function elapsedClock(start, now){
       const startMs = new Date(start || 0).getTime();
       if(!Number.isFinite(startMs) || startMs <= 0) return '-';
@@ -57,50 +74,31 @@
       return h + ':' + String(mm).padStart(2,'0') + ':' + String(s).padStart(2,'0');
     }
 
-    function eventStatsUrl(eventId){
-      const url = new URL(location.href);
-      url.pathname = url.pathname.replace(/[^/]*$/, 'openplay-court-fix.html');
-      url.search = '';
-      url.searchParams.set('event', eventId);
-      url.searchParams.set('tab', 'stats');
-      url.searchParams.set('v', 'event-stats-share');
-      return url.toString();
-    }
-
-    async function copyText(text){
-      try{
-        await navigator.clipboard.writeText(text);
-        return true;
-      }catch(e){
-        const area = document.createElement('textarea');
-        area.value = text;
-        area.style.position = 'fixed';
-        area.style.left = '-9999px';
-        document.body.appendChild(area);
-        area.focus();
-        area.select();
-        const ok = document.execCommand('copy');
-        document.body.removeChild(area);
-        return ok;
-      }
-    }
-
-    shareEventBtn.addEventListener('click', async () => {
-      const app = getApp();
-      const eventId = app?.eventId || targetEventId;
-      if(!eventId){
-        badge.textContent = 'NO EVENT SELECTED';
-        return;
-      }
-      const ok = await copyText(eventStatsUrl(eventId));
-      badge.textContent = ok ? 'EVENT STATS LINK COPIED' : 'COPY FAILED';
-      setTimeout(()=>badge.textContent='COURT + CLOCK + SHARE ACTIVE',1800);
-    });
-
     function applyCourtFix(){
       const app = getApp();
       const doc = frame.contentDocument;
       if(!app || !doc) return false;
+
+      const params = new URLSearchParams(location.search);
+      const targetEvent = params.get('event');
+      const targetTab = params.get('tab');
+      if(targetEvent && !app.__shareOpened){
+        app.__shareOpened = true;
+        app.pick(targetEvent, false).then(()=>{
+          app.tab = targetTab || 'stats';
+          if(app.openPlayerFromUrl) app.openPlayerFromUrl();
+        });
+      }
+
+      shareBtn.style.display = app.eventId ? 'block' : 'none';
+      shareBtn.onclick = () => {
+        const link = eventShareUrl(app);
+        copyText(link).then(()=>{
+          if(app.flash) app.flash('คัดลอกลิงก์สรุปอีเว้นท์แล้ว / Event stats link copied');
+          badge.textContent = 'EVENT LINK COPIED';
+          setTimeout(()=>badge.textContent='COURT + SHARE FIX ACTIVE',1500);
+        });
+      };
 
       const keyFor = () => app.eventId ? 'psh_courts_' + app.eventId : 'psh_courts_global';
 
@@ -178,14 +176,6 @@
         app.__courtFixPatched = true;
       }
 
-      if(targetEventId && !app.__eventSummaryLoaded){
-        app.__eventSummaryLoaded = true;
-        localStorage.psh_event = targetEventId;
-        Promise.resolve(app.pick(targetEventId, false)).then(()=>{
-          if(targetTab === 'stats') app.tab = 'stats';
-        }).catch(()=>{});
-      }
-
       if(!app.__courtClockInterval){
         app.__courtClockInterval = setInterval(() => {
           app.__courtClock = Date.now();
@@ -212,7 +202,7 @@
         input.__courtFixInput = true;
       }
 
-      badge.textContent = 'COURT + CLOCK + SHARE ACTIVE';
+      badge.textContent = 'COURT + SHARE FIX ACTIVE';
       return true;
     }
 
@@ -221,7 +211,7 @@
       const timer = setInterval(() => {
         tries++;
         const ok = applyCourtFix();
-        if(ok && tries > 6) clearInterval(timer);
+        if(ok && tries > 4) clearInterval(timer);
         if(tries > 40 && !ok) badge.textContent = 'COURT FIX WAITING';
       }, 500);
     }
