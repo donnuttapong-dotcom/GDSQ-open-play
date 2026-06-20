@@ -9,22 +9,35 @@
     iframe{width:100%;height:100dvh;min-height:100svh;border:0;display:block;background:#11161b}
     .badge{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:999999;background:#c7ff2e;color:#111;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:900;box-shadow:0 6px 20px rgba(0,0,0,.35);opacity:.92}
     .level-toggle{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:999999;border:0;border-radius:999px;background:#202832;color:#fff;border:1px solid rgba(199,255,46,.45);padding:10px 13px;font-size:12px;font-weight:1000;box-shadow:0 10px 28px rgba(0,0,0,.35);cursor:pointer}
-    .level-panel{position:fixed;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));bottom:60px;max-height:min(68dvh,560px);z-index:999998;background:rgba(18,24,31,.98);border:1px solid rgba(199,255,46,.32);border-radius:22px;box-shadow:0 24px 80px rgba(0,0,0,.55);overflow:hidden;display:none;backdrop-filter:blur(16px)}
-    .level-panel.open{display:block}.level-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;border-bottom:1px solid rgba(255,255,255,.08)}.level-title{font-size:13px;font-weight:1000;color:#c7ff2e;letter-spacing:.06em}.level-sub{font-size:11px;color:#94a3b8;margin-top:2px}.level-close{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:#fff;border-radius:999px;padding:7px 10px;font-weight:900;cursor:pointer}.level-body{padding:10px;overflow:auto;max-height:calc(min(68dvh,560px) - 60px)}.level-row{display:grid;grid-template-columns:1fr 96px;gap:10px;align-items:center;padding:10px;border-radius:16px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08);margin-bottom:8px}.level-name{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.level-meta{font-size:10px;color:#94a3b8;margin-top:3px}.level-select{width:100%;background:#0f151c;color:#fff;border:1px solid rgba(199,255,46,.35);border-radius:12px;padding:10px 8px;font-size:15px;font-weight:900;outline:none}.level-msg{padding:9px 10px;border-radius:14px;background:rgba(199,255,46,.1);border:1px solid rgba(199,255,46,.28);font-size:11px;color:#d9f99d;margin-bottom:9px}.level-empty{padding:14px;color:#94a3b8;font-size:12px;text-align:center}
-    @media (min-width:768px){.level-panel{left:16px;right:auto;width:410px}.level-toggle{bottom:14px}}
-    @media (min-width:768px) and (max-width:1180px){.badge{font-size:11px;padding:7px 10px}}
+    .summary-toggle{position:fixed;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:999999;border:0;border-radius:999px;background:#fb923c;color:#111;border:1px solid rgba(251,146,60,.55);padding:10px 14px;font-size:12px;font-weight:1000;box-shadow:0 10px 28px rgba(0,0,0,.35);cursor:pointer;white-space:nowrap}
+    .level-panel,.summary-panel{position:fixed;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));bottom:60px;max-height:min(68dvh,560px);z-index:999998;background:rgba(18,24,31,.98);border:1px solid rgba(199,255,46,.32);border-radius:22px;box-shadow:0 24px 80px rgba(0,0,0,.55);overflow:hidden;display:none;backdrop-filter:blur(16px)}
+    .summary-panel{border-color:rgba(251,146,60,.38)}
+    .level-panel.open,.summary-panel.open{display:block}
+    .level-head,.summary-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .level-title,.summary-title{font-size:13px;font-weight:1000;color:#c7ff2e;letter-spacing:.06em}.summary-title{color:#fb923c}
+    .level-sub,.summary-sub{font-size:11px;color:#94a3b8;margin-top:2px}.level-close,.summary-close{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:#fff;border-radius:999px;padding:7px 10px;font-weight:900;cursor:pointer}
+    .level-body,.summary-body{padding:10px;overflow:auto;max-height:calc(min(68dvh,560px) - 60px)}
+    .level-row{display:grid;grid-template-columns:1fr 96px;gap:10px;align-items:center;padding:10px;border-radius:16px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08);margin-bottom:8px}.level-name{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.level-meta{font-size:10px;color:#94a3b8;margin-top:3px}.level-select{width:100%;background:#0f151c;color:#fff;border:1px solid rgba(199,255,46,.35);border-radius:12px;padding:10px 8px;font-size:15px;font-weight:900;outline:none}.level-msg,.summary-msg{padding:9px 10px;border-radius:14px;background:rgba(199,255,46,.1);border:1px solid rgba(199,255,46,.28);font-size:11px;color:#d9f99d;margin-bottom:9px}.summary-msg{background:rgba(251,146,60,.1);border-color:rgba(251,146,60,.28);color:#fed7aa}.level-empty,.summary-empty{padding:14px;color:#94a3b8;font-size:12px;text-align:center}
+    .summary-actions{display:grid;grid-template-columns:1fr;gap:8px}.summary-btn{border:0;border-radius:15px;padding:13px 12px;font-size:13px;font-weight:1000;cursor:pointer;text-align:center}.summary-btn.primary{background:#fb923c;color:#111}.summary-btn.lime{background:#c7ff2e;color:#111}.summary-btn.secondary{background:rgba(255,255,255,.07);color:#fff;border:1px solid rgba(255,255,255,.13)}.summary-link{font-size:11px;color:#c7ff2e;word-break:break-all;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:10px;margin:8px 0}.summary-note{font-size:11px;color:#94a3b8;line-height:1.45;margin-top:8px}
+    @media (min-width:768px){.level-panel{left:16px;right:auto;width:410px}.summary-panel{left:50%;right:auto;transform:translateX(-50%);width:440px}.level-toggle{bottom:14px}.summary-toggle{bottom:14px}}
+    @media (min-width:768px) and (max-width:1180px){.badge{font-size:11px;padding:7px 10px}.summary-toggle{bottom:52px}}
+    @media (max-width:520px){.summary-toggle{bottom:54px}.badge{bottom:12px}.level-toggle{bottom:12px;font-size:11px}.summary-panel{bottom:96px}}
   </style>
 </head>
 <body>
   <iframe id="appFrame" src="./openplay.html?v=end-event-archive-051a97b-court-fix-clock-ipad"></iframe>
   <div class="badge" id="badge">COURT FIX LOADING</div>
   <button class="level-toggle" id="levelToggle" onclick="toggleLevelPanel()">LEVEL ADMIN</button>
+  <button class="summary-toggle" id="summaryToggle" onclick="toggleSummaryPanel()">SHARE SUMMARY</button>
   <div class="level-panel" id="levelPanel"></div>
+  <div class="summary-panel" id="summaryPanel"></div>
 
   <script>
     const frame = document.getElementById('appFrame');
     const badge = document.getElementById('badge');
     const levelPanel = document.getElementById('levelPanel');
+    const summaryPanel = document.getElementById('summaryPanel');
+    const summaryToggle = document.getElementById('summaryToggle');
     const COURT_MIN = 1;
     const COURT_MAX = 10;
 
@@ -68,9 +81,76 @@
     }
     function toggleLevelPanel(){
       levelPanel.classList.toggle('open');
+      summaryPanel.classList.remove('open');
       renderLevelPanel();
     }
     function closeLevelPanel(){ levelPanel.classList.remove('open'); }
+    function toggleSummaryPanel(){
+      summaryPanel.classList.toggle('open');
+      levelPanel.classList.remove('open');
+      renderSummaryPanel();
+    }
+    function closeSummaryPanel(){ summaryPanel.classList.remove('open'); }
+
+    function currentEventId(app){
+      app = app || getApp();
+      return app?.eventId || app?.event?.id || new URLSearchParams(location.search).get('event') || localStorage.psh_event || localStorage.op_checkin_event || '';
+    }
+    function currentEventName(app){
+      app = app || getApp();
+      return app?.event?.name_th || app?.event?.name_en || app?.event?.name || 'GDSQ OpenPlay';
+    }
+    function summaryUrl(id){
+      const u = new URL('./event-stats.html', location.href);
+      if(id) u.searchParams.set('event', id);
+      u.searchParams.set('v','final-summary-01');
+      return u.toString();
+    }
+    function summaryMessage(){
+      const app = getApp();
+      const id = currentEventId(app);
+      const name = currentEventName(app);
+      const venue = app?.event?.venue ? ' @ ' + app.event.venue : '';
+      return 'สรุปผล '+name+venue+' มาแล้วครับ\nดูอันดับ ผลแข่ง และสถิติรายคนได้ที่ลิงก์นี้:\n'+summaryUrl(id);
+    }
+    async function copyText(text, message){
+      try{
+        await navigator.clipboard.writeText(text);
+        badge.textContent = message || 'COPIED';
+        renderSummaryPanel(message || 'คัดลอกแล้ว');
+      }catch(e){
+        prompt('Copy', text);
+      }
+    }
+    function copySummaryLink(){
+      const app = getApp();
+      const id = currentEventId(app);
+      copyText(summaryUrl(id), 'SUMMARY LINK COPIED');
+    }
+    function copySummaryMessage(){
+      copyText(summaryMessage(), 'SHARE MESSAGE COPIED');
+    }
+    function openSummary(){
+      const app = getApp();
+      const id = currentEventId(app);
+      window.open(summaryUrl(id), '_blank');
+    }
+    function renderSummaryPanel(message){
+      const app = getApp();
+      const id = currentEventId(app);
+      const name = currentEventName(app);
+      const link = summaryUrl(id);
+      const connected = !!id;
+      summaryToggle.textContent = connected ? 'SHARE SUMMARY' : 'SUMMARY WAITING';
+      summaryPanel.innerHTML = '<div class="summary-head"><div><div class="summary-title">PUBLIC EVENT SUMMARY</div><div class="summary-sub">ส่งลิงก์สรุปหลังจบอีเว้นท์ให้ทุกคนดูได้</div></div><button class="summary-close" onclick="closeSummaryPanel()">ปิด</button></div><div class="summary-body">'
+        +(message?'<div class="summary-msg">'+safeText(message)+'</div>':'')
+        +'<div class="summary-msg"><b>'+safeText(name)+'</b><br>'+(connected?'พร้อมก๊อปลิงก์อีเว้นท์นี้':'ยังไม่พบอีเว้นท์ที่เลือกอยู่ กรุณาเลือก/โหลดอีเว้นท์ใน Organizer ก่อน')+'</div>'
+        +'<div class="summary-link">'+safeText(link)+'</div>'
+        +'<div class="summary-actions"><button class="summary-btn lime" onclick="copySummaryMessage()">COPY SHARE MESSAGE</button><button class="summary-btn primary" onclick="copySummaryLink()">COPY SUMMARY LINK</button><button class="summary-btn secondary" onclick="openSummary()">OPEN SUMMARY PAGE</button></div>'
+        +'<div class="summary-note">ใช้งานจริง: หลังจบอีเว้นท์ กด <b>COPY SHARE MESSAGE</b> แล้ววางใน LINE/กลุ่มได้เลย คนที่เปิดลิงก์จะเห็นอันดับ ผลแข่ง และ popup รายบุคคล</div>'
+        +'</div>';
+    }
+
     function renderLevelPanel(message){
       const app = getApp();
       if(!app){
@@ -453,7 +533,8 @@
         input.__courtFixInput = true;
       }
       if(levelPanel.classList.contains('open')) renderLevelPanel();
-      badge.textContent = 'HARD REST + LEVEL ADMIN + IPAD DESKTOP';
+      if(summaryPanel.classList.contains('open')) renderSummaryPanel();
+      badge.textContent = 'HARD REST + LEVEL ADMIN + SUMMARY SHARE';
       return true;
     }
 
