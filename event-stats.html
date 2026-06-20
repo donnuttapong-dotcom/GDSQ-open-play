@@ -7,7 +7,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{--bg:#0d1217;--card:#202832;--line:#39434d;--lime:#c7ff2e;--muted:#94a3b8;--green:#22c55e;--red:#ef4444;--orange:#fb923c}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top left,rgba(199,255,46,.18),transparent 34%),linear-gradient(180deg,#0d1217,#10161d);color:white;font-family:system-ui,'Noto Sans Thai',sans-serif;min-height:100svh}.wrap{max-width:1080px;margin:auto;padding:16px 14px 90px}.cut{clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px)}.hero,.card{background:rgba(32,40,50,.96);border:1px solid var(--line);box-shadow:0 18px 60px rgba(0,0,0,.3)}.hero{padding:20px}.lime{color:var(--lime)}.bg-lime{background:var(--lime);color:#111}.mini{font-size:12px;color:var(--muted)}.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);padding:7px 10px;font-size:12px;font-weight:1000}.liveDot{width:9px;height:9px;border-radius:99px;background:var(--orange);display:inline-block;box-shadow:0 0 16px var(--orange)}.liveDot.on{background:var(--lime);box-shadow:0 0 16px var(--lime)}.soft{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.09);border-radius:18px}.stat small{display:block;color:var(--muted);font-size:12px}.stat b{font-size:30px;line-height:1.05}.rankRow{display:grid;grid-template-columns:42px 1fr auto;gap:10px;align-items:center;background:rgba(255,255,255,.052);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:12px}.rankNo{width:34px;height:34px;border-radius:999px;background:rgba(199,255,46,.14);color:var(--lime);display:grid;place-items:center;font-weight:1000}.score{font-size:18px;font-weight:1000;color:var(--lime)}.match{background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.09);border-radius:24px;padding:14px}.scoreBox{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch}.side{border:1px solid rgba(255,255,255,.1);border-radius:20px;background:rgba(0,0,0,.22);padding:14px;text-align:center}.side.winSide{border-color:rgba(34,197,94,.55);background:rgba(34,197,94,.12)}.team{font-size:12px;color:var(--muted);font-weight:1000;letter-spacing:.08em}.names{font-size:15px;font-weight:1000;margin:5px 0;line-height:1.25}.num{font-size:40px;line-height:1;font-weight:1000}.vs{display:grid;place-items:center;color:var(--lime);font-weight:1000}.btn{border:0;border-radius:16px;background:var(--lime);color:#111;font-weight:1000;padding:13px 15px;cursor:pointer;text-decoration:none;display:inline-flex;justify-content:center}.btn.secondary{background:rgba(255,255,255,.07);color:#fff;border:1px solid rgba(255,255,255,.13)}select{background:#10161d;color:#fff;border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:13px 14px;font-weight:900;min-width:min(100%,360px)}.empty{padding:18px;border-radius:20px;border:1px dashed rgba(255,255,255,.18);color:var(--muted);text-align:center}.publicNote{background:rgba(199,255,46,.09);border:1px solid rgba(199,255,46,.25);border-radius:20px;padding:12px}.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#fecaca;border-radius:18px;padding:14px}.loading{padding:18px;text-align:center;color:#d9f99d}@media(max-width:760px){.title{font-size:28px!important}.stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}.scoreBox{grid-template-columns:1fr}.vs{padding:0}.rankRow{grid-template-columns:36px 1fr}.rankRow .score{grid-column:2}.num{font-size:36px}.actionRow{width:100%}.actionRow>*{width:100%;justify-content:center}}
+:root{--bg:#0d1217;--card:#202832;--line:#39434d;--lime:#c7ff2e;--muted:#94a3b8;--green:#22c55e;--red:#ef4444;--orange:#fb923c}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top left,rgba(199,255,46,.18),transparent 34%),linear-gradient(180deg,#0d1217,#10161d);color:white;font-family:system-ui,'Noto Sans Thai',sans-serif;min-height:100svh}.wrap{max-width:1080px;margin:auto;padding:16px 14px 90px}.cut{clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px)}.hero,.card{background:rgba(32,40,50,.96);border:1px solid var(--line);box-shadow:0 18px 60px rgba(0,0,0,.3)}.hero{padding:20px}.lime{color:var(--lime)}.bg-lime{background:var(--lime);color:#111}.mini{font-size:12px;color:var(--muted)}.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);padding:7px 10px;font-size:12px;font-weight:1000}.liveDot{width:9px;height:9px;border-radius:99px;background:var(--orange);display:inline-block;box-shadow:0 0 16px var(--orange)}.liveDot.on{background:var(--lime);box-shadow:0 0 16px var(--lime)}.soft{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.09);border-radius:18px}.stat small{display:block;color:var(--muted);font-size:12px}.stat b{font-size:30px;line-height:1.05}.rankRow{display:grid;grid-template-columns:42px 1fr auto;gap:10px;align-items:center;background:rgba(255,255,255,.052);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:12px;cursor:pointer}.rankRow:hover,.rankRow.active{background:rgba(199,255,46,.1);border-color:rgba(199,255,46,.35)}.rankNo{width:34px;height:34px;border-radius:999px;background:rgba(199,255,46,.14);color:var(--lime);display:grid;place-items:center;font-weight:1000}.score{font-size:18px;font-weight:1000;color:var(--lime)}.match{background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.09);border-radius:24px;padding:14px}.scoreBox{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch}.side{border:1px solid rgba(255,255,255,.1);border-radius:20px;background:rgba(0,0,0,.22);padding:14px;text-align:center}.side.winSide{border-color:rgba(34,197,94,.55);background:rgba(34,197,94,.12)}.team{font-size:12px;color:var(--muted);font-weight:1000;letter-spacing:.08em}.names{font-size:15px;font-weight:1000;margin:5px 0;line-height:1.25}.num{font-size:40px;line-height:1;font-weight:1000}.vs{display:grid;place-items:center;color:var(--lime);font-weight:1000}.btn{border:0;border-radius:16px;background:var(--lime);color:#111;font-weight:1000;padding:13px 15px;cursor:pointer;text-decoration:none;display:inline-flex;justify-content:center}.btn.secondary{background:rgba(255,255,255,.07);color:#fff;border:1px solid rgba(255,255,255,.13)}select{background:#10161d;color:#fff;border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:13px 14px;font-weight:900;min-width:min(100%,360px)}.empty{padding:18px;border-radius:20px;border:1px dashed rgba(255,255,255,.18);color:var(--muted);text-align:center}.publicNote{background:rgba(199,255,46,.09);border:1px solid rgba(199,255,46,.25);border-radius:20px;padding:12px}.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#fecaca;border-radius:18px;padding:14px}.loading{padding:18px;text-align:center;color:#d9f99d}.avatar{width:72px;height:72px;border-radius:24px;background:linear-gradient(135deg,var(--lime),#f8ff8a);color:#111;display:grid;place-items:center;font-size:32px;font-weight:1000}.detailHero{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center}.playerMatch{background:rgba(255,255,255,.052);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:12px}.badge{display:inline-flex;border-radius:999px;padding:7px 9px;background:rgba(199,255,46,.1);border:1px solid rgba(199,255,46,.25);color:#d9f99d;font-size:12px;font-weight:1000}@media(max-width:760px){.title{font-size:28px!important}.stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}.scoreBox{grid-template-columns:1fr}.vs{padding:0}.rankRow{grid-template-columns:36px 1fr}.rankRow .score{grid-column:2}.num{font-size:36px}.actionRow{width:100%}.actionRow>*{width:100%;justify-content:center}.detailHero{grid-template-columns:1fr;text-align:center}.avatar{margin:auto}}
 </style>
 </head>
 <body>
@@ -31,7 +31,7 @@
 <div class="mini mb-1">เลือกอีเว้นท์ที่ต้องการส่งสถิติให้ผู้ร่วมงาน</div>
 <select id="eventSelect"><option>Loading events...</option></select>
 </div>
-<div class="publicNote"><b>Public Live Statistics Page</b><div class="mini mt-1">ส่งลิงก์นี้ให้ทุกคนเปิดดูอันดับ คะแนน และประวัติการแข่งขันได้ หน้านี้ refresh อัตโนมัติ</div></div>
+<div class="publicNote"><b>Public Live Statistics Page</b><div class="mini mt-1">เหมือนหน้า Stat ของ Organizer แบบอ่านอย่างเดียว กดชื่อผู้เล่นเพื่อดูรายบุคคลได้</div></div>
 </div>
 </header>
 <section class="grid stats grid-cols-2 md:grid-cols-5 gap-3">
@@ -46,8 +46,11 @@
 <div id="liveBody" class="grid gap-3 mt-3"><div class="loading">Loading live courts...</div></div>
 </section>
 <section class="cut card p-4">
-<div class="flex justify-between gap-3 items-end"><div><h2 class="text-2xl font-black lime">Player Ranking</h2><p class="mini">อันดับรวมของผู้เล่นในอีเว้นท์นี้</p></div><span id="rankingCount" class="pill">0 players</span></div>
+<div class="flex justify-between gap-3 items-end"><div><h2 class="text-2xl font-black lime">Player Ranking</h2><p class="mini">กดชื่อผู้เล่นเพื่อดูสถิติรายบุคคล</p></div><span id="rankingCount" class="pill">0 players</span></div>
 <div id="playersList" class="grid gap-2 mt-3"><div class="loading">Loading ranking...</div></div>
+</section>
+<section class="cut card p-4" id="playerDetailSection">
+<div id="playerDetail"><div class="empty">เลือกผู้เล่นจาก Ranking เพื่อดูรายละเอียดรายบุคคล</div></div>
 </section>
 <section class="cut card p-4">
 <div class="flex justify-between gap-3 items-end"><div><h2 class="text-2xl font-black text-orange-300">Match History</h2><p class="mini">แมตช์ที่ยืนยันคะแนนแล้ว แบ่งฝั่งชัดเจน</p></div><span id="matchCount" class="pill">0 matches</span></div>
@@ -61,17 +64,20 @@ const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const params=new URLSearchParams(location.search);
 let events=[];
 let eventId=params.get('event')||localStorage.psh_event||localStorage.op_checkin_event||'';
+let selectedPlayerId=params.get('player')||'';
 let refreshTimer=null;
 let refreshDebounce=null;
 let realtimeChannel=null;
 let isLoading=false;
+let lastPlayers=[];let lastMatches=[];let lastMps=[];let lastEvent=null;
 function num(v){return Number(v||0)}
 function score(p){return num(p.wins)*10+num(p.matches_played)*2+(num(p.points_for)-num(p.points_against))}
 function diff(p){return num(p.points_for)-num(p.points_against)}
 function winRate(p){return num(p.matches_played)?Math.round(num(p.wins)/num(p.matches_played)*100):0}
 function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function eventName(e){return e?.name_th||e?.name_en||e?.name||'OpenPlay'}
-function eventStatsUrl(id){const u=new URL(location.href);u.pathname=u.pathname.replace(/[^/]*$/,'event-stats.html');u.search='';u.searchParams.set('event',id);u.searchParams.set('v','live-stats-01');return u.toString()}
+function eventStatsUrl(id){const u=new URL(location.href);u.pathname=u.pathname.replace(/[^/]*$/,'event-stats.html');u.search='';u.searchParams.set('event',id);u.searchParams.set('v','player-stats-01');return u.toString()}
+function playerStatsUrl(id,pid){const u=new URL(eventStatsUrl(id));u.searchParams.set('player',pid);return u.toString()}
 function isActiveEvent(e){const s=String(e.status||'').toLowerCase();return !['completed','archived','deleted','cancelled','canceled'].includes(s)}
 function isConfirmed(m){return ['confirmed','completed','done'].includes(String(m.status||'').toLowerCase())}
 function isLiveOrPending(m){return !isConfirmed(m)&&!['cancelled','canceled','void','deleted','draft','preview'].includes(String(m.status||'').toLowerCase())}
@@ -86,8 +92,8 @@ async function loadEvents(){
  const sel=document.getElementById('eventSelect');
  sel.innerHTML=events.map(e=>`<option value="${e.id}">${esc(eventName(e))} · ${esc(e.venue||'-')} · ${esc(e.status||'active')}</option>`).join('')||'<option value="">No event</option>';
  if(eventId)sel.value=eventId;
- sel.onchange=()=>{eventId=sel.value;localStorage.psh_event=eventId;history.replaceState(null,'',eventStatsUrl(eventId));subscribeEvent(eventId);loadStats(eventId)};
- if(eventId){localStorage.psh_event=eventId;history.replaceState(null,'',eventStatsUrl(eventId));}
+ sel.onchange=()=>{eventId=sel.value;selectedPlayerId='';localStorage.psh_event=eventId;history.replaceState(null,'',eventStatsUrl(eventId));subscribeEvent(eventId);loadStats(eventId)};
+ if(eventId){localStorage.psh_event=eventId;history.replaceState(null,'',selectedPlayerId?playerStatsUrl(eventId,selectedPlayerId):eventStatsUrl(eventId));}
  return eventId;
 }
 function subscribeEvent(id){
@@ -119,13 +125,16 @@ async function loadStats(id,quiet=false){
   const matchIds=displayMatches.map(m=>m.id);
   let mps=[];
   if(matchIds.length){const mpRes=await db.from('psh_match_players').select('*').in('match_id',matchIds);mps=mpRes.data||[]}
+  lastEvent=event;lastPlayers=players;lastMatches=allMatches;lastMps=mps;
   render(event,players,allMatches,mps,id);
   setUpdated();
  }catch(e){document.getElementById('eventInfo').innerHTML='<span class="err">'+esc(e.message||e)+'</span>'}
  finally{isLoading=false}
 }
+function rowPlayerId(row){return String(row.event_player_id||row.player_id||row.psh_event_player_id||'')}
+function samePlayerRow(row,p){return rowPlayerId(row)===String(p.id)||String(row.nickname||'').toLowerCase()===String(p.nickname||'').toLowerCase()}
 function matchCard(m,mps,byId,idx,total,liveMode){
- const sideNames=(team)=>mps.filter(x=>x.match_id===m.id&&String(x.team).toUpperCase()===team).map(x=>x.nickname||byId[x.event_player_id]?.nickname||'Player').join(' / ')||'-';
+ const sideNames=(team)=>mps.filter(x=>x.match_id===m.id&&String(x.team).toUpperCase()===team).map(x=>x.nickname||byId[rowPlayerId(x)]?.nickname||'Player').join(' / ')||'-';
  const a=num(m.team_a_score),b=num(m.team_b_score);
  const winner=a>b?'A':b>a?'B':'D';
  const winText=liveMode?String(m.status||'playing').toUpperCase():(winner==='A'?'Team A Win':winner==='B'?'Team B Win':'Draw');
@@ -144,14 +153,27 @@ function render(event,players,allMatches,mps,id){
  document.getElementById('sumStatus').textContent=String(event.status||'active').toUpperCase();
  const byId={};players.forEach(p=>{byId[p.id]=p});
  const ranked=[...players].sort((a,b)=>score(b)-score(a)||num(b.wins)-num(a.wins)||diff(b)-diff(a)||String(a.nickname).localeCompare(String(b.nickname)));
+ if(!selectedPlayerId&&ranked[0])selectedPlayerId=String(ranked[0].id);
  document.getElementById('sumTop').textContent=ranked[0]?ranked[0].nickname:'-';
  document.getElementById('rankingCount').textContent=players.length+' players';
- document.getElementById('playersList').innerHTML=ranked.length?ranked.map((p,i)=>`<div class="rankRow"><div class="rankNo">${i+1}</div><div><b>${esc(p.nickname||'Player')}</b><div class="mini">Level ${Number(p.estimated_level||0).toFixed(2)} · ${num(p.wins)}W / ${num(p.losses)}L · PF ${num(p.points_for)} · PA ${num(p.points_against)}</div></div><div class="score">${winRate(p)}%</div></div>`).join(''):'<div class="empty">ยังไม่มีผู้เล่นในอีเว้นท์นี้</div>';
+ document.getElementById('playersList').innerHTML=ranked.length?ranked.map((p,i)=>`<div class="rankRow ${String(p.id)===String(selectedPlayerId)?'active':''}" onclick="selectPlayer('${esc(p.id)}')"><div class="rankNo">${i+1}</div><div><b>${esc(p.nickname||'Player')}</b><div class="mini">Level ${Number(p.estimated_level||0).toFixed(2)} · ${num(p.wins)}W / ${num(p.losses)}L · PF ${num(p.points_for)} · PA ${num(p.points_against)}</div></div><div class="score">${winRate(p)}%</div></div>`).join(''):'<div class="empty">ยังไม่มีผู้เล่นในอีเว้นท์นี้</div>';
+ renderPlayerDetail(players.find(p=>String(p.id)===String(selectedPlayerId))||ranked[0],ranked,confirmed.concat(live),mps,byId,id);
  document.getElementById('liveCount').textContent=live.length+' live';
  document.getElementById('liveBody').innerHTML=live.length?live.map((m,idx)=>matchCard(m,mps,byId,idx,live.length,true)).join(''):'<div class="empty">ยังไม่มีคอร์ทที่กำลังเล่น / รอยืนยันคะแนน</div>';
  document.getElementById('matchCount').textContent=confirmed.length+' matches';
  document.getElementById('matchesBody').innerHTML=confirmed.length?confirmed.map((m,idx)=>matchCard(m,mps,byId,idx,confirmed.length,false)).join(''):'<div class="empty">ยังไม่มีแมตช์ที่ยืนยันคะแนน</div>';
 }
+function selectPlayer(pid){selectedPlayerId=String(pid);history.replaceState(null,'',playerStatsUrl(eventId,selectedPlayerId));render(lastEvent,lastPlayers,lastMatches,lastMps,eventId);document.getElementById('playerDetailSection').scrollIntoView({behavior:'smooth',block:'start'});}
+function playerMatches(p,matches,mps,byId){if(!p)return[];return matches.map(m=>{const rows=mps.filter(x=>x.match_id===m.id);const mine=rows.find(x=>samePlayerRow(x,p));if(!mine)return null;const team=String(mine.team||'').toUpperCase();const mate=rows.filter(x=>String(x.team).toUpperCase()===team&&!samePlayerRow(x,p)).map(x=>x.nickname||byId[rowPlayerId(x)]?.nickname||'Player').join(' / ')||'-';const opp=rows.filter(x=>String(x.team).toUpperCase()!==team).map(x=>x.nickname||byId[rowPlayerId(x)]?.nickname||'Player').join(' / ')||'-';const a=num(m.team_a_score),b=num(m.team_b_score);const my=team==='A'?a:b;const their=team==='A'?b:a;const confirmed=isConfirmed(m);let result=confirmed?(my>their?'WIN':my<their?'LOSS':'DRAW'):String(m.status||'LIVE').toUpperCase();return{m,team,mate,opp,my,their,result,confirmed}}).filter(Boolean)}
+function renderPlayerDetail(p,ranked,matches,mps,byId,id){
+ if(!p){playerDetail.innerHTML='<div class="empty">เลือกผู้เล่นจาก Ranking เพื่อดูรายละเอียดรายบุคคล</div>';return}
+ const rank=ranked.findIndex(x=>String(x.id)===String(p.id))+1;
+ const personal=playerMatches(p,matches,mps,byId);
+ const initials=String(p.nickname||'P').trim().slice(0,1).toUpperCase();
+ const badges=[];if(rank===1)badges.push('🏆 Top Player');if(winRate(p)>=70&&num(p.matches_played)>=3)badges.push('🔥 High Win Rate');if(num(p.matches_played)>=4)badges.push('💪 Active Player');if(diff(p)>0)badges.push('📈 Positive Diff');
+ playerDetail.innerHTML=`<div class="detailHero"><div class="avatar">${esc(initials)}</div><div><div class="text-[10px] tracking-[.25em] lime font-black">PLAYER DETAIL</div><h2 class="text-3xl font-black">${esc(p.nickname||'Player')}</h2><div class="mini">Rank #${rank||'-'} · Level ${Number(p.estimated_level||0).toFixed(2)} · Score ${score(p)}</div><div class="mt-2">${badges.map(b=>`<span class="badge">${b}</span>`).join('')||'<span class="badge">OpenPlay Player</span>'}</div></div><button class="btn secondary" onclick="copyPlayerLink('${esc(p.id)}')">COPY PLAYER LINK</button></div><div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4"><div class="soft stat p-4"><small>Played</small><b>${num(p.matches_played)}</b></div><div class="soft stat p-4"><small>Win</small><b>${num(p.wins)}</b></div><div class="soft stat p-4"><small>Loss</small><b>${num(p.losses)}</b></div><div class="soft stat p-4"><small>Win Rate</small><b class="lime">${winRate(p)}%</b></div><div class="soft stat p-4"><small>Diff</small><b class="${diff(p)>=0?'lime':'text-red-300'}">${diff(p)}</b></div></div><div class="mt-4"><h3 class="text-xl font-black lime">Personal Match History</h3><div class="grid gap-2 mt-2">${personal.length?personal.map(x=>`<div class="playerMatch"><div class="flex justify-between gap-2"><b>${x.result}</b><span class="pill">Court ${esc(x.m.court_number||'-')}</span></div><div class="mini mt-1">Partner: ${esc(x.mate)}</div><div class="mini">Opponent: ${esc(x.opp)}</div><div class="text-lg font-black mt-1">${x.my} - ${x.their}</div></div>`).join(''):'<div class="empty">ยังไม่มีประวัติแมตช์ของผู้เล่นนี้</div>'}</div></div>`;
+}
+async function copyPlayerLink(pid){const link=playerStatsUrl(eventId,pid);try{await navigator.clipboard.writeText(link)}catch(e){prompt('Copy player link',link)}}
 document.getElementById('copyBtn').addEventListener('click',async()=>{if(!eventId)return;const link=eventStatsUrl(eventId);try{await navigator.clipboard.writeText(link);copyBtn.textContent='COPIED';setTimeout(()=>copyBtn.textContent='COPY RESULT LINK',1600)}catch(e){prompt('Copy result link',link)}});
 document.getElementById('refreshBtn').addEventListener('click',()=>loadStats(eventId));
 (async()=>{try{const id=await loadEvents();subscribeEvent(id);await loadStats(id);refreshTimer=setInterval(()=>loadStats(eventId,true),5000)}catch(e){document.getElementById('eventInfo').innerHTML='<span class="err">'+esc(e.message||e)+'</span>';}})();
