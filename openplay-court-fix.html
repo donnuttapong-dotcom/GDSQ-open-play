@@ -34,9 +34,7 @@
         const root = doc.querySelector('html[x-data]');
         if(!root || !win.Alpine.$data) return null;
         return win.Alpine.$data(root);
-      }catch(e){
-        return null;
-      }
+      }catch(e){ return null; }
     }
 
     function elapsedClock(start, now){
@@ -50,6 +48,8 @@
       const mm = m % 60;
       return h + ':' + String(mm).padStart(2,'0') + ':' + String(s).padStart(2,'0');
     }
+
+    function pairKey(a,b){ return [a,b].sort().join('|'); }
 
     function applyIpadStyle(doc){
       if(!doc || doc.getElementById('gdsq-ipad-style')) return;
@@ -76,12 +76,12 @@
 
       app.__rotationRules = {
         maxConsecutive: 2,
-        candidateLimit: 14,
-        restPenalty: 600,
-        teammatePenalty: 110,
-        opponentPenalty: 32,
-        levelGapPenalty: 95,
-        matchCountPenalty: 24,
+        candidateLimit: 8,
+        restPenalty: 520,
+        teammatePenalty: 105,
+        opponentPenalty: 26,
+        levelGapPenalty: 85,
+        matchCountPenalty: 22,
         queuePenalty: 0.000002
       };
 
@@ -89,51 +89,72 @@
         return new Date(m.ended_at || m.started_at || m.created_at || 0).getTime() || 0;
       };
 
-      app.__confirmedHistory = function(){
-        return (this.matches || [])
+      app.__buildRotationCache = function(){
+        const mpsByMatch = new Map();
+        for(const row of (this.mps || [])){
+          if(!mpsByMatch.has(row.match_id)) mpsByMatch.set(row.match_id, []);
+          mpsByMatch.get(row.match_id).push(row);
+        }
+        const history = (this.matches || [])
           .filter(m => ['confirmed','playing','live'].includes(m.status))
           .sort((a,b) => this.__matchTime(b) - this.__matchTime(a));
+        const same = new Map();
+        const opp = new Map();
+        const add = (map,a,b,n=1) => {
+          if(!a || !b || a === b) return;
+          const k = pairKey(a,b);
+          map.set(k, (map.get(k) || 0) + n);
+        };
+        for(const m of history){
+          const rows = mpsByMatch.get(m.id) || [];
+          const A = rows.filter(x=>x.team==='A').map(x=>x.event_player_id).filter(Boolean);
+          const B = rows.filter(x=>x.team==='B').map(x=>x.event_player_id).filter(Boolean);
+          for(let i=0;i<A.length;i++) for(let j=i+1;j<A.length;j++) add(same,A[i],A[j]);
+          for(let i=0;i<B.length;i++) for(let j=i+1;j<B.length;j++) add(same,B[i],B[j]);
+          for(const a of A) for(const b of B) add(opp,a,b);
+        }
+        const consecutive = new Map();
+        for(const p of (this.players || [])){
+          let count = 0;
+          for(const m of history){
+            const rows = mpsByMatch.get(m.id) || [];
+            if(rows.some(x=>x.event_player_id === p.id)) count++;
+            else break;
+          }
+          consecutive.set(p.id, count);
+        }
+        this.__rotationCache = {history,mpsByMatch,same,opp,consecutive,at:Date.now()};
+        return this.__rotationCache;
       };
 
-      app.__matchPlayers = function(matchId){
-        return (this.mps || []).filter(x => x.match_id === matchId);
-      };
-
-      app.__playerInMatch = function(playerId, match){
-        return this.__matchPlayers(match.id).some(x => x.event_player_id === playerId);
-      };
-
-      app.__playerTeam = function(playerId, match){
-        return this.__matchPlayers(match.id).find(x => x.event_player_id === playerId)?.team || null;
+      app.__cache = function(){
+        return this.__rotationCache || this.__buildRotationCache();
       };
 
       app.__consecutiveCount = function(playerId){
-        let count = 0;
-        for(const m of this.__confirmedHistory()){
-          if(this.__playerInMatch(playerId, m)) count++;
-          else break;
-        }
-        return count;
+        return this.__cache().consecutive.get(playerId) || 0;
       };
 
-      app.__sameTeamCount = function(aId, bId){
-        let count = 0;
-        for(const m of this.__confirmedHistory()){
-          const aTeam = this.__playerTeam(aId, m);
-          const bTeam = this.__playerTeam(bId, m);
-          if(aTeam && bTeam && aTeam === bTeam) count++;
-        }
-        return count;
+      app.__sameTeamCount = function(aId,bId){
+        return this.__cache().same.get(pairKey(aId,bId)) || 0;
       };
 
-      app.__opponentCount = function(aId, bId){
-        let count = 0;
-        for(const m of this.__confirmedHistory()){
-          const aTeam = this.__playerTeam(aId, m);
-          const bTeam = this.__playerTeam(bId, m);
-          if(aTeam && bTeam && aTeam !== bTeam) count++;
-        }
-        return count;
+      app.__opponentCount = function(aId,bId){
+        return this.__cache().opp.get(pairKey(aId,bId)) || 0;
+      };
+
+      app.__queueMs = function(p){
+        return new Date(p.queue_joined_at || p.created_at || 0).getTime() || 0;
+      };
+
+      app.__playerBaseScore = function(p){
+        const rules = this.__rotationRules;
+        const games = +p.matches_played || 0;
+        const streak = this.__consecutiveCount(p.id);
+        const restPenalty = streak >= rules.maxConsecutive ? rules.restPenalty : streak * 45;
+        const statusBonus = p.status === 'ready' ? -18 : 0;
+        const queueAge = Date.now() - this.__queueMs(p);
+        return games * rules.matchCountPenalty + restPenalty + statusBonus - queueAge * rules.queuePenalty;
       };
 
       app.__combinations = function(list, size){
@@ -150,48 +171,29 @@
         return out;
       };
 
-      app.__queueMs = function(p){
-        return new Date(p.queue_joined_at || p.created_at || 0).getTime() || 0;
-      };
-
-      app.__playerBaseScore = function(p){
-        const rules = this.__rotationRules;
-        const games = +p.matches_played || 0;
-        const streak = this.__consecutiveCount(p.id);
-        const restPenalty = streak >= rules.maxConsecutive ? rules.restPenalty : streak * 55;
-        const statusBonus = p.status === 'ready' ? -18 : 0;
-        const queueAge = Date.now() - this.__queueMs(p);
-        return games * rules.matchCountPenalty + restPenalty + statusBonus - queueAge * rules.queuePenalty;
-      };
-
       app.__groupScore = function(group){
-        const avgGames = group.reduce((s,p)=>s+(+p.matches_played||0),0) / group.length;
         const gameSpread = Math.max(...group.map(p=>+p.matches_played||0)) - Math.min(...group.map(p=>+p.matches_played||0));
         const restRisk = group.reduce((s,p)=>s+(this.__consecutiveCount(p.id) >= this.__rotationRules.maxConsecutive ? this.__rotationRules.restPenalty : 0),0);
         let repeatRisk = 0;
         for(let i=0;i<group.length;i++) for(let j=i+1;j<group.length;j++){
-          repeatRisk += this.__sameTeamCount(group[i].id, group[j].id) * 18;
-          repeatRisk += this.__opponentCount(group[i].id, group[j].id) * 6;
+          repeatRisk += this.__sameTeamCount(group[i].id, group[j].id) * 14;
+          repeatRisk += this.__opponentCount(group[i].id, group[j].id) * 5;
         }
-        return group.reduce((s,p)=>s+this.__playerBaseScore(p),0) + avgGames * 8 + gameSpread * 35 + restRisk + repeatRisk;
+        return group.reduce((s,p)=>s+this.__playerBaseScore(p),0) + gameSpread * 32 + restRisk + repeatRisk;
       };
 
-      app.__pairingScore = function(A, B){
+      app.__pairingScore = function(A,B){
         const rules = this.__rotationRules;
         const levelGap = Math.abs(this.teamAvg(A) - this.teamAvg(B));
         const teammateRepeat = this.__sameTeamCount(A[0].id,A[1].id) + this.__sameTeamCount(B[0].id,B[1].id);
         let opponentRepeat = 0;
         for(const a of A) for(const b of B) opponentRepeat += this.__opponentCount(a.id,b.id);
         const gameGap = Math.abs((+A[0].matches_played||0)+(+A[1].matches_played||0)-(+B[0].matches_played||0)-(+B[1].matches_played||0));
-        return levelGap * rules.levelGapPenalty + teammateRepeat * rules.teammatePenalty + opponentRepeat * rules.opponentPenalty + gameGap * 12;
+        return levelGap * rules.levelGapPenalty + teammateRepeat * rules.teammatePenalty + opponentRepeat * rules.opponentPenalty + gameGap * 10;
       };
 
       app.__bestTeams = function(group){
-        const pairings = [
-          [[0,1],[2,3]],
-          [[0,2],[1,3]],
-          [[0,3],[1,2]]
-        ];
+        const pairings = [[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]];
         let best = null;
         for(const pair of pairings){
           const A = pair[0].map(i=>group[i]);
@@ -202,7 +204,12 @@
         return best;
       };
 
+      app.__fastFallbackGroup = function(available){
+        return available.slice(0, 4);
+      };
+
       app.chunkTeams = function(list){
+        this.__buildRotationCache();
         const rules = this.__rotationRules;
         const out = [];
         const used = new Set();
@@ -214,15 +221,16 @@
           const available = pool.filter(p => !used.has(p.id));
           if(available.length < 4) break;
           const shortlist = available.slice(0, rules.candidateLimit);
+          const groups = shortlist.length <= 8 ? this.__combinations(shortlist, 4) : [this.__fastFallbackGroup(shortlist)];
           let bestGroup = null;
-          for(const group of this.__combinations(shortlist, 4)){
+          for(const group of groups){
             const score = this.__groupScore(group);
             if(!bestGroup || score < bestGroup.score) bestGroup = {group,score};
           }
           if(!bestGroup) break;
           bestGroup.group.forEach(p => used.add(p.id));
           const teams = this.__bestTeams(bestGroup.group);
-          out.push({uid:'smart-'+court+'-'+Date.now()+'-'+Math.random().toString(36).slice(2),court,mode:this.autoMode,A:teams.A,B:teams.B,rotationScore:Math.round(bestGroup.score + teams.score)});
+          out.push({uid:'smart-fast-'+court+'-'+Date.now()+'-'+Math.random().toString(36).slice(2),court,mode:this.autoMode,A:teams.A,B:teams.B,rotationScore:Math.round(bestGroup.score + teams.score)});
         }
         return out;
       };
@@ -231,19 +239,23 @@
         if(this.isEventCompleted && this.isEventCompleted()) return this.flash('อีเว้นท์จบแล้ว ดูสถิติย้อนหลังเท่านั้น / Archived event is read-only');
         const n = this.maxPreviewCount ? this.maxPreviewCount() : 0;
         if(n < 1) return this.flash('ต้องมีผู้เล่นรอ/พร้อมอย่างน้อย 4 คน และมีคอร์ทว่าง / Need 4 ready/waiting players and a free court');
+        this.__rotationCache = null;
         this.previews = this.chunkTeams(this.readyPlayers ? this.readyPlayers() : []);
-        const resting = (this.readyPlayers ? this.readyPlayers() : []).filter(p => this.__consecutiveCount(p.id) >= this.__rotationRules.maxConsecutive).length;
-        this.flash('Smart Rotation: สร้างพรีวิว '+this.previews.length+' court(s) · พักคนเล่นติดกัน 2 เกม '+resting+' คน');
+        const ready = this.readyPlayers ? this.readyPlayers() : [];
+        const resting = ready.filter(p => this.__consecutiveCount(p.id) >= this.__rotationRules.maxConsecutive).length;
+        this.flash('Smart Rotation Fast: สร้างพรีวิว '+this.previews.length+' court(s) · พักคนเล่นติดกัน 2 เกม '+resting+' คน');
       };
 
       app.rebalancePreview = function(pr){
         if(this.isEventCompleted && this.isEventCompleted()) return;
+        this.__rotationCache = null;
+        this.__buildRotationCache();
         const ps = [...(pr.A || []), ...(pr.B || [])];
         if(ps.length !== 4) return this.flash('ต้องมีผู้เล่น 4 คนเพื่อรีบาลานซ์ / Need 4 players to rebalance');
         const teams = this.__bestTeams(ps);
         const updated = {...pr,A:teams.A,B:teams.B,uid:pr.uid+'r',rotationScore:Math.round(teams.score)};
         this.previews = this.previews.map(x => x.uid === pr.uid ? updated : x);
-        this.flash('Smart rebalance · ลดคู่ซ้ำและทีมซ้ำ / Reduced repeat pairs');
+        this.flash('Smart rebalance fast · ลดคู่ซ้ำและทีมซ้ำ / Reduced repeat pairs');
       };
 
       app.__rotationGuardPatched = true;
@@ -254,30 +266,19 @@
       const doc = frame.contentDocument;
       if(!app || !doc) return false;
       applyIpadStyle(doc);
-
       const keyFor = () => app.eventId ? 'psh_courts_' + app.eventId : 'psh_courts_global';
-
       if(!app.__courtFixPatched){
         const originalPick = app.pick ? app.pick.bind(app) : null;
         const originalLoadCurrent = app.loadCurrent ? app.loadCurrent.bind(app) : null;
-
         app.clampCourtCount = clampCourt;
         app.__courtClock = Date.now();
-
-        app.elapsed = function(m){
-          return elapsedClock(m?.started_at || m?.created_at, this.__courtClock || Date.now());
-        };
-
+        app.elapsed = function(m){ return elapsedClock(m?.started_at || m?.created_at, this.__courtClock || Date.now()); };
         app.courtNums = function(){
           const count = clampCourt(this.courts || this.event?.courts_count || 1);
           this.courts = count;
           return Array.from({length:count}, (_,i)=>i+1);
         };
-
-        app.freeCourts = function(){
-          return this.courtNums().filter(c=>!this.courtMatch(c) && !this.previews.some(p=>p.court===c));
-        };
-
+        app.freeCourts = function(){ return this.courtNums().filter(c=>!this.courtMatch(c) && !this.previews.some(p=>p.court===c)); };
         app.maxPreviewCount = function(){
           if(this.isEventCompleted && this.isEventCompleted()) return 0;
           const courtLimit = clampCourt(this.courts || this.event?.courts_count || 1);
@@ -285,7 +286,6 @@
           const freeLimit = this.freeCourts ? this.freeCourts().length : courtLimit;
           return Math.max(0, Math.min(courtLimit, playerLimit, freeLimit));
         };
-
         app.saveCourtSettings = async function(){
           if(!this.eventId || (this.isEventCompleted && this.isEventCompleted())) return;
           const n = clampCourt(this.courts);
@@ -298,13 +298,9 @@
             await this.chk('courts', this.db.from('psh_events').update({courts_count:n}).eq('id', this.eventId));
             if(this.event) this.event.courts_count = n;
             this.flash('Courts saved: '+n+' / บันทึกจำนวนคอร์ทแล้ว');
-          }catch(e){
-            this.flash('Courts save failed: '+(e.message || e));
-          }finally{
-            setTimeout(()=>{ this.__courtFixSaving = false; }, 1200);
-          }
+          }catch(e){ this.flash('Courts save failed: '+(e.message || e)); }
+          finally{ setTimeout(()=>{ this.__courtFixSaving = false; }, 1200); }
         };
-
         if(originalPick){
           app.pick = async function(id, show=true){
             const savedBefore = localStorage.getItem('psh_courts_' + id);
@@ -313,9 +309,9 @@
             const n = clampCourt(savedAfter || this.event?.courts_count || this.courts || 1);
             this.courts = n;
             if(this.event) this.event.courts_count = n;
+            this.__rotationCache = null;
           };
         }
-
         if(originalLoadCurrent){
           app.loadCurrent = async function(show=true){
             const keep = this.eventId ? localStorage.getItem('psh_courts_' + this.eventId) : null;
@@ -325,25 +321,19 @@
               this.courts = n;
               if(this.event) this.event.courts_count = n;
             }
+            this.__rotationCache = null;
           };
         }
-
         app.__courtFixPatched = true;
       }
-
       applyRotationGuard(app);
-
       if(!app.__courtClockInterval){
-        app.__courtClockInterval = setInterval(() => {
-          app.__courtClock = Date.now();
-        }, 1000);
+        app.__courtClockInterval = setInterval(() => { app.__courtClock = Date.now(); }, 1000);
       }
-
       const input = [...doc.querySelectorAll('input[type="number"]')].find(el => {
         const m = el.getAttribute('x-model.number') || el.getAttribute('x-model') || '';
         return m === 'courts';
       });
-
       if(input && !input.__courtFixInput){
         input.setAttribute('min','1');
         input.setAttribute('max','10');
@@ -358,8 +348,7 @@
         input.addEventListener('change', () => app.saveCourtSettings && app.saveCourtSettings());
         input.__courtFixInput = true;
       }
-
-      badge.textContent = 'SMART ROTATION + COURT ACTIVE';
+      badge.textContent = 'SMART ROTATION FAST';
       return true;
     }
 
