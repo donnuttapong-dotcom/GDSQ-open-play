@@ -8,16 +8,23 @@
     html,body{margin:0;width:100%;height:100dvh;min-height:100svh;background:#0d1217;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;overflow:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%;overscroll-behavior:none}
     iframe{width:100%;height:100dvh;min-height:100svh;border:0;display:block;background:#11161b}
     .badge{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:999999;background:#c7ff2e;color:#111;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:900;box-shadow:0 6px 20px rgba(0,0,0,.35);opacity:.92}
+    .level-toggle{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:999999;border:0;border-radius:999px;background:#202832;color:#fff;border:1px solid rgba(199,255,46,.45);padding:10px 13px;font-size:12px;font-weight:1000;box-shadow:0 10px 28px rgba(0,0,0,.35);cursor:pointer}
+    .level-panel{position:fixed;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));bottom:60px;max-height:min(68dvh,560px);z-index:999998;background:rgba(18,24,31,.98);border:1px solid rgba(199,255,46,.32);border-radius:22px;box-shadow:0 24px 80px rgba(0,0,0,.55);overflow:hidden;display:none;backdrop-filter:blur(16px)}
+    .level-panel.open{display:block}.level-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;border-bottom:1px solid rgba(255,255,255,.08)}.level-title{font-size:13px;font-weight:1000;color:#c7ff2e;letter-spacing:.06em}.level-sub{font-size:11px;color:#94a3b8;margin-top:2px}.level-close{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:#fff;border-radius:999px;padding:7px 10px;font-weight:900;cursor:pointer}.level-body{padding:10px;overflow:auto;max-height:calc(min(68dvh,560px) - 60px)}.level-row{display:grid;grid-template-columns:1fr 96px;gap:10px;align-items:center;padding:10px;border-radius:16px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08);margin-bottom:8px}.level-name{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.level-meta{font-size:10px;color:#94a3b8;margin-top:3px}.level-select{width:100%;background:#0f151c;color:#fff;border:1px solid rgba(199,255,46,.35);border-radius:12px;padding:10px 8px;font-size:15px;font-weight:900;outline:none}.level-msg{padding:9px 10px;border-radius:14px;background:rgba(199,255,46,.1);border:1px solid rgba(199,255,46,.28);font-size:11px;color:#d9f99d;margin-bottom:9px}.level-empty{padding:14px;color:#94a3b8;font-size:12px;text-align:center}
+    @media (min-width:768px){.level-panel{left:16px;right:auto;width:410px}.level-toggle{bottom:14px}}
     @media (min-width:768px) and (max-width:1180px){.badge{font-size:11px;padding:7px 10px}}
   </style>
 </head>
 <body>
   <iframe id="appFrame" src="./openplay.html?v=end-event-archive-051a97b-court-fix-clock-ipad"></iframe>
   <div class="badge" id="badge">COURT FIX LOADING</div>
+  <button class="level-toggle" id="levelToggle" onclick="toggleLevelPanel()">LEVEL ADMIN</button>
+  <div class="level-panel" id="levelPanel"></div>
 
   <script>
     const frame = document.getElementById('appFrame');
     const badge = document.getElementById('badge');
+    const levelPanel = document.getElementById('levelPanel');
     const COURT_MIN = 1;
     const COURT_MAX = 10;
 
@@ -50,6 +57,62 @@
     }
 
     function pairKey(a,b){ return [a,b].sort().join('|'); }
+    function safeText(value){ return String(value ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+    function levelChoices(current){
+      const now = Number(current || 2.5).toFixed(1);
+      const values = [1,1.5,2,2.5,3,3.5,4,4.5,5];
+      return values.map(v => {
+        const label = Number(v).toFixed(1);
+        return '<option value="'+label+'" '+(label===now?'selected':'')+'>'+label+'</option>';
+      }).join('');
+    }
+    function toggleLevelPanel(){
+      levelPanel.classList.toggle('open');
+      renderLevelPanel();
+    }
+    function closeLevelPanel(){ levelPanel.classList.remove('open'); }
+    function renderLevelPanel(message){
+      const app = getApp();
+      if(!app){
+        levelPanel.innerHTML = '<div class="level-head"><div><div class="level-title">LEVEL ADMIN</div><div class="level-sub">กำลังโหลดระบบ</div></div><button class="level-close" onclick="closeLevelPanel()">ปิด</button></div><div class="level-body"><div class="level-empty">ยังเชื่อมต่อ Organizer ไม่ได้</div></div>';
+        return;
+      }
+      const players = [...(app.players || [])].sort((a,b) => String(a.nickname||'').localeCompare(String(b.nickname||'')));
+      const readOnly = app.isEventCompleted && app.isEventCompleted();
+      const rows = players.map(p => {
+        const status = p.status || 'waiting';
+        const games = Number(p.matches_played || 0);
+        const wins = Number(p.wins || 0);
+        const losses = Number(p.losses || 0);
+        return '<div class="level-row"><div><div class="level-name">'+safeText(p.nickname || 'Player')+'</div><div class="level-meta">Status: '+safeText(status)+' · Games '+games+' · W/L '+wins+'/'+losses+'</div></div><select class="level-select" '+(readOnly?'disabled':'')+' onchange="adminSetLevel(\''+p.id+'\', this.value)">'+levelChoices(p.estimated_level)+'</select></div>';
+      }).join('');
+      levelPanel.innerHTML = '<div class="level-head"><div><div class="level-title">LEVEL ADMIN</div><div class="level-sub">ปรับระดับผู้เล่น 1.0–5.0 สำหรับการจับคู่</div></div><button class="level-close" onclick="closeLevelPanel()">ปิด</button></div><div class="level-body">'+(message?'<div class="level-msg">'+safeText(message)+'</div>':'')+(readOnly?'<div class="level-msg">อีเว้นท์จบแล้ว ไม่สามารถแก้ระดับได้</div>':'')+(rows || '<div class="level-empty">ยังไม่มีผู้เล่นในอีเว้นท์นี้</div>')+'</div>';
+    }
+    async function adminSetLevel(playerId, value){
+      const app = getApp();
+      if(!app || !app.db) return renderLevelPanel('ยังเชื่อมต่อฐานข้อมูลไม่ได้');
+      if(app.isEventCompleted && app.isEventCompleted()) return renderLevelPanel('อีเว้นท์จบแล้ว ไม่สามารถแก้ระดับได้');
+      const level = Math.max(1, Math.min(5, Number(value) || 2.5));
+      const player = (app.players || []).find(p => p.id === playerId);
+      const oldLevel = player ? player.estimated_level : null;
+      if(player) player.estimated_level = level;
+      app.__rotationCache = null;
+      renderLevelPanel('กำลังบันทึกระดับใหม่...');
+      try{
+        const result = await app.db.from('psh_event_players').update({estimated_level:level}).eq('id', playerId).select('*').single();
+        if(result.error) throw result.error;
+        if(player) Object.assign(player, result.data || {});
+        app.__rotationCache = null;
+        if(Array.isArray(app.previews)) app.previews = [];
+        if(app.loadCurrent) await app.loadCurrent(false);
+        if(app.flash) app.flash('ปรับระดับ '+(player?.nickname || 'Player')+' เป็น '+level.toFixed(1)+' แล้ว · สร้างพรีวิวใหม่เพื่อใช้ระดับล่าสุด');
+        badge.textContent = 'LEVEL ADMIN UPDATED';
+        renderLevelPanel('บันทึกแล้ว: '+(player?.nickname || 'Player')+' → LV '+level.toFixed(1));
+      }catch(e){
+        if(player) player.estimated_level = oldLevel;
+        renderLevelPanel('บันทึกไม่สำเร็จ: '+(e.message || e));
+      }
+    }
 
     function applyIpadStyle(doc){
       if(!doc || doc.getElementById('gdsq-ipad-style')) return;
@@ -350,7 +413,8 @@
         input.addEventListener('change', () => app.saveCourtSettings && app.saveCourtSettings());
         input.__courtFixInput = true;
       }
-      badge.textContent = 'SMART REST GUARD ACTIVE';
+      if(levelPanel.classList.contains('open')) renderLevelPanel();
+      badge.textContent = 'SMART REST + LEVEL ADMIN';
       return true;
     }
 
