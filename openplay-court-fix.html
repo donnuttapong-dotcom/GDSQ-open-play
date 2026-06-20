@@ -125,10 +125,36 @@
         main{width:100%!important;}
         @media (min-width:768px) and (max-width:1180px){
           body{overflow-x:hidden!important;}
-          header{padding-left:max(12px,env(safe-area-inset-left))!important;padding-right:max(12px,env(safe-area-inset-right))!important;}
-          main{padding-left:max(12px,env(safe-area-inset-left))!important;padding-right:max(12px,env(safe-area-inset-right))!important;max-width:100%!important;}
-          .card,.soft,.chip{box-sizing:border-box!important;}
-          nav button{min-height:52px!important;}
+          header{padding-left:max(10px,env(safe-area-inset-left))!important;padding-right:max(10px,env(safe-area-inset-right))!important;}
+          header [class*="max-w-7xl"],main.max-w-7xl{max-width:1280px!important;width:100%!important;}
+          main{padding-left:max(10px,env(safe-area-inset-left))!important;padding-right:max(10px,env(safe-area-inset-right))!important;max-width:1280px!important;width:100%!important;}
+          nav{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important;}
+          nav button{min-height:50px!important;padding-top:10px!important;padding-bottom:10px!important;}
+          [class*="xl:grid-cols-[.9fr_1.1fr]"]{display:grid!important;grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr)!important;align-items:start!important;}
+          [class*="lg:grid-cols-[1fr_.9fr]"]{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,.9fr)!important;align-items:start!important;}
+          [class*="md:grid-cols-3"]{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+          [class*="sm:grid-cols-5"]{grid-template-columns:repeat(5,minmax(0,1fr))!important;}
+          [class*="sm:grid-cols-2"]{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+          .space-y-4,.card,.soft,.chip{min-width:0!important;box-sizing:border-box!important;}
+          .card,.soft,.chip{border-radius:14px!important;}
+          .p-4{padding:.9rem!important;}
+          .p-3{padding:.7rem!important;}
+          .gap-4{gap:.8rem!important;}
+          .gap-3{gap:.7rem!important;}
+          .text-3xl{font-size:1.55rem!important;line-height:1.15!important;}
+          .text-2xl{font-size:1.32rem!important;line-height:1.18!important;}
+          .text-xl{font-size:1.05rem!important;line-height:1.2!important;}
+          .mini{font-size:11px!important;}
+          .chip{padding:8px!important;}
+          .chip .text-xl{font-size:1.12rem!important;}
+          table{font-size:12px!important;}
+        }
+        @media (min-width:768px) and (max-width:860px){
+          [class*="xl:grid-cols-[.9fr_1.1fr]"]{grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr)!important;}
+          .text-3xl{font-size:1.42rem!important;}
+          .text-2xl{font-size:1.22rem!important;}
+          .p-4{padding:.78rem!important;}
+          .p-3{padding:.62rem!important;}
         }
       `;
       doc.head.appendChild(style);
@@ -414,7 +440,7 @@
         input.__courtFixInput = true;
       }
       if(levelPanel.classList.contains('open')) renderLevelPanel();
-      badge.textContent = 'SMART REST + LEVEL ADMIN';
+      badge.textContent = 'SMART REST + LEVEL ADMIN + IPAD DESKTOP';
       return true;
     }
 
