@@ -3,166 +3,124 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>OpenPlay Beta 0.2 · Player QR Demo</title>
+  <title>OpenPlay · Player QR Demo</title>
   <style>
-    :root{--bg:#0d1217;--card:#222931;--soft:#171f28;--line:#39434d;--lime:#c7ff2e;--muted:#94a3b8;--orange:#fb923c;--cyan:#38bdf8;--yellow:#fde047;--red:#ef4444}
-    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 0 0,rgba(199,255,46,.13),transparent 34%),linear-gradient(180deg,#0d1217,#10161d 55%,#090d12);color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;min-height:100svh}button,input,select{font:inherit}a{color:inherit;text-decoration:none}.wrap{max-width:980px;margin:0 auto;padding:14px 14px 70px}.cut{clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px)}.card{background:rgba(34,41,49,.94);border:1px solid var(--line);box-shadow:0 20px 70px rgba(0,0,0,.3)}.soft{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.1);border-radius:20px}.lime{color:var(--lime)}.muted{color:var(--muted)}.mini{font-size:12px;color:var(--muted)}
-    header{position:sticky;top:0;z-index:40;background:rgba(13,18,23,.9);border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(14px)}.head{max-width:980px;margin:0 auto;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{display:flex;align-items:center;gap:10px}.logo{width:46px;height:46px;border-radius:16px;background:var(--lime);color:#111;display:grid;place-items:center;font-weight:1000}.eyebrow{font-size:10px;letter-spacing:.24em;color:var(--lime);font-weight:900}.title{font-size:18px;font-weight:1000}.pill{display:inline-flex;align-items:center;gap:7px;border-radius:999px;border:1px solid rgba(255,255,255,.14);padding:7px 10px;font-size:12px;font-weight:900;background:rgba(255,255,255,.06);white-space:nowrap}.pill.waiting{color:var(--yellow)}.pill.ready{color:var(--lime)}.pill.playing{color:var(--orange)}
-    .grid{display:grid;gap:14px}.two{grid-template-columns:1fr .9fr}.three{grid-template-columns:repeat(3,1fr)}@media(max-width:820px){.two,.three{grid-template-columns:1fr}.head{align-items:flex-start}.title{font-size:16px}}
-    h1{font-size:32px;line-height:1.08;margin:8px 0 8px}h2{margin:0 0 10px}.hero{padding:18px}.notice{border:1px dashed rgba(199,255,46,.42);background:rgba(199,255,46,.08);color:#eaffb7;border-radius:18px;padding:12px;font-size:13px;margin-top:14px}.label{display:block;font-size:12px;color:var(--muted);font-weight:800;margin:12px 0 7px}input,select{width:100%;padding:15px 14px;border-radius:16px;border:1px solid #3a424a;background:#10151b;color:#fff;font-size:16px;outline:none}.btn{width:100%;border:0;border-radius:18px;padding:16px;font-weight:1000;cursor:pointer;background:var(--lime);color:#111;margin-top:14px}.btn:active{transform:scale(.99)}.stat{padding:14px;border-radius:18px;background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.09)}.stat small{display:block;color:var(--muted);font-size:11px}.stat b{font-size:24px}.playerTop{display:flex;gap:12px;align-items:center}.avatar{width:66px;height:66px;border-radius:24px;background:linear-gradient(135deg,var(--lime),#f8ff8a);color:#111;display:grid;place-items:center;font-size:26px;font-weight:1000;flex:0 0 auto}.section{padding:16px}.match{padding:14px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);margin-top:8px}.team{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-top:10px}.teamBox{padding:13px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09)}.teamBox b{display:block;margin-bottom:5px}.vs{font-weight:1000;color:var(--lime)}.scoreline{display:flex;justify-content:space-between;gap:10px;padding:12px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);margin-top:8px}.liveDot{width:10px;height:10px;border-radius:999px;background:var(--orange);display:inline-block;box-shadow:0 0 14px var(--orange)}.footerNote{position:fixed;left:12px;right:12px;bottom:12px;z-index:50;max-width:760px;margin:0 auto;background:rgba(13,18,23,.92);border:1px solid rgba(199,255,46,.35);border-radius:18px;padding:10px 12px;color:#d9f99d;font-size:12px;backdrop-filter:blur(12px)}.hide{display:none!important}.qrBox{display:grid;place-items:center;padding:16px;border-radius:24px;background:#fff}.qrBox img{width:220px;height:220px;display:block}.qrLabel{color:#111;font-weight:1000;text-align:center;margin-top:8px}.readonly{font-size:12px;color:#d9f99d;background:rgba(199,255,46,.08);border:1px solid rgba(199,255,46,.28);border-radius:16px;padding:10px;margin-top:12px}.lock{opacity:.75;font-size:12px;color:#cbd5e1;margin-top:8px}.eventCard{padding:12px;border-radius:18px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);margin-top:8px}.eventCard strong{display:block}.eventCard span{font-size:12px;color:var(--muted)}
+    :root{--bg:#0d1217;--card:#222931;--line:#39434d;--lime:#c7ff2e;--muted:#94a3b8;--orange:#fb923c;--yellow:#fde047;--red:#ef4444}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 0 0,rgba(199,255,46,.12),transparent 34%),linear-gradient(180deg,#0d1217,#10161d 60%,#090d12);color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;min-height:100svh}button,input,select{font:inherit}a{color:inherit;text-decoration:none}.wrap{max-width:860px;margin:0 auto;padding:14px 14px 54px}.cut{clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px)}.card{background:rgba(34,41,49,.95);border:1px solid var(--line);box-shadow:0 18px 60px rgba(0,0,0,.28)}.soft{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.1);border-radius:20px}.lime{color:var(--lime)}.muted{color:var(--muted)}.mini{font-size:12px;color:var(--muted)}
+    header{position:sticky;top:0;z-index:40;background:rgba(13,18,23,.92);border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(14px)}.head{max-width:860px;margin:0 auto;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}.brand{display:flex;align-items:center;gap:10px}.logo{width:44px;height:44px;border-radius:16px;background:var(--lime);color:#111;display:grid;place-items:center;font-weight:1000}.eyebrow{font-size:10px;letter-spacing:.22em;color:var(--lime);font-weight:900}.title{font-size:18px;font-weight:1000}.langBtn{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#fff;border-radius:999px;padding:10px 13px;font-size:12px;font-weight:1000;cursor:pointer;white-space:nowrap}.pill{display:inline-flex;align-items:center;gap:7px;border-radius:999px;border:1px solid rgba(255,255,255,.14);padding:7px 10px;font-size:12px;font-weight:900;background:rgba(255,255,255,.06);white-space:nowrap}.pill.waiting{color:var(--yellow)}.pill.ready{color:var(--lime)}.pill.playing{color:var(--orange)}
+    .grid{display:grid;gap:14px}.two{grid-template-columns:1fr 1fr}.three{grid-template-columns:repeat(3,1fr)}@media(max-width:760px){.two,.three{grid-template-columns:1fr}.title{font-size:16px}.head{align-items:flex-start}}
+    h1{font-size:28px;line-height:1.08;margin:8px 0 8px}h2{margin:0 0 10px}.section{padding:16px}.label{display:block;font-size:12px;color:var(--muted);font-weight:800;margin:12px 0 7px}input,select{width:100%;padding:15px 14px;border-radius:16px;border:1px solid #3a424a;background:#10151b;color:#fff;font-size:16px;outline:none}.btn{width:100%;border:0;border-radius:18px;padding:16px;font-weight:1000;cursor:pointer;background:var(--lime);color:#111;margin-top:14px}.btn:active{transform:scale(.99)}.stat{padding:14px;border-radius:18px;background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.09)}.stat small{display:block;color:var(--muted);font-size:11px}.stat b{font-size:24px}.playerTop{display:flex;gap:12px;align-items:center}.avatar{width:64px;height:64px;border-radius:24px;background:linear-gradient(135deg,var(--lime),#f8ff8a);color:#111;display:grid;place-items:center;font-size:26px;font-weight:1000;flex:0 0 auto}.match{padding:14px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);margin-top:8px}.team{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-top:10px}.teamBox{padding:13px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09)}.teamBox b{display:block;margin-bottom:5px}.vs{font-weight:1000;color:var(--lime)}.scoreline{display:flex;justify-content:space-between;gap:10px;padding:12px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);margin-top:8px}.liveDot{width:10px;height:10px;border-radius:999px;background:var(--orange);display:inline-block;box-shadow:0 0 14px var(--orange)}.hide{display:none!important}.foot{font-size:11px;color:#d9f99d;text-align:center;margin-top:14px;opacity:.8}.qrBox{display:grid;place-items:center;padding:16px;border-radius:24px;background:#fff}.qrBox img{width:190px;height:190px;display:block}.qrLabel{color:#111;font-weight:1000;text-align:center;margin-top:8px}
   </style>
 </head>
 <body>
   <header>
     <div class="head">
-      <div class="brand"><div class="logo">OP</div><div><div class="eyebrow">OPENPLAY PLAYER</div><div class="title">QR Registration Demo</div></div></div>
-      <div class="pill">PLAYER ONLY · VIEW ONLY</div>
+      <div class="brand"><div class="logo">OP</div><div><div class="eyebrow">OPENPLAY</div><div class="title" data-i18n="appTitle">Player QR</div></div></div>
+      <button class="langBtn" onclick="toggleLang()" id="langBtn">EN</button>
     </div>
   </header>
 
   <main class="wrap">
-    <section class="cut card hero">
-      <div class="grid two">
-        <div>
-          <span class="pill">Beta 0.2 Demo</span>
-          <h1>สแกน QR → เลือกอีเว้นท์ → ลงชื่อ → เลือกเลเวล</h1>
-          <p class="muted">หลังลงทะเบียน ผู้เล่นจะดูได้เฉพาะข้อมูลตัวเอง ตารางแข่งขัน และคอร์ทที่กำลังแข่งอยู่ ไม่มีปุ่มแอดมิน ไม่มีปุ่มแก้ไข ไม่มีปุ่มจำลอง</p>
-          <div class="notice">หน้านี้เป็น demo แยก ไม่ผูกกับ OpenPlay ตัวจริง ไม่ใช้ Supabase และไม่กระทบข้อมูลเดิม</div>
-        </div>
-        <div class="soft section">
-          <b class="lime">Player Permission</b>
-          <div class="eventCard"><strong>ทำได้</strong><span>เลือกอีเว้นท์ / ลงชื่อ / เลือกระดับความสามารถ</span></div>
-          <div class="eventCard"><strong>ดูได้</strong><span>สถิติตัวเอง / ตารางแข่งขัน / ใครกำลังแข่งอยู่</span></div>
-          <div class="eventCard"><strong>ทำไม่ได้</strong><span>จัดคู่ / ใส่คะแนน / แก้สถานะ / เข้า Organizer</span></div>
-        </div>
-      </div>
-    </section>
-
-    <section id="joinScreen" class="grid two" style="margin-top:14px">
+    <section id="joinScreen" class="grid two">
       <div class="cut card section">
-        <div class="eyebrow">PLAYER REGISTRATION</div>
-        <h2>ลงทะเบียนเข้าเล่น</h2>
-        <label class="label">เลือกอีเว้นท์ / Select Event</label>
+        <span class="pill">Beta 0.2</span>
+        <h1 data-i18n="joinTitle">ลงทะเบียนเข้าเล่น</h1>
+        <label class="label" data-i18n="eventLabel">เลือกอีเว้นท์</label>
         <select id="eventSelect">
           <option value="Smash Sat! · Club46 · 16:00–18:00">Smash Sat! · Club46 · 16:00–18:00</option>
-          <option value="Beginner Friendly Night · GDSQ · 19:00–21:00">Beginner Friendly Night · GDSQ · 19:00–21:00</option>
-          <option value="Social Mix Open Play · Sukspace · 18:00–20:00">Social Mix Open Play · Sukspace · 18:00–20:00</option>
+          <option value="Beginner Night · GDSQ · 19:00–21:00">Beginner Night · GDSQ · 19:00–21:00</option>
+          <option value="Social Mix · Sukspace · 18:00–20:00">Social Mix · Sukspace · 18:00–20:00</option>
         </select>
-        <label class="label">ชื่อเล่น / Nickname</label>
-        <input id="nick" placeholder="เช่น Don" autocomplete="nickname" />
-        <label class="label">คะแนนความสามารถตนเอง / Self Rating</label>
+        <label class="label" data-i18n="nickLabel">ชื่อเล่น</label>
+        <input id="nick" placeholder="Don" autocomplete="nickname" />
+        <label class="label" data-i18n="levelLabel">ระดับความสามารถ</label>
         <select id="level">
           <option>1.0</option><option>1.5</option><option>2.0</option><option selected>2.5</option><option>3.0</option><option>3.5</option><option>4.0</option><option>4.5</option><option>5.0</option>
         </select>
-        <button class="btn" onclick="registerPlayer()">JOIN EVENT / เข้าร่วมอีเว้นท์</button>
-        <div class="lock">หลังจากกดเข้าร่วม หน้านี้จะเปลี่ยนเป็นโหมดดูข้อมูลเท่านั้น</div>
+        <button class="btn" onclick="registerPlayer()" data-i18n="joinBtn">เข้าร่วมอีเว้นท์</button>
+        <div class="mini" style="margin-top:10px" data-i18n="joinNote">หลังลงทะเบียน ระบบจะแสดงข้อมูลของคุณเท่านั้น</div>
       </div>
       <div class="cut card section">
-        <div class="eyebrow">EVENT QR EXAMPLE</div>
-        <h2>ตัวอย่าง QR สำหรับผู้เล่น</h2>
-        <div class="qrBox"><div><img id="qrImg" alt="Demo QR"><div class="qrLabel">SCAN TO REGISTER</div></div></div>
-        <div class="mini" style="margin-top:10px">QR นี้พามาหน้า demo นี้เท่านั้น ไม่เชื่อมระบบจริง</div>
+        <h2 data-i18n="qrTitle">QR สำหรับผู้เล่น</h2>
+        <div class="qrBox"><div><img id="qrImg" alt="Demo QR"><div class="qrLabel">OPENPLAY</div></div></div>
       </div>
     </section>
 
-    <section id="playerScreen" class="hide" style="margin-top:14px">
+    <section id="playerScreen" class="hide">
       <div class="cut card section">
         <div class="playerTop">
           <div class="avatar" id="avatar">D</div>
           <div style="flex:1">
-            <div class="eyebrow">MY OPENPLAY CARD</div>
+            <div class="eyebrow" data-i18n="myCard">MY CARD</div>
             <h2 id="playerName" style="margin:3px 0">Don</h2>
             <div class="mini" id="eventName">Smash Sat! · Club46</div>
           </div>
-          <div class="pill waiting">WAITING</div>
+          <div class="pill waiting" data-i18n="waiting">WAITING</div>
         </div>
-        <div class="readonly">ผู้เล่นดูข้อมูลได้เท่านั้น / Player view only</div>
         <div class="grid three" style="margin-top:12px">
-          <div class="stat"><small>Level</small><b id="playerLevel">2.5</b></div>
-          <div class="stat"><small>Queue</small><b>#5</b></div>
-          <div class="stat"><small>Status</small><b style="font-size:16px;color:var(--yellow)">WAITING</b></div>
+          <div class="stat"><small data-i18n="levelShort">Level</small><b id="playerLevel">2.5</b></div>
+          <div class="stat"><small data-i18n="queue">Queue</small><b>#5</b></div>
+          <div class="stat"><small data-i18n="status">Status</small><b style="font-size:16px;color:var(--yellow)" data-i18n="waiting">WAITING</b></div>
         </div>
       </div>
 
       <div class="grid two" style="margin-top:14px">
         <div class="cut card section">
-          <div class="eyebrow">MY STATS</div>
-          <h2>สถิติของฉัน</h2>
+          <h2 data-i18n="myStats">สถิติของฉัน</h2>
           <div class="grid three">
-            <div class="stat"><small>Games</small><b>3</b></div>
+            <div class="stat"><small data-i18n="games">Games</small><b>3</b></div>
             <div class="stat"><small>W/L</small><b>2/1</b></div>
-            <div class="stat"><small>Win Rate</small><b>67%</b></div>
+            <div class="stat"><small data-i18n="winRate">Win Rate</small><b>67%</b></div>
           </div>
           <div class="grid three" style="margin-top:12px">
-            <div class="stat"><small>Points For</small><b>31</b></div>
-            <div class="stat"><small>Points Against</small><b>24</b></div>
-            <div class="stat"><small>Score</small><b class="lime">13</b></div>
+            <div class="stat"><small>PF</small><b>31</b></div>
+            <div class="stat"><small>PA</small><b>24</b></div>
+            <div class="stat"><small data-i18n="score">Score</small><b class="lime">13</b></div>
           </div>
           <div class="scoreline"><div><b class="lime">WIN</b><div class="mini" id="history1">Don/Mark vs Pond/Tee</div></div><b>11 - 7</b></div>
           <div class="scoreline"><div><b style="color:var(--red)">LOSS</b><div class="mini" id="history2">Don/Boss vs Max/Tee</div></div><b>8 - 11</b></div>
         </div>
 
         <div class="cut card section">
-          <div class="eyebrow">MY MATCH SCHEDULE</div>
-          <h2>ตารางแข่งขันของฉัน</h2>
+          <h2 data-i18n="myMatch">ตารางของฉัน</h2>
           <div class="match">
-            <div class="pill ready">NEXT MATCH · Court 2</div>
+            <div class="pill ready"><span data-i18n="nextMatch">NEXT MATCH</span> · Court 2</div>
             <div class="team">
               <div class="teamBox"><b>Team A</b><span id="teamA">Don / Mark</span></div>
               <div class="vs">VS</div>
               <div class="teamBox"><b>Team B</b><span>Pond / Tee</span></div>
             </div>
-            <div class="mini" style="margin-top:10px">รอผู้จัดเรียกขึ้นคอร์ท / Waiting for organizer</div>
-          </div>
-          <div class="match">
-            <div class="pill">After 2 matches</div>
-            <div class="mini">ระบบจะแสดงแมตช์ถัดไปเมื่อผู้จัดจับคู่ใหม่</div>
           </div>
         </div>
       </div>
 
       <div class="cut card section" style="margin-top:14px">
-        <div class="eyebrow">LIVE COURTS</div>
-        <h2>ใครกำลังแข่งอยู่</h2>
+        <h2 data-i18n="liveCourts">กำลังแข่งอยู่</h2>
         <div class="grid two">
-          <div class="match"><b><span class="liveDot"></span> Court 1 · Playing</b><div class="mini" style="margin-top:8px">Team A: Aof / Bank</div><div class="mini">Team B: Mint / Tee</div><div class="scoreline"><span>Current</span><b>6 - 4</b></div></div>
-          <div class="match"><b><span class="liveDot"></span> Court 3 · Playing</b><div class="mini" style="margin-top:8px">Team A: Fern / Jay</div><div class="mini">Team B: Max / Boss</div><div class="scoreline"><span>Current</span><b>3 - 5</b></div></div>
+          <div class="match"><b><span class="liveDot"></span> Court 1</b><div class="mini" style="margin-top:8px">Aof / Bank vs Mint / Tee</div><div class="scoreline"><span>Current</span><b>6 - 4</b></div></div>
+          <div class="match"><b><span class="liveDot"></span> Court 3</b><div class="mini" style="margin-top:8px">Fern / Jay vs Max / Boss</div><div class="scoreline"><span>Current</span><b>3 - 5</b></div></div>
         </div>
       </div>
     </section>
+
+    <div class="foot" data-i18n="demoNote">Demo only · ไม่เชื่อมระบบจริง</div>
   </main>
 
-  <div class="footerNote">Demo Player-only: ไม่มีปุ่ม Organizer / ไม่มีการแก้ข้อมูลจริง / ใช้ localStorage ในเครื่องเท่านั้น</div>
-
   <script>
-    const STORAGE_KEY='openplay_player_only_demo';
+    const STORAGE_KEY='openplay_player_demo_v2';
+    const LANG_KEY='openplay_player_demo_lang';
+    const dict={
+      th:{appTitle:'Player QR',joinTitle:'ลงทะเบียนเข้าเล่น',eventLabel:'เลือกอีเว้นท์',nickLabel:'ชื่อเล่น',levelLabel:'ระดับความสามารถ',joinBtn:'เข้าร่วมอีเว้นท์',joinNote:'หลังลงทะเบียน ระบบจะแสดงข้อมูลของคุณเท่านั้น',qrTitle:'QR สำหรับผู้เล่น',myCard:'การ์ดของฉัน',waiting:'รอคิว',levelShort:'เลเวล',queue:'คิว',status:'สถานะ',myStats:'สถิติของฉัน',games:'เกม',winRate:'ชนะ%',score:'คะแนน',myMatch:'ตารางของฉัน',nextMatch:'แมตช์ถัดไป',liveCourts:'กำลังแข่งอยู่',demoNote:'Demo เท่านั้น · ไม่เชื่อมระบบจริง'},
+      en:{appTitle:'Player QR',joinTitle:'Join Event',eventLabel:'Select Event',nickLabel:'Nickname',levelLabel:'Skill Level',joinBtn:'Join Event',joinNote:'After joining, you can view your own information only.',qrTitle:'Player QR',myCard:'MY CARD',waiting:'WAITING',levelShort:'Level',queue:'Queue',status:'Status',myStats:'My Stats',games:'Games',winRate:'Win Rate',score:'Score',myMatch:'My Schedule',nextMatch:'Next Match',liveCourts:'Live Courts',demoNote:'Demo only · Not connected to the real system'}
+    };
+    let lang=localStorage.getItem(LANG_KEY)||'th';
+    function t(k){return (dict[lang]&&dict[lang][k])||k}
+    function applyLang(){document.documentElement.lang=lang;document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n)});document.getElementById('langBtn').textContent=lang==='th'?'EN':'TH'}
+    function toggleLang(){lang=lang==='th'?'en':'th';localStorage.setItem(LANG_KEY,lang);applyLang()}
     function initials(name){return String(name||'D').trim().slice(0,1).toUpperCase()}
-    function registerPlayer(){
-      const nick=(document.getElementById('nick').value||'').trim();
-      const event=document.getElementById('eventSelect').value;
-      const level=document.getElementById('level').value;
-      if(!nick){alert('กรุณากรอกชื่อเล่น');return;}
-      const player={nick,event,level,joinedAt:new Date().toISOString()};
-      localStorage.setItem(STORAGE_KEY,JSON.stringify(player));
-      renderPlayer(player);
-    }
-    function renderPlayer(player){
-      document.getElementById('joinScreen').classList.add('hide');
-      document.getElementById('playerScreen').classList.remove('hide');
-      document.getElementById('playerName').textContent=player.nick;
-      document.getElementById('eventName').textContent=player.event;
-      document.getElementById('playerLevel').textContent=player.level;
-      document.getElementById('avatar').textContent=initials(player.nick);
-      document.getElementById('teamA').textContent=player.nick+' / Mark';
-      document.getElementById('history1').textContent=player.nick+'/Mark vs Pond/Tee';
-      document.getElementById('history2').textContent=player.nick+'/Boss vs Max/Tee';
-    }
-    function init(){
-      const qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encodeURIComponent(location.origin+location.pathname);
-      document.getElementById('qrImg').src=qrUrl;
-      const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
-      if(saved) renderPlayer(saved);
-    }
+    function registerPlayer(){const nick=(document.getElementById('nick').value||'').trim();if(!nick){alert(lang==='th'?'กรุณากรอกชื่อเล่น':'Please enter nickname');return;}const player={nick,event:document.getElementById('eventSelect').value,level:document.getElementById('level').value};localStorage.setItem(STORAGE_KEY,JSON.stringify(player));renderPlayer(player)}
+    function renderPlayer(player){document.getElementById('joinScreen').classList.add('hide');document.getElementById('playerScreen').classList.remove('hide');document.getElementById('playerName').textContent=player.nick;document.getElementById('eventName').textContent=player.event;document.getElementById('playerLevel').textContent=player.level;document.getElementById('avatar').textContent=initials(player.nick);document.getElementById('teamA').textContent=player.nick+' / Mark';document.getElementById('history1').textContent=player.nick+'/Mark vs Pond/Tee';document.getElementById('history2').textContent=player.nick+'/Boss vs Max/Tee'}
+    function init(){document.getElementById('qrImg').src='https://api.qrserver.com/v1/create-qr-code/?size=190x190&data='+encodeURIComponent(location.origin+location.pathname);const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');if(saved)renderPlayer(saved);applyLang()}
     init();
   </script>
 </body>
