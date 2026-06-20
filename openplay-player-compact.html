@@ -3,75 +3,32 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>OpenPlay Player Compact</title>
+<title>OpenPlay Player · Level 0.25</title>
 <style>
-html,body{margin:0;width:100%;height:100dvh;min-height:100svh;background:#0d1217;overflow:hidden}iframe{width:100%;height:100%;border:0;background:#0d1217}.badge{position:fixed;right:10px;bottom:10px;z-index:999999;background:#c7ff2e;color:#111;border-radius:999px;padding:6px 9px;font:800 10px system-ui;opacity:.86;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+html,body{margin:0;width:100%;height:100dvh;min-height:100svh;background:#0d1217;overflow:hidden}iframe{width:100%;height:100%;border:0;background:#0d1217}.badge{position:fixed;right:10px;bottom:10px;z-index:999999;background:#c7ff2e;color:#111;border-radius:999px;padding:6px 9px;font:900 10px system-ui;opacity:.86;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 </style>
 </head>
 <body>
 <iframe id="playerFrame"></iframe>
-<div class="badge">COMPACT HISTORY</div>
+<div class="badge">LEVEL 0.25</div>
 <script>
 const frame=document.getElementById('playerFrame');
-const q=new URLSearchParams(location.search);
-q.set('v','compact-history-02');
-frame.src='./openplay-player.html?'+q.toString();
-function inject(){
+const q=new URLSearchParams(location.search);q.set('v','level025-compact-existing');frame.src='./openplay-player.html?'+q.toString();
+function values025(){const a=[];for(let v=1;v<=5.0001;v+=0.25)a.push(Number(v.toFixed(2)));return a}
+function patchSelect(select,current){if(!select)return;const now=Number(current||select.value||2.5);select.innerHTML=values025().map(v=>`<option value="${v.toFixed(2)}" ${Math.abs(v-now)<.001?'selected':''}>${v.toFixed(2)}</option>`).join('')}
+function patch(){
   try{
-    const doc=frame.contentDocument;
-    if(!doc)return;
-    if(!doc.getElementById('compact-player-board-style')){
-      const style=doc.createElement('style');
-      style.id='compact-player-board-style';
-      style.textContent=`
-        .rankCard{padding:10px 11px!important;border-radius:18px!important;grid-template-columns:34px 1fr 52px!important;gap:8px!important;}
-        .rankNo{width:32px!important;height:32px!important;font-size:13px!important;}
-        .miniAvatar{width:32px!important;height:32px!important;border-radius:12px!important;font-size:13px!important;}
-        .playerCell{gap:8px!important;}.playerCell b{font-size:14px!important;}.scoreBig{font-size:20px!important;}
-        .rankMeta{gap:4px!important;margin-top:4px!important;}.tag{font-size:10px!important;padding:3px 6px!important;}
-        .statStrip{gap:5px!important;margin-top:7px!important;}.statStrip span{font-size:10px!important;padding:5px 3px!important;border-radius:10px!important;}.statStrip b{font-size:13px!important;}
-        #leaderTitle{font-size:20px!important;}#leaderboardList{gap:8px!important;}
-
-        .historyTitle{margin:10px 0 4px!important;gap:6px!important;}
-        .historyTitle b{font-size:12px!important;}.historyTitle span{font-size:9px!important;}
-        .resultCard{padding:9px!important;border-radius:15px!important;margin-top:7px!important;grid-template-columns:34px minmax(0,1fr)!important;gap:8px!important;box-shadow:0 7px 16px rgba(0,0,0,.13)!important;}
-        .resultIcon{width:32px!important;height:32px!important;border-radius:11px!important;font-size:17px!important;line-height:1!important;}
-        .historyTop{gap:5px!important;}.resultLabel{font-size:10px!important;letter-spacing:.03em!important;}.matchMeta{font-size:9px!important;}
-        .scoreBoard{margin:4px 0 5px!important;gap:5px!important;}.scoreBoard b{font-size:24px!important;line-height:.95!important;}.scoreBoard span{font-size:11px!important;}
-        .teamLine{font-size:10px!important;gap:5px!important;margin-top:3px!important;}.teamPill{font-size:8px!important;padding:3px 5px!important;}
-        .resultCard .winnerScore{color:var(--yellow)!important;position:relative;text-shadow:0 0 16px rgba(253,224,71,.45);}
-        .resultCard .winnerScore::after{content:'🏆';position:absolute;right:-18px;top:-5px;font-size:13px;filter:drop-shadow(0 2px 5px rgba(0,0,0,.45));}
-        .resultCard .winnerTeam{background:rgba(253,224,71,.075)!important;border-radius:10px!important;padding:3px 5px!important;border:1px solid rgba(253,224,71,.28)!important;color:#fff7b0!important;}
-        .resultCard .winnerTeam .teamPill{color:#111!important;background:var(--yellow)!important;border-color:rgba(253,224,71,.75)!important;}
-        .resultCard .winnerTeam .teamPill::after{content:' 🏆';}
-        .resultCard.win .resultIcon{background:rgba(253,224,71,.18)!important;border-color:rgba(253,224,71,.65)!important;color:var(--yellow)!important;}
-        .resultCard.loss .resultIcon{font-size:15px!important;}
-        #history .mini{font-size:10px!important;}
-      `;
-      doc.head.appendChild(style);
-    }
-    markWinners(doc);
+    const doc=frame.contentDocument;if(!doc)return;
+    const select=doc.getElementById('levelSelect')||doc.querySelector('select[id*=level],select[x-model*=level]');
+    patchSelect(select,select&&select.value);
+    doc.querySelectorAll('select').forEach(s=>{
+      const opts=[...s.options].map(o=>o.value).join('|');
+      if(opts==='1.0|1.5|2.0|2.5|3.0|3.5|4.0|4.5|5.0'||opts==='1|1.5|2|2.5|3|3.5|4|4.5|5')patchSelect(s,s.value);
+    });
   }catch(e){}
 }
-function markWinners(doc){
-  doc.querySelectorAll('.resultCard').forEach(card=>{
-    const scores=card.querySelectorAll('.scoreBoard b');
-    const lines=card.querySelectorAll('.teamLine');
-    scores.forEach(x=>x.classList.remove('winnerScore'));
-    lines.forEach(x=>x.classList.remove('winnerTeam'));
-    if(card.classList.contains('win')){
-      if(scores[0])scores[0].classList.add('winnerScore');
-      if(lines[0])lines[0].classList.add('winnerTeam');
-      const icon=card.querySelector('.resultIcon');
-      if(icon)icon.textContent='🏆';
-    }else if(card.classList.contains('loss')){
-      if(scores[1])scores[1].classList.add('winnerScore');
-      if(lines[1])lines[1].classList.add('winnerTeam');
-    }
-  });
-}
-frame.addEventListener('load',()=>{inject();setInterval(inject,1000)});
-setInterval(inject,2500);
+frame.addEventListener('load',()=>{patch();setInterval(patch,1000)});
+setInterval(patch,2500);
 </script>
 </body>
 </html>
