@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GDSQ Open Play · Level 0.25</title>
+<style>
+html,body{margin:0;width:100%;height:100dvh;min-height:100svh;background:#0d1217;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;overflow:hidden}iframe{width:100%;height:100%;border:0;background:#11161b}.badge{position:fixed;right:12px;bottom:12px;z-index:999999;background:#c7ff2e;color:#111;border-radius:999px;padding:7px 10px;font:900 11px system-ui;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+</style>
+</head>
+<body>
+<iframe id="wrapFrame" src="./openplay-court-fix.html?v=level025-base"></iframe>
+<div class="badge">LEVEL 0.25</div>
+<script>
+const frame=document.getElementById('wrapFrame');
+function values025(){const a=[];for(let v=1;v<=5.0001;v+=0.25)a.push(Number(v.toFixed(2)));return a}
+function patchSelect(select,current){if(!select)return;const now=Number(current||select.value||2.5);select.innerHTML=values025().map(v=>`<option value="${v.toFixed(2)}" ${Math.abs(v-now)<.001?'selected':''}>${v.toFixed(2)}</option>`).join('')}
+function patchInnerOpenPlay(){
+  try{
+    const outerDoc=frame.contentDocument;
+    const appFrame=outerDoc&&outerDoc.getElementById('appFrame');
+    const win=appFrame&&appFrame.contentWindow;
+    const doc=appFrame&&appFrame.contentDocument;
+    if(!win||!doc)return;
+    const root=doc.querySelector('html[x-data]');
+    const app=win.Alpine&&root&&win.Alpine.$data?win.Alpine.$data(root):null;
+    if(app){app.levels=values025();}
+    doc.querySelectorAll('select').forEach(s=>{
+      const opts=[...s.options].map(o=>o.value).join('|');
+      if(opts==='1|1.5|2|2.5|3|3.5|4|4.5|5')patchSelect(s,s.value);
+    });
+  }catch(e){}
+}
+function patchOuterLevelAdmin(){
+  try{
+    const w=frame.contentWindow,doc=frame.contentDocument;
+    if(!w||!doc)return;
+    if(!w.__level025Patched){
+      w.__level025Patched=true;
+      const oldRender=w.renderLevelPanel;
+      w.renderLevelPanel=function(message){
+        oldRender&&oldRender(message);
+        setTimeout(()=>doc.querySelectorAll('.level-select').forEach(s=>patchSelect(s,s.value)),0);
+      };
+    }
+    doc.querySelectorAll('.level-select').forEach(s=>patchSelect(s,s.value));
+  }catch(e){}
+}
+function patch(){patchOuterLevelAdmin();patchInnerOpenPlay()}
+frame.addEventListener('load',()=>{patch();setInterval(patch,1000)});
+setInterval(patch,2500);
+</script>
+</body>
+</html>
