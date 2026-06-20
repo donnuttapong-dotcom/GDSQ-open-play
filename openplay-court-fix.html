@@ -179,6 +179,13 @@
         return new Date(m.ended_at || m.started_at || m.created_at || 0).getTime() || 0;
       };
 
+      app.__isRotationHistoryMatch = function(m){
+        if(!m || !m.id) return false;
+        const status = String(m.status || '').toLowerCase();
+        const ignored = ['cancelled','canceled','void','deleted','draft','preview'];
+        return !ignored.includes(status);
+      };
+
       app.__buildRotationCache = function(){
         const rules = this.__rotationRules;
         const mpsByMatch = new Map();
@@ -187,7 +194,7 @@
           mpsByMatch.get(row.match_id).push(row);
         }
         const history = (this.matches || [])
-          .filter(m => ['confirmed','playing','live'].includes(m.status))
+          .filter(m => this.__isRotationHistoryMatch(m))
           .sort((a,b) => this.__matchTime(b) - this.__matchTime(a));
 
         const same = new Map();
@@ -237,6 +244,7 @@
       app.__sameTeamCount = function(aId,bId){ return this.__cache().same.get(pairKey(aId,bId)) || 0; };
       app.__opponentCount = function(aId,bId){ return this.__cache().opp.get(pairKey(aId,bId)) || 0; };
       app.__queueMs = function(p){ return new Date(p.queue_joined_at || p.created_at || 0).getTime() || 0; };
+      app.__shouldRest = function(p){ return this.__consecutiveCount(p.id) >= this.__rotationRules.maxConsecutive; };
 
       app.__playerBaseScore = function(p){
         const rules = this.__rotationRules;
@@ -265,7 +273,7 @@
 
       app.__groupScore = function(group){
         const gameSpread = Math.max(...group.map(p=>+p.matches_played||0)) - Math.min(...group.map(p=>+p.matches_played||0));
-        const restRisk = group.reduce((s,p)=>s+(this.__consecutiveCount(p.id) >= this.__rotationRules.maxConsecutive ? this.__rotationRules.restPenalty : 0),0);
+        const restRisk = group.reduce((s,p)=>s+(this.__shouldRest(p) ? this.__rotationRules.restPenalty * 2 : 0),0);
         let repeatRisk = 0;
         for(let i=0;i<group.length;i++) for(let j=i+1;j<group.length;j++){
           repeatRisk += this.__sameTeamCount(group[i].id, group[j].id) * 14;
@@ -303,17 +311,17 @@
         const out = [];
         const used = new Set();
         const courts = this.freeCourts ? this.freeCourts() : [];
-        let pool = this.sortPool ? this.sortPool(list) : [...list];
-        const restPool = pool.filter(p => this.__consecutiveCount(p.id) < rules.maxConsecutive);
-        if(restPool.length >= 4) pool = restPool;
+        const basePool = this.sortPool ? this.sortPool(list) : [...list];
+        const restBlocked = basePool.filter(p => this.__shouldRest(p));
+        const freshPool = basePool.filter(p => !this.__shouldRest(p));
+        const hasEnoughFreshForAtLeastOneCourt = freshPool.length >= 4;
+        let pool = hasEnoughFreshForAtLeastOneCourt ? freshPool : basePool;
 
         for(const court of courts){
           const available = pool.filter(p => !used.has(p.id));
           if(available.length < 4) break;
-          const belowLimit = available.filter(p => this.__consecutiveCount(p.id) < rules.maxConsecutive);
-          const candidatePool = belowLimit.length >= 4 ? belowLimit : available;
-          const shortlist = candidatePool.slice(0, rules.candidateLimit);
-          const groups = this.__combinations(shortlist, 4);
+          const shortlist = available.slice(0, rules.candidateLimit);
+          const groups = this.__combinations(shortlist, 4).filter(g => hasEnoughFreshForAtLeastOneCourt ? !g.some(p => this.__shouldRest(p)) : true);
           let bestGroup = null;
           for(const group of groups){
             const score = this.__groupScore(group);
@@ -322,7 +330,7 @@
           if(!bestGroup) break;
           bestGroup.group.forEach(p => used.add(p.id));
           const teams = this.__bestTeams(bestGroup.group);
-          out.push({uid:'wave-rest-'+court+'-'+Date.now()+'-'+Math.random().toString(36).slice(2),court,mode:this.autoMode,A:teams.A,B:teams.B,rotationScore:Math.round(bestGroup.score + teams.score)});
+          out.push({uid:'hard-rest-'+court+'-'+Date.now()+'-'+Math.random().toString(36).slice(2),court,mode:this.autoMode,A:teams.A,B:teams.B,rotationScore:Math.round(bestGroup.score + teams.score),restBlockedCount:restBlocked.length});
         }
         return out;
       };
@@ -331,10 +339,15 @@
         if(this.isEventCompleted && this.isEventCompleted()) return this.flash('อีเว้นท์จบแล้ว ดูสถิติย้อนหลังเท่านั้น / Archived event is read-only');
         const n = this.maxPreviewCount ? this.maxPreviewCount() : 0;
         if(n < 1) return this.flash('ต้องมีผู้เล่นรอ/พร้อมอย่างน้อย 4 คน และมีคอร์ทว่าง / Need 4 ready/waiting players and a free court');
-        this.previews = this.chunkTeams(this.readyPlayers ? this.readyPlayers() : []);
         const ready = this.readyPlayers ? this.readyPlayers() : [];
-        const resting = ready.filter(p => this.__consecutiveCount(p.id) >= this.__rotationRules.maxConsecutive).length;
-        this.flash('Smart Rest Guard: สร้างพรีวิว '+this.previews.length+' court(s) · กันคนเล่นติดกันครบ 2 รอบ '+resting+' คน');
+        this.__rotationCache = null;
+        this.__buildRotationCache();
+        const restingPlayers = ready.filter(p => this.__shouldRest(p));
+        const freshPlayers = ready.filter(p => !this.__shouldRest(p));
+        this.previews = this.chunkTeams(ready);
+        const names = restingPlayers.slice(0,4).map(p=>p.nickname).join(', ');
+        const note = restingPlayers.length && freshPlayers.length >= 4 ? ' · พัก: '+restingPlayers.length+' คน'+(names?' ('+names+(restingPlayers.length>4?'...':'')+')':'') : ' · พัก: '+restingPlayers.length+' คน';
+        this.flash('Hard Rest Guard: สร้างพรีวิว '+this.previews.length+' court(s)'+note);
       };
 
       app.rebalancePreview = function(pr){
@@ -440,7 +453,7 @@
         input.__courtFixInput = true;
       }
       if(levelPanel.classList.contains('open')) renderLevelPanel();
-      badge.textContent = 'SMART REST + LEVEL ADMIN + IPAD DESKTOP';
+      badge.textContent = 'HARD REST + LEVEL ADMIN + IPAD DESKTOP';
       return true;
     }
 
