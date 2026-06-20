@@ -76,8 +76,9 @@
 
       app.__rotationRules = {
         maxConsecutive: 2,
+        waveWindowMs: 180000,
         candidateLimit: 8,
-        restPenalty: 520,
+        restPenalty: 900,
         teammatePenalty: 105,
         opponentPenalty: 26,
         levelGapPenalty: 85,
@@ -90,6 +91,7 @@
       };
 
       app.__buildRotationCache = function(){
+        const rules = this.__rotationRules;
         const mpsByMatch = new Map();
         for(const row of (this.mps || [])){
           if(!mpsByMatch.has(row.match_id)) mpsByMatch.set(row.match_id, []);
@@ -98,6 +100,7 @@
         const history = (this.matches || [])
           .filter(m => ['confirmed','playing','live'].includes(m.status))
           .sort((a,b) => this.__matchTime(b) - this.__matchTime(a));
+
         const same = new Map();
         const opp = new Map();
         const add = (map,a,b,n=1) => {
@@ -105,56 +108,56 @@
           const k = pairKey(a,b);
           map.set(k, (map.get(k) || 0) + n);
         };
+
+        const waves = [];
         for(const m of history){
+          const t = this.__matchTime(m);
           const rows = mpsByMatch.get(m.id) || [];
           const A = rows.filter(x=>x.team==='A').map(x=>x.event_player_id).filter(Boolean);
           const B = rows.filter(x=>x.team==='B').map(x=>x.event_player_id).filter(Boolean);
           for(let i=0;i<A.length;i++) for(let j=i+1;j<A.length;j++) add(same,A[i],A[j]);
           for(let i=0;i<B.length;i++) for(let j=i+1;j<B.length;j++) add(same,B[i],B[j]);
           for(const a of A) for(const b of B) add(opp,a,b);
+
+          let wave = waves[waves.length - 1];
+          if(!wave || Math.abs(wave.time - t) > rules.waveWindowMs){
+            wave = {time:t, matches:[], players:new Set()};
+            waves.push(wave);
+          }
+          wave.matches.push(m);
+          for(const row of rows){
+            if(row.event_player_id) wave.players.add(row.event_player_id);
+          }
         }
+
         const consecutive = new Map();
         for(const p of (this.players || [])){
           let count = 0;
-          for(const m of history){
-            const rows = mpsByMatch.get(m.id) || [];
-            if(rows.some(x=>x.event_player_id === p.id)) count++;
+          for(const wave of waves){
+            if(wave.players.has(p.id)) count++;
             else break;
           }
           consecutive.set(p.id, count);
         }
-        this.__rotationCache = {history,mpsByMatch,same,opp,consecutive,at:Date.now()};
+        this.__rotationCache = {history,waves,mpsByMatch,same,opp,consecutive,at:Date.now()};
         return this.__rotationCache;
       };
 
-      app.__cache = function(){
-        return this.__rotationCache || this.__buildRotationCache();
-      };
-
-      app.__consecutiveCount = function(playerId){
-        return this.__cache().consecutive.get(playerId) || 0;
-      };
-
-      app.__sameTeamCount = function(aId,bId){
-        return this.__cache().same.get(pairKey(aId,bId)) || 0;
-      };
-
-      app.__opponentCount = function(aId,bId){
-        return this.__cache().opp.get(pairKey(aId,bId)) || 0;
-      };
-
-      app.__queueMs = function(p){
-        return new Date(p.queue_joined_at || p.created_at || 0).getTime() || 0;
-      };
+      app.__cache = function(){ return this.__rotationCache || this.__buildRotationCache(); };
+      app.__consecutiveCount = function(playerId){ return this.__cache().consecutive.get(playerId) || 0; };
+      app.__sameTeamCount = function(aId,bId){ return this.__cache().same.get(pairKey(aId,bId)) || 0; };
+      app.__opponentCount = function(aId,bId){ return this.__cache().opp.get(pairKey(aId,bId)) || 0; };
+      app.__queueMs = function(p){ return new Date(p.queue_joined_at || p.created_at || 0).getTime() || 0; };
 
       app.__playerBaseScore = function(p){
         const rules = this.__rotationRules;
         const games = +p.matches_played || 0;
         const streak = this.__consecutiveCount(p.id);
-        const restPenalty = streak >= rules.maxConsecutive ? rules.restPenalty : streak * 45;
+        const hardRest = streak >= rules.maxConsecutive ? rules.restPenalty : 0;
+        const softRest = streak > 0 ? streak * 70 : 0;
         const statusBonus = p.status === 'ready' ? -18 : 0;
         const queueAge = Date.now() - this.__queueMs(p);
-        return games * rules.matchCountPenalty + restPenalty + statusBonus - queueAge * rules.queuePenalty;
+        return games * rules.matchCountPenalty + hardRest + softRest + statusBonus - queueAge * rules.queuePenalty;
       };
 
       app.__combinations = function(list, size){
@@ -204,24 +207,24 @@
         return best;
       };
 
-      app.__fastFallbackGroup = function(available){
-        return available.slice(0, 4);
-      };
-
       app.chunkTeams = function(list){
+        this.__rotationCache = null;
         this.__buildRotationCache();
         const rules = this.__rotationRules;
         const out = [];
         const used = new Set();
         const courts = this.freeCourts ? this.freeCourts() : [];
         let pool = this.sortPool ? this.sortPool(list) : [...list];
-        const restFiltered = pool.filter(p => this.__consecutiveCount(p.id) < rules.maxConsecutive);
-        if(restFiltered.length >= 4) pool = restFiltered;
+        const restPool = pool.filter(p => this.__consecutiveCount(p.id) < rules.maxConsecutive);
+        if(restPool.length >= 4) pool = restPool;
+
         for(const court of courts){
           const available = pool.filter(p => !used.has(p.id));
           if(available.length < 4) break;
-          const shortlist = available.slice(0, rules.candidateLimit);
-          const groups = shortlist.length <= 8 ? this.__combinations(shortlist, 4) : [this.__fastFallbackGroup(shortlist)];
+          const belowLimit = available.filter(p => this.__consecutiveCount(p.id) < rules.maxConsecutive);
+          const candidatePool = belowLimit.length >= 4 ? belowLimit : available;
+          const shortlist = candidatePool.slice(0, rules.candidateLimit);
+          const groups = this.__combinations(shortlist, 4);
           let bestGroup = null;
           for(const group of groups){
             const score = this.__groupScore(group);
@@ -230,7 +233,7 @@
           if(!bestGroup) break;
           bestGroup.group.forEach(p => used.add(p.id));
           const teams = this.__bestTeams(bestGroup.group);
-          out.push({uid:'smart-fast-'+court+'-'+Date.now()+'-'+Math.random().toString(36).slice(2),court,mode:this.autoMode,A:teams.A,B:teams.B,rotationScore:Math.round(bestGroup.score + teams.score)});
+          out.push({uid:'wave-rest-'+court+'-'+Date.now()+'-'+Math.random().toString(36).slice(2),court,mode:this.autoMode,A:teams.A,B:teams.B,rotationScore:Math.round(bestGroup.score + teams.score)});
         }
         return out;
       };
@@ -239,11 +242,10 @@
         if(this.isEventCompleted && this.isEventCompleted()) return this.flash('อีเว้นท์จบแล้ว ดูสถิติย้อนหลังเท่านั้น / Archived event is read-only');
         const n = this.maxPreviewCount ? this.maxPreviewCount() : 0;
         if(n < 1) return this.flash('ต้องมีผู้เล่นรอ/พร้อมอย่างน้อย 4 คน และมีคอร์ทว่าง / Need 4 ready/waiting players and a free court');
-        this.__rotationCache = null;
         this.previews = this.chunkTeams(this.readyPlayers ? this.readyPlayers() : []);
         const ready = this.readyPlayers ? this.readyPlayers() : [];
         const resting = ready.filter(p => this.__consecutiveCount(p.id) >= this.__rotationRules.maxConsecutive).length;
-        this.flash('Smart Rotation Fast: สร้างพรีวิว '+this.previews.length+' court(s) · พักคนเล่นติดกัน 2 เกม '+resting+' คน');
+        this.flash('Smart Rest Guard: สร้างพรีวิว '+this.previews.length+' court(s) · กันคนเล่นติดกันครบ 2 รอบ '+resting+' คน');
       };
 
       app.rebalancePreview = function(pr){
@@ -255,7 +257,7 @@
         const teams = this.__bestTeams(ps);
         const updated = {...pr,A:teams.A,B:teams.B,uid:pr.uid+'r',rotationScore:Math.round(teams.score)};
         this.previews = this.previews.map(x => x.uid === pr.uid ? updated : x);
-        this.flash('Smart rebalance fast · ลดคู่ซ้ำและทีมซ้ำ / Reduced repeat pairs');
+        this.flash('Smart rebalance · ลดคู่ซ้ำและทีมซ้ำ / Reduced repeat pairs');
       };
 
       app.__rotationGuardPatched = true;
@@ -348,7 +350,7 @@
         input.addEventListener('change', () => app.saveCourtSettings && app.saveCourtSettings());
         input.__courtFixInput = true;
       }
-      badge.textContent = 'SMART ROTATION FAST';
+      badge.textContent = 'SMART REST GUARD ACTIVE';
       return true;
     }
 
