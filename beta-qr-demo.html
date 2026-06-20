@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>OpenPlay Beta 0.2 · QR Demo</title>
+  <style>
+    :root{
+      --bg:#0d1217;--panel:#171f28;--card:#222931;--line:#39434d;--lime:#c7ff2e;--muted:#94a3b8;--orange:#fb923c;--cyan:#38bdf8;--red:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at top left,rgba(199,255,46,.14),transparent 32%),linear-gradient(180deg,#0d1217,#11161b 55%,#0b0f14);color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;min-height:100svh}
+    a{color:inherit;text-decoration:none}.wrap{max-width:1120px;margin:0 auto;padding:14px 14px 80px}.cut{clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px)}
+    .card{background:rgba(34,41,49,.92);border:1px solid var(--line);box-shadow:0 18px 60px rgba(0,0,0,.28)}.soft{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.1);border-radius:18px}.lime{color:var(--lime)}.muted{color:var(--muted)}
+    header{position:sticky;top:0;z-index:30;background:rgba(13,18,23,.88);backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.09)}.head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;max-width:1120px;margin:0 auto}.brand{display:flex;align-items:center;gap:10px}.logo{width:46px;height:46px;border-radius:16px;background:var(--lime);color:#111;display:grid;place-items:center;font-weight:1000}.eyebrow{font-size:10px;letter-spacing:.24em;color:var(--lime);font-weight:900}.title{font-size:18px;font-weight:1000}.pill{display:inline-flex;align-items:center;gap:7px;border-radius:999px;border:1px solid rgba(255,255,255,.14);padding:7px 10px;font-size:12px;font-weight:900;background:rgba(255,255,255,.06)}
+    .grid{display:grid;gap:14px}.two{grid-template-columns:1.05fr .95fr}.three{grid-template-columns:repeat(3,1fr)}@media(max-width:860px){.two,.three{grid-template-columns:1fr}.head{align-items:flex-start}.title{font-size:16px}}
+    .hero{padding:18px}.hero h1{font-size:34px;line-height:1.05;margin:8px 0 8px}.hero p{margin:0;color:#cbd5e1}.notice{border:1px dashed rgba(199,255,46,.45);background:rgba(199,255,46,.08);color:#eaffb7;border-radius:16px;padding:12px;font-size:13px;margin-top:14px}.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}.tab{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;font-weight:1000;padding:13px 8px;border-radius:16px;cursor:pointer}.tab.active{background:var(--lime);color:#111;border-color:var(--lime)}
+    input,select{width:100%;padding:15px 14px;border-radius:16px;border:1px solid #3a424a;background:#10151b;color:white;font-size:16px;outline:none}.label{display:block;font-size:12px;color:var(--muted);font-weight:800;margin:12px 0 7px}.btn{border:0;border-radius:18px;padding:15px 16px;font-weight:1000;cursor:pointer}.btn.main{background:var(--lime);color:#111}.btn.dark{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.12)}.btn.orange{background:var(--orange);color:#111}.btn.cyan{background:var(--cyan);color:#071015}.btn.red{background:var(--red);color:#fff}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}.stat{padding:14px;border-radius:18px;background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.09)}.stat small{display:block;color:var(--muted);font-size:11px}.stat b{font-size:24px}.status{font-size:13px}.status.waiting{color:#fde047}.status.ready{color:var(--lime)}.status.playing{color:var(--orange)}
+    .phone{max-width:420px;margin:0 auto}.phoneTop{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px;border-bottom:1px solid rgba(255,255,255,.08)}.phoneBody{padding:16px}.avatar{width:64px;height:64px;border-radius:22px;background:linear-gradient(135deg,var(--lime),#f8ff8a);color:#111;display:grid;place-items:center;font-size:25px;font-weight:1000}.team{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}.teamBox{padding:14px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09)}.teamBox b{display:block;margin-bottom:6px}.vs{font-weight:1000;color:var(--lime)}.matchItem{padding:12px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);margin-top:8px}.copy{font-size:11px;word-break:break-all;color:#cbd5e1;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px}.qrBox{display:grid;place-items:center;padding:16px;border-radius:24px;background:#fff}.qrBox img{width:220px;height:220px;display:block}.qrLabel{color:#111;font-weight:1000;text-align:center;margin-top:8px}.boardCourt{padding:14px;border-radius:20px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.05)}.mini{font-size:12px;color:var(--muted)}.hide{display:none!important}.footerNote{position:fixed;left:12px;right:12px;bottom:12px;z-index:40;max-width:760px;margin:0 auto;background:rgba(13,18,23,.92);border:1px solid rgba(199,255,46,.35);border-radius:18px;padding:10px 12px;color:#d9f99d;font-size:12px;backdrop-filter:blur(12px)}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="head">
+      <div class="brand"><div class="logo">OP</div><div><div class="eyebrow">GDSQ PICKLEBALL</div><div class="title">OpenPlay QR Demo · Beta 0.2</div></div></div>
+      <div class="pill">DEMO ONLY · ไม่ผูกระบบจริง</div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="cut card hero">
+      <div class="grid two">
+        <div>
+          <span class="pill">QR → Join → My Card → Stats</span>
+          <h1>ทดลอง flow ผู้เล่น<br><span class="lime">สแกน QR แล้วดูข้อมูลตัวเอง</span></h1>
+          <p>หน้านี้เป็น demo แยก ใช้ mock data และ localStorage เท่านั้น ไม่ดึง Supabase และไม่แตะ OpenPlay เวอร์ชันใช้งานจริง</p>
+          <div class="notice">เป้าหมาย: ทดลองประสบการณ์ผู้เล่นก่อนพัฒนาเข้าระบบจริง — ลงทะเบียน, ดูคิว, ดูคู่ที่กำลังจะเล่น, ดูคะแนนและสถิติตัวเอง</div>
+        </div>
+        <div class="soft" style="padding:16px">
+          <b class="lime">Demo Event</b>
+          <h2 style="margin:8px 0 4px">Smash Sat! · QR Test</h2>
+          <div class="mini">Club46 · 16:00–18:00 · 4 Courts</div>
+          <div class="grid three" style="margin-top:14px">
+            <div class="stat"><small>Players</small><b>18</b></div>
+            <div class="stat"><small>Live Courts</small><b>2</b></div>
+            <div class="stat"><small>Mode</small><b style="font-size:16px">Friendly</b></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <nav class="tabs">
+      <button class="tab" data-view="join">1 Join</button>
+      <button class="tab" data-view="card">2 My Card</button>
+      <button class="tab" data-view="board">3 Live Board</button>
+      <button class="tab" data-view="admin">4 Admin Demo</button>
+    </nav>
+
+    <section id="join" class="view grid two">
+      <div class="cut card phone">
+        <div class="phoneTop"><div><div class="eyebrow">SCAN TO JOIN</div><b>GDSQ Open Play</b></div><span class="pill">BETA 0.2</span></div>
+        <div class="phoneBody">
+          <h2 style="margin-top:0">Join Open Play</h2>
+          <div class="soft" style="padding:12px"><b>Smash Sat! · QR Test</b><div class="mini">Club46 · 4 Courts · Beginner Friendly</div></div>
+          <label class="label">ชื่อเล่น / Nickname</label>
+          <input id="nick" placeholder="เช่น Don" />
+          <label class="label">ระดับของคุณ / Your Level</label>
+          <select id="level"><option>1.5</option><option>2.0</option><option selected>2.5</option><option>3.0</option><option>3.5</option><option>4.0</option></select>
+          <button class="btn main" style="width:100%;margin-top:14px" onclick="joinQueue()">JOIN QUEUE</button>
+          <p class="mini">กดแล้วจะเข้า My Play Card แบบ demo ทันที</p>
+        </div>
+      </div>
+      <div class="cut card" style="padding:18px">
+        <h2 class="lime" style="margin-top:0">Event QR Preview</h2>
+        <p class="muted">QR นี้สแกนกลับมาที่หน้า Join ของ demo นี้ ไม่ผูกกับระบบเดิม</p>
+        <div class="qrBox"><div><img id="qrImg" alt="Demo QR"><div class="qrLabel">SCAN TO JOIN</div></div></div>
+        <div class="copy" id="joinLink" style="margin-top:12px"></div>
+        <button class="btn dark" style="width:100%;margin-top:10px" onclick="copyJoinLink()">COPY JOIN LINK</button>
+      </div>
+    </section>
+
+    <section id="card" class="view grid two hide">
+      <div class="cut card phone">
+        <div class="phoneTop"><div><div class="eyebrow">MY PLAY CARD</div><b id="cardTitle">Player Card</b></div><div class="avatar" id="avatar">D</div></div>
+        <div class="phoneBody">
+          <div class="soft" style="padding:14px">
+            <div class="row" style="align-items:center"><div><h2 id="playerName" style="margin:0">Don</h2><div class="mini">Level <span id="playerLevel">2.5</span> · Player Code <span id="playerCode">4821</span></div></div><div class="pill status waiting" id="statusPill">WAITING</div></div>
+          </div>
+          <div class="grid three" style="margin-top:12px">
+            <div class="stat"><small>Queue</small><b id="queueNo">#5</b></div>
+            <div class="stat"><small>Games</small><b id="games">0</b></div>
+            <div class="stat"><small>W/L</small><b id="wl">0/0</b></div>
+          </div>
+          <div class="grid three" style="margin-top:12px">
+            <div class="stat"><small>Win Rate</small><b id="wr">-</b></div>
+            <div class="stat"><small>Score</small><b id="score">0</b></div>
+            <div class="stat"><small>Rank</small><b id="rank">-</b></div>
+          </div>
+          <div class="soft" style="padding:14px;margin-top:12px">
+            <b class="lime" id="matchHead">Next Match</b>
+            <div id="matchEmpty" class="mini" style="margin-top:8px">ยังไม่ถูกจับคู่ · Waiting for organizer</div>
+            <div id="matchBox" class="hide" style="margin-top:12px">
+              <div class="pill" style="margin-bottom:10px">Court 2 · <span id="matchStatus">READY TO PLAY</span></div>
+              <div class="team"><div class="teamBox"><b>Team A</b><span id="teamA">Don / Mark</span></div><div class="vs">VS</div><div class="teamBox"><b>Team B</b><span id="teamB">Pond / Tee</span></div></div>
+            </div>
+          </div>
+          <div class="soft" style="padding:14px;margin-top:12px">
+            <b>Match History</b>
+            <div id="history"><div class="mini" style="margin-top:8px">ยังไม่มีประวัติการเล่นใน demo</div></div>
+          </div>
+          <div class="row" style="margin-top:12px"><button class="btn dark" onclick="copyMyLink()">COPY MY LINK</button><button class="btn main" onclick="setView('join')">JOIN AGAIN</button></div>
+        </div>
+      </div>
+      <div class="cut card" style="padding:18px">
+        <h2 class="lime" style="margin-top:0">ทดลองสถานะผู้เล่น</h2>
+        <p class="muted">กดปุ่มด้านล่างเพื่อจำลองว่าแอดมินจับคู่และใส่คะแนนแล้ว หน้าผู้เล่นจะเปลี่ยนตาม</p>
+        <div class="grid" style="margin-top:14px">
+          <button class="btn orange" onclick="simulateReady()">SIMULATE NEXT MATCH</button>
+          <button class="btn cyan" onclick="simulatePlaying()">SIMULATE NOW PLAYING</button>
+          <button class="btn main" onclick="simulateScore()">SIMULATE SCORE UPDATED</button>
+          <button class="btn red" onclick="resetDemo()">RESET DEMO DATA</button>
+        </div>
+        <div class="copy" id="myLink" style="margin-top:14px"></div>
+      </div>
+    </section>
+
+    <section id="board" class="view hide">
+      <div class="cut card" style="padding:18px">
+        <div class="row" style="align-items:end"><div><div class="eyebrow">LIVE BOARD</div><h2 style="margin:4px 0 0">GDSQ Open Play · Court & Queue</h2><div class="mini">สำหรับเปิดบน iPad / TV / จอสนาม</div></div><button class="btn dark" onclick="setView('join')">OPEN JOIN</button></div>
+        <div class="grid two" style="margin-top:14px">
+          <div class="boardCourt"><div class="row"><b class="lime">Court 1 · Playing</b><span class="pill">12:40</span></div><div class="mini" style="margin-top:8px">Team A: Aof / Bank</div><div class="mini">Team B: Mint / Tee</div></div>
+          <div class="boardCourt"><div class="row"><b class="lime">Court 2 · <span id="boardCourt2">Ready</span></b><span class="pill" id="boardTime">Next</span></div><div class="mini" style="margin-top:8px">Team A: <span id="boardA">Don / Mark</span></div><div class="mini">Team B: <span id="boardB">Pond / Tee</span></div></div>
+        </div>
+        <div class="grid two" style="margin-top:14px">
+          <div class="soft" style="padding:16px"><b>Waiting Queue</b><div class="matchItem">#1 Boss</div><div class="matchItem">#2 Max</div><div class="matchItem">#3 Fern</div><div class="matchItem">#4 Jay</div><div class="matchItem">#5 <span id="queuePlayer">Don</span></div></div>
+          <div class="soft" style="padding:16px"><b>Top Today</b><div class="matchItem">1. Mark · 18 pts</div><div class="matchItem">2. Pond · 16 pts</div><div class="matchItem">3. Don · 13 pts</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="admin" class="view hide">
+      <div class="cut card" style="padding:18px">
+        <div class="eyebrow">ADMIN DEMO PANEL</div>
+        <h2 style="margin:6px 0 0">Event QR & Player Links</h2>
+        <p class="muted">ตัวอย่าง block ที่จะเอาไปเพิ่มในหน้า Organizer ภายหลัง ตอนนี้เป็น demo ไม่เชื่อมข้อมูลจริง</p>
+        <div class="grid two" style="margin-top:14px">
+          <div class="soft" style="padding:16px"><b class="lime">Join Link</b><div class="copy" id="adminJoin"></div><button class="btn main" style="width:100%;margin-top:10px" onclick="copyJoinLink()">COPY JOIN LINK</button></div>
+          <div class="soft" style="padding:16px"><b class="lime">Player Link</b><div class="copy" id="adminPlayer"></div><button class="btn dark" style="width:100%;margin-top:10px" onclick="copyMyLink()">COPY PLAYER LINK</button></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="footerNote">Demo page only: ไม่มี Supabase, ไม่มีข้อมูลจริง, ไม่แก้ระบบ OpenPlay ตัวเดิม</div>
+
+<script>
+const EVENT={id:'demo_smash_sat_001',name:'Smash Sat! · QR Test'};
+const stateKey='openplay_beta_qr_demo_player';
+function baseUrl(){return location.origin+location.pathname}
+function joinUrl(){return baseUrl()+'#join'}
+function playerUrl(){const p=getPlayer();return baseUrl()+'#card?player='+(p.token||'demo-token')}
+function getPlayer(){let p=JSON.parse(localStorage.getItem(stateKey)||'null');if(!p){p={nick:'Don',level:'2.5',code:'4821',token:'demo-'+Math.random().toString(36).slice(2,9),status:'waiting',queue:5,games:0,wins:0,losses:0,pointsFor:0,pointsAgainst:0,score:0,rank:'-',match:null,history:[]};localStorage.setItem(stateKey,JSON.stringify(p))}return p}
+function savePlayer(p){localStorage.setItem(stateKey,JSON.stringify(p));render()}
+function setView(v){document.querySelectorAll('.view').forEach(x=>x.classList.add('hide'));document.getElementById(v).classList.remove('hide');document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.view===v));if(!location.hash.startsWith('#'+v)) history.replaceState(null,'','#'+v);render()}
+function joinQueue(){let p=getPlayer();p.nick=(document.getElementById('nick').value||'Don').trim();p.level=document.getElementById('level').value;p.status='waiting';p.queue=5;p.games=0;p.wins=0;p.losses=0;p.pointsFor=0;p.pointsAgainst=0;p.score=0;p.rank='-';p.match=null;p.history=[];savePlayer(p);setView('card')}
+function initials(n){return String(n||'D').trim().slice(0,1).toUpperCase()}
+function winRate(p){let total=(p.wins||0)+(p.losses||0);return total?Math.round((p.wins||0)*100/total)+'%':'-'}
+function simulateReady(){let p=getPlayer();p.status='ready';p.match={court:2,status:'READY TO PLAY',teamA:[p.nick,'Mark'],teamB:['Pond','Tee']};savePlayer(p);setView('card')}
+function simulatePlaying(){let p=getPlayer();if(!p.match)p.match={court:2,status:'NOW PLAYING',teamA:[p.nick,'Mark'],teamB:['Pond','Tee']};p.status='playing';p.match.status='NOW PLAYING';savePlayer(p);setView('card')}
+function simulateScore(){let p=getPlayer();p.status='waiting';p.queue=3;p.games=(p.games||0)+1;p.wins=(p.wins||0)+1;p.pointsFor=(p.pointsFor||0)+11;p.pointsAgainst=(p.pointsAgainst||0)+7;p.score=(p.wins*3)+(p.pointsFor-p.pointsAgainst);p.rank='#4';p.history.unshift({result:'WIN',teams:p.nick+'/Mark vs Pond/Tee',score:'11 - 7'});p.match=null;savePlayer(p);setView('card')}
+function resetDemo(){localStorage.removeItem(stateKey);render();setView('join')}
+async function copyText(t){try{await navigator.clipboard.writeText(t);alert('Copied')}catch(e){prompt('Copy link',t)}}
+function copyJoinLink(){copyText(joinUrl())}
+function copyMyLink(){copyText(playerUrl())}
+function render(){const p=getPlayer();document.getElementById('nick').value=p.nick||'';document.getElementById('level').value=p.level||'2.5';document.getElementById('playerName').textContent=p.nick;document.getElementById('playerLevel').textContent=p.level;document.getElementById('playerCode').textContent=p.code;document.getElementById('avatar').textContent=initials(p.nick);document.getElementById('statusPill').textContent=p.status.toUpperCase();document.getElementById('statusPill').className='pill status '+p.status;document.getElementById('queueNo').textContent=p.status==='playing'?'—':'#'+p.queue;document.getElementById('games').textContent=p.games;document.getElementById('wl').textContent=(p.wins||0)+'/'+(p.losses||0);document.getElementById('wr').textContent=winRate(p);document.getElementById('score').textContent=p.score||0;document.getElementById('rank').textContent=p.rank||'-';document.getElementById('cardTitle').textContent=p.nick+' · My Card';document.getElementById('queuePlayer').textContent=p.nick;document.getElementById('joinLink').textContent=joinUrl();document.getElementById('myLink').textContent=playerUrl();document.getElementById('adminJoin').textContent=joinUrl();document.getElementById('adminPlayer').textContent=playerUrl();
+const qr='https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encodeURIComponent(joinUrl());document.getElementById('qrImg').src=qr;
+if(p.match){document.getElementById('matchEmpty').classList.add('hide');document.getElementById('matchBox').classList.remove('hide');document.getElementById('matchHead').textContent=p.status==='playing'?'Now Playing':'Next Match';document.getElementById('matchStatus').textContent=p.match.status;document.getElementById('teamA').textContent=p.match.teamA.join(' / ');document.getElementById('teamB').textContent=p.match.teamB.join(' / ');document.getElementById('boardCourt2').textContent=p.status==='playing'?'Playing':'Ready';document.getElementById('boardTime').textContent=p.status==='playing'?'08:35':'Next';document.getElementById('boardA').textContent=p.match.teamA.join(' / ');document.getElementById('boardB').textContent=p.match.teamB.join(' / ')}else{document.getElementById('matchEmpty').classList.remove('hide');document.getElementById('matchBox').classList.add('hide');document.getElementById('matchHead').textContent='Next Match';document.getElementById('boardCourt2').textContent='Ready';document.getElementById('boardTime').textContent='Next';document.getElementById('boardA').textContent=p.nick+' / Mark';document.getElementById('boardB').textContent='Pond / Tee'}
+document.getElementById('history').innerHTML=p.history.length?p.history.map(h=>'<div class="matchItem"><b class="lime">'+h.result+'</b><div class="mini">'+h.teams+'</div><div>'+h.score+'</div></div>').join(''):'<div class="mini" style="margin-top:8px">ยังไม่มีประวัติการเล่นใน demo</div>'}
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>setView(btn.dataset.view)));
+const initial=(location.hash||'#join').replace('#','').split('?')[0];render();setView(['join','card','board','admin'].includes(initial)?initial:'join');
+</script>
+</body>
+</html>
