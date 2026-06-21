@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>GDSQ OpenPlay · Organizer Stable + Event Delete</title>
+<title>GDSQ OpenPlay · Organizer Stable + Compact Links</title>
 <style>
-html,body{margin:0;width:100%;height:100dvh;background:#0d1217;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;overflow:hidden}iframe{width:100%;height:100dvh;border:0;display:block}.status{position:fixed;right:12px;top:12px;z-index:999999;background:#c7ff2e;color:#111;border-radius:999px;padding:8px 12px;font-size:11px;font-weight:1000;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+html,body{margin:0;width:100%;height:100dvh;background:#0d1217;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;overflow:hidden}iframe{width:100%;height:100dvh;border:0;display:block}.status{position:fixed;right:10px;top:10px;z-index:999999;background:#c7ff2e;color:#111;border-radius:999px;padding:5px 8px;font-size:9px;font-weight:1000;box-shadow:0 8px 20px rgba(0,0,0,.22);opacity:.72}.status.fade{opacity:.18}
 </style>
 </head>
 <body>
 <iframe id="wrapFrame" src="./openplay-court-fix.html?v=stable-direct-01"></iframe>
-<div id="status" class="status">STABLE + DELETE</div>
+<div id="status" class="status">STABLE</div>
 <script>
 const wrapFrame=document.getElementById('wrapFrame');
 const statusBox=document.getElementById('status');
@@ -20,71 +20,33 @@ function setHidden(ids){localStorage.setItem('gdsq_hidden_events',JSON.stringify
 function isFinal(e){return FINAL_STATUSES.includes(String(e?.status||'').toLowerCase())}
 function eventName(e){return e?.name_th||e?.name_en||e?.name||'OpenPlay'}
 function summaryUrl(id){const u=new URL('./event-stats.html',location.href);if(id)u.searchParams.set('event',id);u.searchParams.set('v','final-summary-01');return u.toString()}
-function safeText(value){return String(value??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))}
-async function copyText(text){try{await navigator.clipboard.writeText(text);statusBox.textContent='COPIED'}catch(e){prompt('Copy',text)}}
-function getInner(){
- try{
-  const outerDoc=wrapFrame.contentDocument;
-  const base=outerDoc?.getElementById('appFrame');
-  const doc=base?.contentDocument;
-  const win=base?.contentWindow;
-  const root=doc?.querySelector('html[x-data]');
-  const app=(win&&root&&win.Alpine&&win.Alpine.$data)?win.Alpine.$data(root):null;
-  return {outerDoc,base,doc,win,app};
- }catch(e){return {}}
-}
-function hideFromApp(app,id){
- if(!app)return;
- ['events','allEvents','eventList','recentEvents'].forEach(k=>{if(Array.isArray(app[k]))app[k]=app[k].filter(e=>String(e.id)!==String(id))});
- if(app.eventId===id||app.event?.id===id){app.eventId='';app.event=null;}
-}
-function applyHidden(app){
- const hidden=new Set(hiddenIds().map(String));
- if(!app||!hidden.size)return;
- ['events','allEvents','eventList','recentEvents'].forEach(k=>{if(Array.isArray(app[k]))app[k]=app[k].filter(e=>!hidden.has(String(e.id)))});
-}
-async function deleteEvent(id,name){
- const ok=confirm('ลบ/ซ่อนอีเว้นท์ที่จบแล้วออกจากรายการ?\n\n'+name+'\n\nอีเว้นท์นี้จะหายจากหน้า Organizer นี้ และไม่กลับมาใหม่ในเครื่องนี้');
- if(!ok)return;
- const {app}=getInner();
- const ids=hiddenIds();ids.push(id);setHidden(ids);
- hideFromApp(app,id);
- statusBox.textContent='EVENT DELETED';
- try{if(app?.db){await app.db.from('psh_events').update({status:'deleted'}).eq('id',id).in('status',FINAL_STATUSES)}}catch(e){}
- setTimeout(()=>inject(true),80);
-}
-function findCardForEvent(doc,e){
- const name=eventName(e);
- const cards=[...doc.querySelectorAll('section[x-show*="events"] .card, section[x-show*="events"] [class*="card"]')];
- return cards.find(card=>card.textContent.includes(name));
-}
-function addButtons(doc,e,card){
+function flashStatus(text){statusBox.textContent=text;statusBox.classList.remove('fade');clearTimeout(window.__gdsqStatusTimer);window.__gdsqStatusTimer=setTimeout(()=>statusBox.classList.add('fade'),1400)}
+async function copyText(text){try{await navigator.clipboard.writeText(text);flashStatus('COPIED')}catch(e){prompt('Copy',text)}}
+function openSummary(id){const url=summaryUrl(id);try{window.top.location.href=url}catch(e){location.href=url}}
+function getInner(){try{const outerDoc=wrapFrame.contentDocument;const base=outerDoc?.getElementById('appFrame');const doc=base?.contentDocument;const win=base?.contentWindow;const root=doc?.querySelector('html[x-data]');const app=(win&&root&&win.Alpine&&win.Alpine.$data)?win.Alpine.$data(root):null;return {outerDoc,base,doc,win,app}}catch(e){return {}}}
+function hideFromApp(app,id){if(!app)return;['events','allEvents','eventList','recentEvents'].forEach(k=>{if(Array.isArray(app[k]))app[k]=app[k].filter(e=>String(e.id)!==String(id))});if(app.eventId===id||app.event?.id===id){app.eventId='';app.event=null}}
+function applyHidden(app){const hidden=new Set(hiddenIds().map(String));if(!app||!hidden.size)return;['events','allEvents','eventList','recentEvents'].forEach(k=>{if(Array.isArray(app[k]))app[k]=app[k].filter(e=>!hidden.has(String(e.id)))})}
+async function deleteEvent(id,name){const ok=confirm('ลบ/ซ่อนอีเว้นท์ที่จบแล้วออกจากรายการ?\n\n'+name+'\n\nอีเว้นท์นี้จะหายจากหน้า Organizer นี้ และไม่กลับมาใหม่ในเครื่องนี้');if(!ok)return;const {app}=getInner();const ids=hiddenIds();ids.push(id);setHidden(ids);hideFromApp(app,id);flashStatus('DELETED');try{if(app?.db){await app.db.from('psh_events').update({status:'deleted'}).eq('id',id).in('status',FINAL_STATUSES)}}catch(e){}setTimeout(()=>inject(true),80)}
+function findCardForEvent(doc,e){const name=eventName(e);const cards=[...doc.querySelectorAll('section[x-show*="events"] .card, section[x-show*="events"] [class*="card"]')];return cards.find(card=>card.textContent.includes(name))}
+function makeLink(doc,text,color){const b=doc.createElement('button');b.type='button';b.textContent=text;b.style.cssText='appearance:none;border:0;background:transparent;padding:2px 0;margin:0;color:'+color+';font:inherit;font-size:11px;font-weight:900;line-height:1.2;cursor:pointer;text-decoration:underline;text-underline-offset:2px';return b}
+function addCompactLinks(doc,e,card){
  if(card.querySelector('[data-gdsq-event-clear="'+e.id+'"]'))return;
- const bar=doc.createElement('div');
- bar.setAttribute('data-gdsq-event-clear',e.id);
- bar.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;border-top:1px solid rgba(255,255,255,.1);padding-top:10px';
- const copy=doc.createElement('button');
- copy.textContent='COPY SUMMARY';
- copy.style.cssText='border:1px solid rgba(199,255,46,.45);background:#c7ff2e;color:#111;border-radius:14px;padding:12px 8px;font-size:12px;font-weight:1000;cursor:pointer';
- copy.onclick=(ev)=>{ev.stopPropagation();copyText(summaryUrl(e.id));};
- const del=doc.createElement('button');
- del.textContent='DELETE EVENT';
- del.style.cssText='border:1px solid rgba(239,68,68,.45);background:rgba(239,68,68,.18);color:#fecaca;border-radius:14px;padding:12px 8px;font-size:12px;font-weight:1000;cursor:pointer';
- del.onclick=(ev)=>{ev.stopPropagation();deleteEvent(e.id,eventName(e));};
- bar.appendChild(copy);bar.appendChild(del);card.appendChild(bar);
+ const row=doc.createElement('div');
+ row.setAttribute('data-gdsq-event-clear',e.id);
+ row.style.cssText='display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px;border-top:1px solid rgba(255,255,255,.08);padding-top:7px;font-size:11px;line-height:1.2';
+ const summary=makeLink(doc,'ดูสรุป','#c7ff2e');
+ summary.onclick=(ev)=>{ev.preventDefault();ev.stopPropagation();openSummary(e.id)};
+ const dot1=doc.createElement('span');dot1.textContent='·';dot1.style.cssText='color:rgba(148,163,184,.75);font-size:11px;font-weight:900';
+ const copy=makeLink(doc,'คัดลอก','#93c5fd');
+ copy.onclick=(ev)=>{ev.preventDefault();ev.stopPropagation();copyText(summaryUrl(e.id))};
+ const dot2=doc.createElement('span');dot2.textContent='·';dot2.style.cssText='color:rgba(148,163,184,.75);font-size:11px;font-weight:900';
+ const del=makeLink(doc,'ลบ','#fca5a5');
+ del.onclick=(ev)=>{ev.preventDefault();ev.stopPropagation();deleteEvent(e.id,eventName(e))};
+ row.append(summary,dot1,copy,dot2,del);
+ card.appendChild(row);
 }
 let lastInject=0;
-function inject(force){
- const now=Date.now();
- if(!force&&now-lastInject<2500)return;
- lastInject=now;
- const {doc,app}=getInner();
- if(!doc||!app){statusBox.textContent='LOADING';return}
- applyHidden(app);
- const events=(app.events||[]).filter(isFinal);
- for(const e of events){const card=findCardForEvent(doc,e);if(card)addButtons(doc,e,card)}
- statusBox.textContent=events.length?'DELETE READY':'STABLE + DELETE';
-}
+function inject(force){const now=Date.now();if(!force&&now-lastInject<2500)return;lastInject=now;const {doc,app}=getInner();if(!doc||!app){flashStatus('LOADING');return}applyHidden(app);const events=(app.events||[]).filter(isFinal);for(const e of events){const card=findCardForEvent(doc,e);if(card)addCompactLinks(doc,e,card)}if(events.length)flashStatus('LINK READY')}
 function loop(){inject(false);setTimeout(loop,2500)}
 wrapFrame.addEventListener('load',()=>setTimeout(()=>inject(true),1200));
 loop();
