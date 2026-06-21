@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>GDSQ OpenPlay · Organizer Stable + Event Delete</title>
 <style>
-html,body{margin:0;width:100%;height:100dvh;background:#0d1217;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;overflow:hidden}iframe{width:100%;height:100dvh;border:0;display:block}.status{position:fixed;right:12px;top:12px;z-index:999999;background:#c7ff2e;color:#111;border-radius:999px;padding:6px 9px;font-size:10px;font-weight:1000;box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:.82}.status.fade{opacity:.18}.gdsq-event-links{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px;border-top:1px solid rgba(255,255,255,.08);padding-top:8px;font-size:11px;line-height:1.2}.gdsq-event-links a,.gdsq-event-links button{appearance:none;border:0;background:transparent;padding:0;margin:0;font:inherit;font-weight:900;cursor:pointer;text-decoration:none}.gdsq-event-links .summary{color:#c7ff2e}.gdsq-event-links .copy{color:#93c5fd}.gdsq-event-links .delete{color:#fca5a5}.gdsq-event-links .dot{color:rgba(148,163,184,.7);font-weight:900}@media(max-width:520px){.status{font-size:9px;padding:5px 8px;right:9px;top:9px}.gdsq-event-links{font-size:10px;gap:6px;margin-top:7px;padding-top:7px}}
+html,body{margin:0;width:100%;height:100dvh;background:#0d1217;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;overflow:hidden}iframe{width:100%;height:100dvh;border:0;display:block}.status{position:fixed;right:12px;top:12px;z-index:999999;background:#c7ff2e;color:#111;border-radius:999px;padding:8px 12px;font-size:11px;font-weight:1000;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 </style>
 </head>
 <body>
 <iframe id="wrapFrame" src="./openplay-court-fix.html?v=stable-direct-01"></iframe>
-<div id="status" class="status">STABLE</div>
+<div id="status" class="status">STABLE + DELETE</div>
 <script>
 const wrapFrame=document.getElementById('wrapFrame');
 const statusBox=document.getElementById('status');
@@ -20,8 +20,8 @@ function setHidden(ids){localStorage.setItem('gdsq_hidden_events',JSON.stringify
 function isFinal(e){return FINAL_STATUSES.includes(String(e?.status||'').toLowerCase())}
 function eventName(e){return e?.name_th||e?.name_en||e?.name||'OpenPlay'}
 function summaryUrl(id){const u=new URL('./event-stats.html',location.href);if(id)u.searchParams.set('event',id);u.searchParams.set('v','final-summary-01');return u.toString()}
-function flashStatus(text){statusBox.textContent=text;statusBox.classList.remove('fade');clearTimeout(window.__gdsqStatusTimer);window.__gdsqStatusTimer=setTimeout(()=>statusBox.classList.add('fade'),1600)}
-async function copyText(text){try{await navigator.clipboard.writeText(text);flashStatus('COPIED')}catch(e){prompt('Copy',text)}}
+function safeText(value){return String(value??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))}
+async function copyText(text){try{await navigator.clipboard.writeText(text);statusBox.textContent='COPIED'}catch(e){prompt('Copy',text)}}
 function getInner(){
  try{
   const outerDoc=wrapFrame.contentDocument;
@@ -41,7 +41,7 @@ function hideFromApp(app,id){
 function applyHidden(app){
  const hidden=new Set(hiddenIds().map(String));
  if(!app||!hidden.size)return;
- ['events','allEvents','eventList','recentEvents'].forEach(k=>{if(Array.isArray(app[k]))app[k]=app[k].filter(e=>!hidden.has(String(e.id))) });
+ ['events','allEvents','eventList','recentEvents'].forEach(k=>{if(Array.isArray(app[k]))app[k]=app[k].filter(e=>!hidden.has(String(e.id)))});
 }
 async function deleteEvent(id,name){
  const ok=confirm('ลบ/ซ่อนอีเว้นท์ที่จบแล้วออกจากรายการ?\n\n'+name+'\n\nอีเว้นท์นี้จะหายจากหน้า Organizer นี้ และไม่กลับมาใหม่ในเครื่องนี้');
@@ -49,7 +49,7 @@ async function deleteEvent(id,name){
  const {app}=getInner();
  const ids=hiddenIds();ids.push(id);setHidden(ids);
  hideFromApp(app,id);
- flashStatus('DELETED');
+ statusBox.textContent='EVENT DELETED';
  try{if(app?.db){await app.db.from('psh_events').update({status:'deleted'}).eq('id',id).in('status',FINAL_STATUSES)}}catch(e){}
  setTimeout(()=>inject(true),80);
 }
@@ -58,31 +58,20 @@ function findCardForEvent(doc,e){
  const cards=[...doc.querySelectorAll('section[x-show*="events"] .card, section[x-show*="events"] [class*="card"]')];
  return cards.find(card=>card.textContent.includes(name));
 }
-function addLinks(doc,e,card){
+function addButtons(doc,e,card){
  if(card.querySelector('[data-gdsq-event-clear="'+e.id+'"]'))return;
- const row=doc.createElement('div');
- row.className='gdsq-event-links';
- row.setAttribute('data-gdsq-event-clear',e.id);
- const summary=doc.createElement('a');
- summary.className='summary';
- summary.href=summaryUrl(e.id);
- summary.target='_blank';
- summary.rel='noopener';
- summary.textContent='ดูสรุป';
- const dot1=doc.createElement('span');dot1.className='dot';dot1.textContent='·';
+ const bar=doc.createElement('div');
+ bar.setAttribute('data-gdsq-event-clear',e.id);
+ bar.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;border-top:1px solid rgba(255,255,255,.1);padding-top:10px';
  const copy=doc.createElement('button');
- copy.className='copy';
- copy.type='button';
- copy.textContent='คัดลอกลิงก์';
+ copy.textContent='COPY SUMMARY';
+ copy.style.cssText='border:1px solid rgba(199,255,46,.45);background:#c7ff2e;color:#111;border-radius:14px;padding:12px 8px;font-size:12px;font-weight:1000;cursor:pointer';
  copy.onclick=(ev)=>{ev.stopPropagation();copyText(summaryUrl(e.id));};
- const dot2=doc.createElement('span');dot2.className='dot';dot2.textContent='·';
  const del=doc.createElement('button');
- del.className='delete';
- del.type='button';
- del.textContent='ลบ';
+ del.textContent='DELETE EVENT';
+ del.style.cssText='border:1px solid rgba(239,68,68,.45);background:rgba(239,68,68,.18);color:#fecaca;border-radius:14px;padding:12px 8px;font-size:12px;font-weight:1000;cursor:pointer';
  del.onclick=(ev)=>{ev.stopPropagation();deleteEvent(e.id,eventName(e));};
- row.append(summary,dot1,copy,dot2,del);
- card.appendChild(row);
+ bar.appendChild(copy);bar.appendChild(del);card.appendChild(bar);
 }
 let lastInject=0;
 function inject(force){
@@ -90,11 +79,11 @@ function inject(force){
  if(!force&&now-lastInject<2500)return;
  lastInject=now;
  const {doc,app}=getInner();
- if(!doc||!app){flashStatus('LOADING');return}
+ if(!doc||!app){statusBox.textContent='LOADING';return}
  applyHidden(app);
  const events=(app.events||[]).filter(isFinal);
- for(const e of events){const card=findCardForEvent(doc,e);if(card)addLinks(doc,e,card)}
- if(events.length)flashStatus('LINK READY');
+ for(const e of events){const card=findCardForEvent(doc,e);if(card)addButtons(doc,e,card)}
+ statusBox.textContent=events.length?'DELETE READY':'STABLE + DELETE';
 }
 function loop(){inject(false);setTimeout(loop,2500)}
 wrapFrame.addEventListener('load',()=>setTimeout(()=>inject(true),1200));
