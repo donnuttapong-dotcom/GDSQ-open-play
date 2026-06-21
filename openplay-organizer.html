@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GDSQ OpenPlay · Organizer Easy</title>
+<style>
+html,body{margin:0;width:100%;height:100dvh;background:#0d1217;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif;overflow:hidden}iframe{width:100%;height:100dvh;border:0;display:block}.status{position:fixed;right:12px;top:12px;z-index:999999;background:#c7ff2e;color:#111;border-radius:999px;padding:8px 12px;font-size:11px;font-weight:1000;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+</style>
+</head>
+<body>
+<iframe id="wrapFrame" src="./openplay-court-fix.html?v=events-cleanup-01"></iframe>
+<div id="status" class="status">ORGANIZER EASY</div>
+<script>
+const wrapFrame=document.getElementById('wrapFrame');
+const statusBox=document.getElementById('status');
+const FINAL_STATUSES=['completed','archived','done','finished'];
+function hiddenIds(){try{return JSON.parse(localStorage.getItem('gdsq_hidden_events')||'[]')}catch(e){return[]}}
+function setHidden(ids){localStorage.setItem('gdsq_hidden_events',JSON.stringify([...new Set(ids)]))}
+function isFinal(e){return FINAL_STATUSES.includes(String(e?.status||'').toLowerCase())}
+function eventName(e){return e?.name_th||e?.name_en||e?.name||'OpenPlay'}
+function summaryUrl(id){const u=new URL('./event-stats.html',location.href);if(id)u.searchParams.set('event',id);u.searchParams.set('v','final-summary-01');return u.toString()}
+function safeText(value){return String(value??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))}
+async function copyText(text){try{await navigator.clipboard.writeText(text);statusBox.textContent='COPIED'}catch(e){prompt('Copy',text)}}
+function getInner(){
+ try{
+  const outerDoc=wrapFrame.contentDocument;
+  const base=outerDoc?.getElementById('appFrame');
+  const doc=base?.contentDocument;
+  const win=base?.contentWindow;
+  const root=doc?.querySelector('html[x-data]');
+  const app=(win&&root&&win.Alpine&&win.Alpine.$data)?win.Alpine.$data(root):null;
+  return {outerDoc,base,doc,win,app};
+ }catch(e){return {}}
+}
+function hideOldCleanup(outerDoc){
+ try{const old=outerDoc.getElementById('cleanupToggle'); if(old) old.style.display='none'; const panel=outerDoc.getElementById('cleanupPanel'); if(panel) panel.style.display='none'}catch(e){}
+}
+function hideFromApp(app,id){
+ if(!app)return;
+ ['events','allEvents','eventList','recentEvents'].forEach(k=>{if(Array.isArray(app[k]))app[k]=app[k].filter(e=>String(e.id)!==String(id))});
+ if(app.eventId===id||app.event?.id===id){app.eventId='';app.event=null;}
+}
+function markHidden(id){const ids=hiddenIds();ids.push(id);setHidden(ids)}
+async function deleteEvent(id,name){
+ const ok=confirm('ลบ/ซ่อนอีเว้นท์ที่จบแล้วออกจากรายการ?\n\n'+name+'\n\nสถิติและ Match History ยังดูย้อนหลังจากลิงก์ Summary ได้');
+ if(!ok)return;
+ const {app}=getInner();
+ markHidden(id);
+ hideFromApp(app,id);
+ statusBox.textContent='EVENT HIDDEN';
+ try{
+  if(app?.db){await app.db.from('psh_events').update({status:'deleted'}).eq('id',id).in('status',FINAL_STATUSES)}
+ }catch(e){}
+ inject();
+}
+function findCardForEvent(doc,e){
+ const name=eventName(e);
+ const cards=[...doc.querySelectorAll('section[x-show*="events"] .card, section[x-show*="events"] [class*="card"]')];
+ return cards.find(card=>card.textContent.includes(name));
+}
+function addButtons(doc,app,e,card){
+ if(card.querySelector('[data-gdsq-event-clear="'+e.id+'"]'))return;
+ const bar=doc.createElement('div');
+ bar.setAttribute('data-gdsq-event-clear',e.id);
+ bar.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;border-top:1px solid rgba(255,255,255,.1);padding-top:10px';
+ const copy=doc.createElement('button');
+ copy.textContent='COPY SUMMARY';
+ copy.style.cssText='border:1px solid rgba(199,255,46,.45);background:#c7ff2e;color:#111;border-radius:14px;padding:12px 8px;font-size:12px;font-weight:1000;cursor:pointer';
+ copy.onclick=(ev)=>{ev.stopPropagation();copyText(summaryUrl(e.id));};
+ const del=doc.createElement('button');
+ del.textContent='DELETE EVENT';
+ del.style.cssText='border:1px solid rgba(239,68,68,.45);background:rgba(239,68,68,.18);color:#fecaca;border-radius:14px;padding:12px 8px;font-size:12px;font-weight:1000;cursor:pointer';
+ del.onclick=(ev)=>{ev.stopPropagation();deleteEvent(e.id,eventName(e));};
+ bar.appendChild(copy);bar.appendChild(del);card.appendChild(bar);
+}
+function inject(){
+ const {outerDoc,doc,app}=getInner();
+ if(!doc||!app){statusBox.textContent='LOADING ORGANIZER';return}
+ hideOldCleanup(outerDoc);
+ const hidden=new Set(hiddenIds().map(String));
+ if(Array.isArray(app.events))app.events=app.events.filter(e=>!hidden.has(String(e.id)));
+ const events=(app.events||[]).filter(isFinal);
+ events.forEach(e=>{
+  const card=findCardForEvent(doc,e);
+  if(card)addButtons(doc,app,e,card);
+ });
+ statusBox.textContent=events.length?'DELETE ON EVENT CARD':'ORGANIZER EASY';
+}
+function loop(){inject();setTimeout(loop,900)}
+wrapFrame.addEventListener('load',()=>setTimeout(inject,1200));
+loop();
+</script>
+</body>
+</html>
