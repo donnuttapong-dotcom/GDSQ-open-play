@@ -10,18 +10,19 @@
     .badge{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));z-index:999999;background:#c7ff2e;color:#111;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:900;box-shadow:0 6px 20px rgba(0,0,0,.35);opacity:.92}
     .level-toggle{position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));z-index:999999;border:0;border-radius:999px;background:#202832;color:#fff;border:1px solid rgba(199,255,46,.45);padding:10px 13px;font-size:12px;font-weight:1000;box-shadow:0 10px 28px rgba(0,0,0,.35);cursor:pointer}
     .summary-toggle{position:fixed;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:999999;border:0;border-radius:999px;background:#fb923c;color:#111;border:1px solid rgba(251,146,60,.55);padding:10px 14px;font-size:12px;font-weight:1000;box-shadow:0 10px 28px rgba(0,0,0,.35);cursor:pointer;white-space:nowrap}
-    .level-panel,.summary-panel{position:fixed;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));bottom:60px;max-height:min(68dvh,560px);z-index:999998;background:rgba(18,24,31,.98);border:1px solid rgba(199,255,46,.32);border-radius:22px;box-shadow:0 24px 80px rgba(0,0,0,.55);overflow:hidden;display:none;backdrop-filter:blur(16px)}
-    .summary-panel{border-color:rgba(251,146,60,.38)}
-    .level-panel.open,.summary-panel.open{display:block}
-    .level-head,.summary-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
-    .level-title,.summary-title{font-size:13px;font-weight:1000;color:#c7ff2e;letter-spacing:.06em}.summary-title{color:#fb923c}
-    .level-sub,.summary-sub{font-size:11px;color:#94a3b8;margin-top:2px}.level-close,.summary-close{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:#fff;border-radius:999px;padding:7px 10px;font-weight:900;cursor:pointer}
-    .level-body,.summary-body{padding:10px;overflow:auto;max-height:calc(min(68dvh,560px) - 60px)}
-    .level-row{display:grid;grid-template-columns:1fr 96px;gap:10px;align-items:center;padding:10px;border-radius:16px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08);margin-bottom:8px}.level-name{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.level-meta{font-size:10px;color:#94a3b8;margin-top:3px}.level-select{width:100%;background:#0f151c;color:#fff;border:1px solid rgba(199,255,46,.35);border-radius:12px;padding:10px 8px;font-size:15px;font-weight:900;outline:none}.level-msg,.summary-msg{padding:9px 10px;border-radius:14px;background:rgba(199,255,46,.1);border:1px solid rgba(199,255,46,.28);font-size:11px;color:#d9f99d;margin-bottom:9px}.summary-msg{background:rgba(251,146,60,.1);border-color:rgba(251,146,60,.28);color:#fed7aa}.level-empty,.summary-empty{padding:14px;color:#94a3b8;font-size:12px;text-align:center}
-    .summary-actions{display:grid;grid-template-columns:1fr;gap:8px}.summary-btn{border:0;border-radius:15px;padding:13px 12px;font-size:13px;font-weight:1000;cursor:pointer;text-align:center}.summary-btn.primary{background:#fb923c;color:#111}.summary-btn.lime{background:#c7ff2e;color:#111}.summary-btn.secondary{background:rgba(255,255,255,.07);color:#fff;border:1px solid rgba(255,255,255,.13)}.summary-link{font-size:11px;color:#c7ff2e;word-break:break-all;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:10px;margin:8px 0}.summary-note{font-size:11px;color:#94a3b8;line-height:1.45;margin-top:8px}
-    @media (min-width:768px){.level-panel{left:16px;right:auto;width:410px}.summary-panel{left:50%;right:auto;transform:translateX(-50%);width:440px}.level-toggle{bottom:14px}.summary-toggle{bottom:14px}}
+    .cleanup-toggle{position:fixed;left:max(12px,env(safe-area-inset-left));top:max(12px,env(safe-area-inset-top));z-index:999999;border:0;border-radius:999px;background:#ef4444;color:#fff;border:1px solid rgba(239,68,68,.55);padding:10px 14px;font-size:12px;font-weight:1000;box-shadow:0 10px 28px rgba(0,0,0,.35);cursor:pointer;white-space:nowrap}
+    .level-panel,.summary-panel,.cleanup-panel{position:fixed;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));bottom:60px;max-height:min(68dvh,560px);z-index:999998;background:rgba(18,24,31,.98);border:1px solid rgba(199,255,46,.32);border-radius:22px;box-shadow:0 24px 80px rgba(0,0,0,.55);overflow:hidden;display:none;backdrop-filter:blur(16px)}
+    .summary-panel{border-color:rgba(251,146,60,.38)}.cleanup-panel{border-color:rgba(239,68,68,.4);top:58px;bottom:auto;max-height:min(72dvh,620px)}
+    .level-panel.open,.summary-panel.open,.cleanup-panel.open{display:block}
+    .level-head,.summary-head,.cleanup-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .level-title,.summary-title,.cleanup-title{font-size:13px;font-weight:1000;color:#c7ff2e;letter-spacing:.06em}.summary-title{color:#fb923c}.cleanup-title{color:#fecaca}
+    .level-sub,.summary-sub,.cleanup-sub{font-size:11px;color:#94a3b8;margin-top:2px}.level-close,.summary-close,.cleanup-close{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:#fff;border-radius:999px;padding:7px 10px;font-weight:900;cursor:pointer}
+    .level-body,.summary-body,.cleanup-body{padding:10px;overflow:auto;max-height:calc(min(68dvh,560px) - 60px)}.cleanup-body{max-height:calc(min(72dvh,620px) - 60px)}
+    .level-row,.cleanup-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border-radius:16px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08);margin-bottom:8px}.level-name,.cleanup-name{font-size:13px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.level-meta,.cleanup-meta{font-size:10px;color:#94a3b8;margin-top:3px}.level-select{width:100%;background:#0f151c;color:#fff;border:1px solid rgba(199,255,46,.35);border-radius:12px;padding:10px 8px;font-size:15px;font-weight:900;outline:none}.level-msg,.summary-msg,.cleanup-msg{padding:9px 10px;border-radius:14px;background:rgba(199,255,46,.1);border:1px solid rgba(199,255,46,.28);font-size:11px;color:#d9f99d;margin-bottom:9px}.summary-msg{background:rgba(251,146,60,.1);border-color:rgba(251,146,60,.28);color:#fed7aa}.cleanup-msg{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.32);color:#fecaca}.level-empty,.summary-empty,.cleanup-empty{padding:14px;color:#94a3b8;font-size:12px;text-align:center}.cleanup-status{font-size:10px;color:#fed7aa;font-weight:1000;text-transform:uppercase}.cleanup-actions{display:grid;grid-template-columns:1fr;gap:6px}.cleanup-btn{border:0;border-radius:13px;padding:10px 11px;font-size:11px;font-weight:1000;cursor:pointer;white-space:nowrap}.cleanup-btn.red{background:rgba(239,68,68,.18);color:#fecaca;border:1px solid rgba(239,68,68,.36)}.cleanup-btn.secondary{background:rgba(255,255,255,.07);color:#fff;border:1px solid rgba(255,255,255,.12)}
+    .summary-actions{display:grid;grid-template-columns:1fr;gap:8px}.summary-btn{border:0;border-radius:15px;padding:13px 12px;font-size:13px;font-weight:1000;cursor:pointer;text-align:center}.summary-btn.primary{background:#fb923c;color:#111}.summary-btn.lime{background:#c7ff2e;color:#111}.summary-btn.secondary{background:rgba(255,255,255,.07);color:#fff;border:1px solid rgba(255,255,255,.13)}.summary-link{font-size:11px;color:#c7ff2e;word-break:break-all;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:10px;margin:8px 0}.summary-note,.cleanup-note{font-size:11px;color:#94a3b8;line-height:1.45;margin-top:8px}
+    @media (min-width:768px){.level-panel{left:16px;right:auto;width:410px}.summary-panel{left:50%;right:auto;transform:translateX(-50%);width:440px}.cleanup-panel{left:16px;right:auto;width:470px}.level-toggle{bottom:14px}.summary-toggle{bottom:14px}}
     @media (min-width:768px) and (max-width:1180px){.badge{font-size:11px;padding:7px 10px}.summary-toggle{bottom:52px}}
-    @media (max-width:520px){.summary-toggle{bottom:54px}.badge{bottom:12px}.level-toggle{bottom:12px;font-size:11px}.summary-panel{bottom:96px}}
+    @media (max-width:520px){.summary-toggle{bottom:54px}.badge{bottom:12px}.level-toggle{bottom:12px;font-size:11px}.summary-panel{bottom:96px}.cleanup-panel{top:58px}.cleanup-row{grid-template-columns:1fr}.cleanup-actions{grid-template-columns:1fr 1fr}.cleanup-toggle{font-size:11px;padding:9px 12px}}
   </style>
 </head>
 <body>
@@ -29,17 +30,22 @@
   <div class="badge" id="badge">COURT FIX LOADING</div>
   <button class="level-toggle" id="levelToggle" onclick="toggleLevelPanel()">LEVEL ADMIN</button>
   <button class="summary-toggle" id="summaryToggle" onclick="toggleSummaryPanel()">SHARE SUMMARY</button>
+  <button class="cleanup-toggle" id="cleanupToggle" onclick="toggleCleanupPanel()">CLEAR EVENTS</button>
   <div class="level-panel" id="levelPanel"></div>
   <div class="summary-panel" id="summaryPanel"></div>
+  <div class="cleanup-panel" id="cleanupPanel"></div>
 
   <script>
     const frame = document.getElementById('appFrame');
     const badge = document.getElementById('badge');
     const levelPanel = document.getElementById('levelPanel');
     const summaryPanel = document.getElementById('summaryPanel');
+    const cleanupPanel = document.getElementById('cleanupPanel');
     const summaryToggle = document.getElementById('summaryToggle');
+    const cleanupToggle = document.getElementById('cleanupToggle');
     const COURT_MIN = 1;
     const COURT_MAX = 10;
+    const FINAL_STATUSES = ['completed','archived','done','finished'];
 
     function clampCourt(value){
       const n = Math.floor(Number(value) || 1);
@@ -71,6 +77,7 @@
 
     function pairKey(a,b){ return [a,b].sort().join('|'); }
     function safeText(value){ return String(value ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+    function eventName(e){ return e?.name_th || e?.name_en || e?.name || 'GDSQ OpenPlay'; }
     function levelChoices(current){
       const now = Number(current || 2.5).toFixed(1);
       const values = [1,1.5,2,2.5,3,3.5,4,4.5,5];
@@ -82,15 +89,24 @@
     function toggleLevelPanel(){
       levelPanel.classList.toggle('open');
       summaryPanel.classList.remove('open');
+      cleanupPanel.classList.remove('open');
       renderLevelPanel();
     }
     function closeLevelPanel(){ levelPanel.classList.remove('open'); }
     function toggleSummaryPanel(){
       summaryPanel.classList.toggle('open');
       levelPanel.classList.remove('open');
+      cleanupPanel.classList.remove('open');
       renderSummaryPanel();
     }
     function closeSummaryPanel(){ summaryPanel.classList.remove('open'); }
+    function toggleCleanupPanel(){
+      cleanupPanel.classList.toggle('open');
+      levelPanel.classList.remove('open');
+      summaryPanel.classList.remove('open');
+      renderCleanupPanel();
+    }
+    function closeCleanupPanel(){ cleanupPanel.classList.remove('open'); }
 
     function currentEventId(app){
       app = app || getApp();
@@ -117,7 +133,8 @@
       try{
         await navigator.clipboard.writeText(text);
         badge.textContent = message || 'COPIED';
-        renderSummaryPanel(message || 'คัดลอกแล้ว');
+        if(summaryPanel.classList.contains('open')) renderSummaryPanel(message || 'คัดลอกแล้ว');
+        if(cleanupPanel.classList.contains('open')) renderCleanupPanel(message || 'คัดลอกแล้ว');
       }catch(e){
         prompt('Copy', text);
       }
@@ -149,6 +166,58 @@
         +'<div class="summary-actions"><button class="summary-btn lime" onclick="copySummaryMessage()">COPY SHARE MESSAGE</button><button class="summary-btn primary" onclick="copySummaryLink()">COPY SUMMARY LINK</button><button class="summary-btn secondary" onclick="openSummary()">OPEN SUMMARY PAGE</button></div>'
         +'<div class="summary-note">ใช้งานจริง: หลังจบอีเว้นท์ กด <b>COPY SHARE MESSAGE</b> แล้ววางใน LINE/กลุ่มได้เลย คนที่เปิดลิงก์จะเห็นอันดับ ผลแข่ง และ popup รายบุคคล</div>'
         +'</div>';
+    }
+
+    function hideClearedEvents(app){
+      if(!app) return;
+      ['events','allEvents','eventList','recentEvents'].forEach(key=>{
+        if(Array.isArray(app[key])) app[key] = app[key].filter(e => String(e.status || '').toLowerCase() !== 'deleted');
+      });
+    }
+    async function loadCompletedEvents(){
+      const app = getApp();
+      if(!app || !app.db) return {error:'ยังเชื่อมต่อ Organizer ไม่ได้'};
+      const res = await app.db.from('psh_events').select('id,name_th,name_en,name,event_time,venue,status,created_at').in('status', FINAL_STATUSES).order('created_at',{ascending:false});
+      if(res.error) return {error:res.error.message || res.error};
+      return {events:res.data || []};
+    }
+    function cleanupShareText(e){
+      return 'สรุปผล '+eventName(e)+(e.venue?' @ '+e.venue:'')+' มาแล้วครับ\nดูอันดับ ผลแข่ง และสถิติรายคนได้ที่ลิงก์นี้:\n'+summaryUrl(e.id);
+    }
+    async function renderCleanupPanel(message){
+      cleanupToggle.textContent = 'CLEAR EVENTS';
+      cleanupPanel.innerHTML = '<div class="cleanup-head"><div><div class="cleanup-title">EVENT CLEANUP</div><div class="cleanup-sub">เคลียร์อีเว้นท์ที่จบแล้วในหน้า Organizer นี้เลย</div></div><button class="cleanup-close" onclick="closeCleanupPanel()">ปิด</button></div><div class="cleanup-body"><div class="cleanup-empty">Loading completed events...</div></div>';
+      const result = await loadCompletedEvents();
+      if(result.error){
+        cleanupPanel.innerHTML = '<div class="cleanup-head"><div><div class="cleanup-title">EVENT CLEANUP</div><div class="cleanup-sub">เคลียร์อีเว้นท์ที่จบแล้ว</div></div><button class="cleanup-close" onclick="closeCleanupPanel()">ปิด</button></div><div class="cleanup-body"><div class="cleanup-msg">'+safeText(result.error)+'</div></div>';
+        return;
+      }
+      const rows = result.events || [];
+      const list = rows.map(e => '<div class="cleanup-row"><div><div class="cleanup-status">'+safeText(e.status || 'completed')+'</div><div class="cleanup-name">'+safeText(eventName(e))+'</div><div class="cleanup-meta">'+safeText(e.venue || '-')+' · '+safeText(e.event_time || e.created_at || '-')+'</div></div><div class="cleanup-actions"><button class="cleanup-btn secondary" onclick="copyText(\''+safeText(summaryUrl(e.id)).replace(/'/g,'&#39;')+'\',\'SUMMARY LINK COPIED\')">COPY LINK</button><button class="cleanup-btn red" onclick="clearCompletedEvent(\''+e.id+'\',\''+safeText(eventName(e)).replace(/'/g,'&#39;')+'\')">CLEAR</button></div></div>').join('');
+      cleanupPanel.innerHTML = '<div class="cleanup-head"><div><div class="cleanup-title">EVENT CLEANUP</div><div class="cleanup-sub">เคลียร์อีเว้นท์ที่จบแล้วในหน้า Organizer นี้เลย</div></div><button class="cleanup-close" onclick="closeCleanupPanel()">ปิด</button></div><div class="cleanup-body">'
+        +(message?'<div class="cleanup-msg">'+safeText(message)+'</div>':'')
+        +'<div class="cleanup-msg">พบอีเว้นท์ที่จบแล้ว '+rows.length+' รายการ · กด Clear เพื่อซ่อนออกจากรายการ</div>'
+        +(list || '<div class="cleanup-empty">ยังไม่มีอีเว้นท์ที่จบแล้วให้เคลียร์</div>')
+        +'<div class="cleanup-note">Clear เป็นแบบ safe clear: เปลี่ยน status เป็น deleted เพื่อซ่อนจากรายการ แต่ยังไม่ลบสถิติ/ประวัติแมตช์จริงทันที</div>'
+        +'</div>';
+    }
+    async function clearCompletedEvent(id,name){
+      const app = getApp();
+      if(!app || !app.db) return renderCleanupPanel('ยังเชื่อมต่อ Organizer ไม่ได้');
+      const ok = confirm('เคลียร์อีเว้นท์นี้ออกจากหน้ารวม?\n\n'+name+'\n\nระบบจะซ่อนออกจากรายการ แต่ยังไม่ลบสถิติจริง');
+      if(!ok) return;
+      const res = await app.db.from('psh_events').update({status:'deleted'}).eq('id',id).in('status', FINAL_STATUSES).select('id').single();
+      if(res.error) return renderCleanupPanel('Clear ไม่สำเร็จ: '+(res.error.message || res.error));
+      hideClearedEvents(app);
+      if(app.eventId === id || app.event?.id === id){
+        app.eventId = '';
+        app.event = null;
+      }
+      if(app.loadEvents) try{ await app.loadEvents(false); }catch(e){}
+      if(app.loadCurrent) try{ await app.loadCurrent(false); }catch(e){}
+      if(app.flash) app.flash('เคลียร์อีเว้นท์แล้ว: '+name);
+      badge.textContent = 'EVENT CLEARED';
+      renderCleanupPanel('เคลียร์อีเว้นท์แล้ว: '+name);
     }
 
     function renderLevelPanel(message){
@@ -242,207 +311,24 @@
 
     function applyRotationGuard(app){
       if(!app || app.__rotationGuardPatched) return;
-
-      app.__rotationRules = {
-        maxConsecutive: 2,
-        waveWindowMs: 180000,
-        candidateLimit: 8,
-        restPenalty: 900,
-        teammatePenalty: 105,
-        opponentPenalty: 26,
-        levelGapPenalty: 85,
-        matchCountPenalty: 22,
-        queuePenalty: 0.000002
-      };
-
-      app.__matchTime = function(m){
-        return new Date(m.ended_at || m.started_at || m.created_at || 0).getTime() || 0;
-      };
-
-      app.__isRotationHistoryMatch = function(m){
-        if(!m || !m.id) return false;
-        const status = String(m.status || '').toLowerCase();
-        const ignored = ['cancelled','canceled','void','deleted','draft','preview'];
-        return !ignored.includes(status);
-      };
-
+      app.__rotationRules = {maxConsecutive:2,waveWindowMs:180000,candidateLimit:8,restPenalty:900,teammatePenalty:105,opponentPenalty:26,levelGapPenalty:85,matchCountPenalty:22,queuePenalty:0.000002};
+      app.__matchTime = function(m){return new Date(m.ended_at||m.started_at||m.created_at||0).getTime()||0};
+      app.__isRotationHistoryMatch = function(m){if(!m||!m.id)return false;const status=String(m.status||'').toLowerCase();const ignored=['cancelled','canceled','void','deleted','draft','preview'];return !ignored.includes(status)};
       app.__buildRotationCache = function(){
-        const rules = this.__rotationRules;
-        const mpsByMatch = new Map();
-        for(const row of (this.mps || [])){
-          if(!mpsByMatch.has(row.match_id)) mpsByMatch.set(row.match_id, []);
-          mpsByMatch.get(row.match_id).push(row);
-        }
-        const history = (this.matches || [])
-          .filter(m => this.__isRotationHistoryMatch(m))
-          .sort((a,b) => this.__matchTime(b) - this.__matchTime(a));
-
-        const same = new Map();
-        const opp = new Map();
-        const add = (map,a,b,n=1) => {
-          if(!a || !b || a === b) return;
-          const k = pairKey(a,b);
-          map.set(k, (map.get(k) || 0) + n);
-        };
-
-        const waves = [];
-        for(const m of history){
-          const t = this.__matchTime(m);
-          const rows = mpsByMatch.get(m.id) || [];
-          const A = rows.filter(x=>x.team==='A').map(x=>x.event_player_id).filter(Boolean);
-          const B = rows.filter(x=>x.team==='B').map(x=>x.event_player_id).filter(Boolean);
-          for(let i=0;i<A.length;i++) for(let j=i+1;j<A.length;j++) add(same,A[i],A[j]);
-          for(let i=0;i<B.length;i++) for(let j=i+1;j<B.length;j++) add(same,B[i],B[j]);
-          for(const a of A) for(const b of B) add(opp,a,b);
-
-          let wave = waves[waves.length - 1];
-          if(!wave || Math.abs(wave.time - t) > rules.waveWindowMs){
-            wave = {time:t, matches:[], players:new Set()};
-            waves.push(wave);
-          }
-          wave.matches.push(m);
-          for(const row of rows){
-            if(row.event_player_id) wave.players.add(row.event_player_id);
-          }
-        }
-
-        const consecutive = new Map();
-        for(const p of (this.players || [])){
-          let count = 0;
-          for(const wave of waves){
-            if(wave.players.has(p.id)) count++;
-            else break;
-          }
-          consecutive.set(p.id, count);
-        }
-        this.__rotationCache = {history,waves,mpsByMatch,same,opp,consecutive,at:Date.now()};
-        return this.__rotationCache;
-      };
-
-      app.__cache = function(){ return this.__rotationCache || this.__buildRotationCache(); };
-      app.__consecutiveCount = function(playerId){ return this.__cache().consecutive.get(playerId) || 0; };
-      app.__sameTeamCount = function(aId,bId){ return this.__cache().same.get(pairKey(aId,bId)) || 0; };
-      app.__opponentCount = function(aId,bId){ return this.__cache().opp.get(pairKey(aId,bId)) || 0; };
-      app.__queueMs = function(p){ return new Date(p.queue_joined_at || p.created_at || 0).getTime() || 0; };
-      app.__shouldRest = function(p){ return this.__consecutiveCount(p.id) >= this.__rotationRules.maxConsecutive; };
-
-      app.__playerBaseScore = function(p){
-        const rules = this.__rotationRules;
-        const games = +p.matches_played || 0;
-        const streak = this.__consecutiveCount(p.id);
-        const hardRest = streak >= rules.maxConsecutive ? rules.restPenalty : 0;
-        const softRest = streak > 0 ? streak * 70 : 0;
-        const statusBonus = p.status === 'ready' ? -18 : 0;
-        const queueAge = Date.now() - this.__queueMs(p);
-        return games * rules.matchCountPenalty + hardRest + softRest + statusBonus - queueAge * rules.queuePenalty;
-      };
-
-      app.__combinations = function(list, size){
-        const out = [];
-        const go = (start, combo) => {
-          if(combo.length === size){ out.push(combo.slice()); return; }
-          for(let i=start;i<list.length;i++){
-            combo.push(list[i]);
-            go(i+1, combo);
-            combo.pop();
-          }
-        };
-        go(0, []);
-        return out;
-      };
-
-      app.__groupScore = function(group){
-        const gameSpread = Math.max(...group.map(p=>+p.matches_played||0)) - Math.min(...group.map(p=>+p.matches_played||0));
-        const restRisk = group.reduce((s,p)=>s+(this.__shouldRest(p) ? this.__rotationRules.restPenalty * 2 : 0),0);
-        let repeatRisk = 0;
-        for(let i=0;i<group.length;i++) for(let j=i+1;j<group.length;j++){
-          repeatRisk += this.__sameTeamCount(group[i].id, group[j].id) * 14;
-          repeatRisk += this.__opponentCount(group[i].id, group[j].id) * 5;
-        }
-        return group.reduce((s,p)=>s+this.__playerBaseScore(p),0) + gameSpread * 32 + restRisk + repeatRisk;
-      };
-
-      app.__pairingScore = function(A,B){
-        const rules = this.__rotationRules;
-        const levelGap = Math.abs(this.teamAvg(A) - this.teamAvg(B));
-        const teammateRepeat = this.__sameTeamCount(A[0].id,A[1].id) + this.__sameTeamCount(B[0].id,B[1].id);
-        let opponentRepeat = 0;
-        for(const a of A) for(const b of B) opponentRepeat += this.__opponentCount(a.id,b.id);
-        const gameGap = Math.abs((+A[0].matches_played||0)+(+A[1].matches_played||0)-(+B[0].matches_played||0)-(+B[1].matches_played||0));
-        return levelGap * rules.levelGapPenalty + teammateRepeat * rules.teammatePenalty + opponentRepeat * rules.opponentPenalty + gameGap * 10;
-      };
-
-      app.__bestTeams = function(group){
-        const pairings = [[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]];
-        let best = null;
-        for(const pair of pairings){
-          const A = pair[0].map(i=>group[i]);
-          const B = pair[1].map(i=>group[i]);
-          const score = this.__pairingScore(A,B);
-          if(!best || score < best.score) best = {A,B,score};
-        }
-        return best;
-      };
-
-      app.chunkTeams = function(list){
-        this.__rotationCache = null;
-        this.__buildRotationCache();
-        const rules = this.__rotationRules;
-        const out = [];
-        const used = new Set();
-        const courts = this.freeCourts ? this.freeCourts() : [];
-        const basePool = this.sortPool ? this.sortPool(list) : [...list];
-        const restBlocked = basePool.filter(p => this.__shouldRest(p));
-        const freshPool = basePool.filter(p => !this.__shouldRest(p));
-        const hasEnoughFreshForAtLeastOneCourt = freshPool.length >= 4;
-        let pool = hasEnoughFreshForAtLeastOneCourt ? freshPool : basePool;
-
-        for(const court of courts){
-          const available = pool.filter(p => !used.has(p.id));
-          if(available.length < 4) break;
-          const shortlist = available.slice(0, rules.candidateLimit);
-          const groups = this.__combinations(shortlist, 4).filter(g => hasEnoughFreshForAtLeastOneCourt ? !g.some(p => this.__shouldRest(p)) : true);
-          let bestGroup = null;
-          for(const group of groups){
-            const score = this.__groupScore(group);
-            if(!bestGroup || score < bestGroup.score) bestGroup = {group,score};
-          }
-          if(!bestGroup) break;
-          bestGroup.group.forEach(p => used.add(p.id));
-          const teams = this.__bestTeams(bestGroup.group);
-          out.push({uid:'hard-rest-'+court+'-'+Date.now()+'-'+Math.random().toString(36).slice(2),court,mode:this.autoMode,A:teams.A,B:teams.B,rotationScore:Math.round(bestGroup.score + teams.score),restBlockedCount:restBlocked.length});
-        }
-        return out;
-      };
-
-      app.generateAutoPreviews = function(){
-        if(this.isEventCompleted && this.isEventCompleted()) return this.flash('อีเว้นท์จบแล้ว ดูสถิติย้อนหลังเท่านั้น / Archived event is read-only');
-        const n = this.maxPreviewCount ? this.maxPreviewCount() : 0;
-        if(n < 1) return this.flash('ต้องมีผู้เล่นรอ/พร้อมอย่างน้อย 4 คน และมีคอร์ทว่าง / Need 4 ready/waiting players and a free court');
-        const ready = this.readyPlayers ? this.readyPlayers() : [];
-        this.__rotationCache = null;
-        this.__buildRotationCache();
-        const restingPlayers = ready.filter(p => this.__shouldRest(p));
-        const freshPlayers = ready.filter(p => !this.__shouldRest(p));
-        this.previews = this.chunkTeams(ready);
-        const names = restingPlayers.slice(0,4).map(p=>p.nickname).join(', ');
-        const note = restingPlayers.length && freshPlayers.length >= 4 ? ' · พัก: '+restingPlayers.length+' คน'+(names?' ('+names+(restingPlayers.length>4?'...':'')+')':'') : ' · พัก: '+restingPlayers.length+' คน';
-        this.flash('Hard Rest Guard: สร้างพรีวิว '+this.previews.length+' court(s)'+note);
-      };
-
-      app.rebalancePreview = function(pr){
-        if(this.isEventCompleted && this.isEventCompleted()) return;
-        this.__rotationCache = null;
-        this.__buildRotationCache();
-        const ps = [...(pr.A || []), ...(pr.B || [])];
-        if(ps.length !== 4) return this.flash('ต้องมีผู้เล่น 4 คนเพื่อรีบาลานซ์ / Need 4 players to rebalance');
-        const teams = this.__bestTeams(ps);
-        const updated = {...pr,A:teams.A,B:teams.B,uid:pr.uid+'r',rotationScore:Math.round(teams.score)};
-        this.previews = this.previews.map(x => x.uid === pr.uid ? updated : x);
-        this.flash('Smart rebalance · ลดคู่ซ้ำและทีมซ้ำ / Reduced repeat pairs');
-      };
-
-      app.__rotationGuardPatched = true;
+        const rules=this.__rotationRules;const mpsByMatch=new Map();for(const row of (this.mps||[])){if(!mpsByMatch.has(row.match_id))mpsByMatch.set(row.match_id,[]);mpsByMatch.get(row.match_id).push(row)}
+        const history=(this.matches||[]).filter(m=>this.__isRotationHistoryMatch(m)).sort((a,b)=>this.__matchTime(b)-this.__matchTime(a));const same=new Map();const opp=new Map();const add=(map,a,b,n=1)=>{if(!a||!b||a===b)return;const k=pairKey(a,b);map.set(k,(map.get(k)||0)+n)};const waves=[];
+        for(const m of history){const t=this.__matchTime(m);const rows=mpsByMatch.get(m.id)||[];const A=rows.filter(x=>x.team==='A').map(x=>x.event_player_id).filter(Boolean);const B=rows.filter(x=>x.team==='B').map(x=>x.event_player_id).filter(Boolean);for(let i=0;i<A.length;i++)for(let j=i+1;j<A.length;j++)add(same,A[i],A[j]);for(let i=0;i<B.length;i++)for(let j=i+1;j<B.length;j++)add(same,B[i],B[j]);for(const a of A)for(const b of B)add(opp,a,b);let wave=waves[waves.length-1];if(!wave||Math.abs(wave.time-t)>rules.waveWindowMs){wave={time:t,matches:[],players:new Set()};waves.push(wave)}wave.matches.push(m);for(const row of rows){if(row.event_player_id)wave.players.add(row.event_player_id)}}
+        const consecutive=new Map();for(const p of (this.players||[])){let count=0;for(const wave of waves){if(wave.players.has(p.id))count++;else break}consecutive.set(p.id,count)}this.__rotationCache={history,waves,mpsByMatch,same,opp,consecutive,at:Date.now()};return this.__rotationCache};
+      app.__cache=function(){return this.__rotationCache||this.__buildRotationCache()};app.__consecutiveCount=function(playerId){return this.__cache().consecutive.get(playerId)||0};app.__sameTeamCount=function(aId,bId){return this.__cache().same.get(pairKey(aId,bId))||0};app.__opponentCount=function(aId,bId){return this.__cache().opp.get(pairKey(aId,bId))||0};app.__queueMs=function(p){return new Date(p.queue_joined_at||p.created_at||0).getTime()||0};app.__shouldRest=function(p){return this.__consecutiveCount(p.id)>=this.__rotationRules.maxConsecutive};
+      app.__playerBaseScore=function(p){const rules=this.__rotationRules;const games=+p.matches_played||0;const streak=this.__consecutiveCount(p.id);const hardRest=streak>=rules.maxConsecutive?rules.restPenalty:0;const softRest=streak>0?streak*70:0;const statusBonus=p.status==='ready'?-18:0;const queueAge=Date.now()-this.__queueMs(p);return games*rules.matchCountPenalty+hardRest+softRest+statusBonus-queueAge*rules.queuePenalty};
+      app.__combinations=function(list,size){const out=[];const go=(start,combo)=>{if(combo.length===size){out.push(combo.slice());return}for(let i=start;i<list.length;i++){combo.push(list[i]);go(i+1,combo);combo.pop()}};go(0,[]);return out};
+      app.__groupScore=function(group){const gameSpread=Math.max(...group.map(p=>+p.matches_played||0))-Math.min(...group.map(p=>+p.matches_played||0));const restRisk=group.reduce((s,p)=>s+(this.__shouldRest(p)?this.__rotationRules.restPenalty*2:0),0);let repeatRisk=0;for(let i=0;i<group.length;i++)for(let j=i+1;j<group.length;j++){repeatRisk+=this.__sameTeamCount(group[i].id,group[j].id)*14;repeatRisk+=this.__opponentCount(group[i].id,group[j].id)*5}return group.reduce((s,p)=>s+this.__playerBaseScore(p),0)+gameSpread*32+restRisk+repeatRisk};
+      app.__pairingScore=function(A,B){const rules=this.__rotationRules;const levelGap=Math.abs(this.teamAvg(A)-this.teamAvg(B));const teammateRepeat=this.__sameTeamCount(A[0].id,A[1].id)+this.__sameTeamCount(B[0].id,B[1].id);let opponentRepeat=0;for(const a of A)for(const b of B)opponentRepeat+=this.__opponentCount(a.id,b.id);const gameGap=Math.abs((+A[0].matches_played||0)+(+A[1].matches_played||0)-(+B[0].matches_played||0)-(+B[1].matches_played||0));return levelGap*rules.levelGapPenalty+teammateRepeat*rules.teammatePenalty+opponentRepeat*rules.opponentPenalty+gameGap*10};
+      app.__bestTeams=function(group){const pairings=[[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]];let best=null;for(const pair of pairings){const A=pair[0].map(i=>group[i]);const B=pair[1].map(i=>group[i]);const score=this.__pairingScore(A,B);if(!best||score<best.score)best={A,B,score}}return best};
+      app.chunkTeams=function(list){this.__rotationCache=null;this.__buildRotationCache();const rules=this.__rotationRules;const out=[];const used=new Set();const courts=this.freeCourts?this.freeCourts():[];const basePool=this.sortPool?this.sortPool(list):[...list];const restBlocked=basePool.filter(p=>this.__shouldRest(p));const freshPool=basePool.filter(p=>!this.__shouldRest(p));const hasEnoughFreshForAtLeastOneCourt=freshPool.length>=4;let pool=hasEnoughFreshForAtLeastOneCourt?freshPool:basePool;for(const court of courts){const available=pool.filter(p=>!used.has(p.id));if(available.length<4)break;const shortlist=available.slice(0,rules.candidateLimit);const groups=this.__combinations(shortlist,4).filter(g=>hasEnoughFreshForAtLeastOneCourt?!g.some(p=>this.__shouldRest(p)):true);let bestGroup=null;for(const group of groups){const score=this.__groupScore(group);if(!bestGroup||score<bestGroup.score)bestGroup={group,score}}if(!bestGroup)break;bestGroup.group.forEach(p=>used.add(p.id));const teams=this.__bestTeams(bestGroup.group);out.push({uid:'hard-rest-'+court+'-'+Date.now()+'-'+Math.random().toString(36).slice(2),court,mode:this.autoMode,A:teams.A,B:teams.B,rotationScore:Math.round(bestGroup.score+teams.score),restBlockedCount:restBlocked.length})}return out};
+      app.generateAutoPreviews=function(){if(this.isEventCompleted&&this.isEventCompleted())return this.flash('อีเว้นท์จบแล้ว ดูสถิติย้อนหลังเท่านั้น / Archived event is read-only');const n=this.maxPreviewCount?this.maxPreviewCount():0;if(n<1)return this.flash('ต้องมีผู้เล่นรอ/พร้อมอย่างน้อย 4 คน และมีคอร์ทว่าง / Need 4 ready/waiting players and a free court');const ready=this.readyPlayers?this.readyPlayers():[];this.__rotationCache=null;this.__buildRotationCache();const restingPlayers=ready.filter(p=>this.__shouldRest(p));const freshPlayers=ready.filter(p=>!this.__shouldRest(p));this.previews=this.chunkTeams(ready);const names=restingPlayers.slice(0,4).map(p=>p.nickname).join(', ');const note=restingPlayers.length&&freshPlayers.length>=4?' · พัก: '+restingPlayers.length+' คน'+(names?' ('+names+(restingPlayers.length>4?'...':'')+')':''):' · พัก: '+restingPlayers.length+' คน';this.flash('Hard Rest Guard: สร้างพรีวิว '+this.previews.length+' court(s)'+note)};
+      app.rebalancePreview=function(pr){if(this.isEventCompleted&&this.isEventCompleted())return;this.__rotationCache=null;this.__buildRotationCache();const ps=[...(pr.A||[]),...(pr.B||[])];if(ps.length!==4)return this.flash('ต้องมีผู้เล่น 4 คนเพื่อรีบาลานซ์ / Need 4 players to rebalance');const teams=this.__bestTeams(ps);const updated={...pr,A:teams.A,B:teams.B,uid:pr.uid+'r',rotationScore:Math.round(teams.score)};this.previews=this.previews.map(x=>x.uid===pr.uid?updated:x);this.flash('Smart rebalance · ลดคู่ซ้ำและทีมซ้ำ / Reduced repeat pairs')};
+      app.__rotationGuardPatched=true;
     }
 
     function applyCourtFix(){
@@ -450,6 +336,7 @@
       const doc = frame.contentDocument;
       if(!app || !doc) return false;
       applyIpadStyle(doc);
+      hideClearedEvents(app);
       const keyFor = () => app.eventId ? 'psh_courts_' + app.eventId : 'psh_courts_global';
       if(!app.__courtFixPatched){
         const originalPick = app.pick ? app.pick.bind(app) : null;
@@ -500,6 +387,7 @@
           app.loadCurrent = async function(show=true){
             const keep = this.eventId ? localStorage.getItem('psh_courts_' + this.eventId) : null;
             await originalLoadCurrent(show);
+            hideClearedEvents(this);
             if(keep){
               const n = clampCourt(keep);
               this.courts = n;
@@ -534,7 +422,7 @@
       }
       if(levelPanel.classList.contains('open')) renderLevelPanel();
       if(summaryPanel.classList.contains('open')) renderSummaryPanel();
-      badge.textContent = 'HARD REST + LEVEL ADMIN + SUMMARY SHARE';
+      badge.textContent = 'HARD REST + LEVEL ADMIN + EVENTS CLEANUP';
       return true;
     }
 
