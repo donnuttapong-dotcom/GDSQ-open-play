@@ -9,9 +9,9 @@ html,body{margin:0;width:100%;height:100dvh;background:#0d1217;color:#fff;font-f
 </style>
 </head>
 <body>
-<iframe id="wrapFrame" src="./openplay-court-fix.html?v=events-cleanup-01"></iframe>
+<iframe id="wrapFrame" src="./openplay-court-fix.html?v=summary-share-01"></iframe>
 <div id="status" class="status">ORGANIZER EASY</div>
-<div id="fairStatus" class="fair">STRICT FAIR QUEUE</div>
+<div id="fairStatus" class="fair">LOW GAMES FIRST</div>
 <script>
 const wrapFrame=document.getElementById('wrapFrame');
 const statusBox=document.getElementById('status');
@@ -24,160 +24,39 @@ function eventName(e){return e?.name_th||e?.name_en||e?.name||'OpenPlay'}
 function summaryUrl(id){const u=new URL('./event-stats.html',location.href);if(id)u.searchParams.set('event',id);u.searchParams.set('v','final-summary-01');return u.toString()}
 function safeText(value){return String(value??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))}
 async function copyText(text){try{await navigator.clipboard.writeText(text);statusBox.textContent='COPIED'}catch(e){prompt('Copy',text)}}
-function getInner(){
- try{
-  const outerDoc=wrapFrame.contentDocument;
-  const base=outerDoc?.getElementById('appFrame');
-  const doc=base?.contentDocument;
-  const win=base?.contentWindow;
-  const root=doc?.querySelector('html[x-data]');
-  const app=(win&&root&&win.Alpine&&win.Alpine.$data)?win.Alpine.$data(root):null;
-  return {outerDoc,base,doc,win,app};
- }catch(e){return {}}
-}
-function hideOldCleanup(outerDoc){
- try{const old=outerDoc.getElementById('cleanupToggle'); if(old) old.style.display='none'; const panel=outerDoc.getElementById('cleanupPanel'); if(panel) panel.style.display='none'}catch(e){}
-}
-function hideFromApp(app,id){
- if(!app)return;
- ['events','allEvents','eventList','recentEvents'].forEach(k=>{if(Array.isArray(app[k]))app[k]=app[k].filter(e=>String(e.id)!==String(id))});
- if(app.eventId===id||app.event?.id===id){app.eventId='';app.event=null;}
-}
+function getInner(){try{const outerDoc=wrapFrame.contentDocument;const base=outerDoc?.getElementById('appFrame');const doc=base?.contentDocument;const win=base?.contentWindow;const root=doc?.querySelector('html[x-data]');const app=(win&&root&&win.Alpine&&win.Alpine.$data)?win.Alpine.$data(root):null;return {outerDoc,base,doc,win,app}}catch(e){return {}}}
+function hideOldCleanup(outerDoc){try{const old=outerDoc.getElementById('cleanupToggle');if(old)old.style.display='none';const panel=outerDoc.getElementById('cleanupPanel');if(panel)panel.style.display='none'}catch(e){}}
+function hideFromApp(app,id){if(!app)return;['events','allEvents','eventList','recentEvents'].forEach(k=>{if(Array.isArray(app[k]))app[k]=app[k].filter(e=>String(e.id)!==String(id))});if(app.eventId===id||app.event?.id===id){app.eventId='';app.event=null}}
 function markHidden(id){const ids=hiddenIds();ids.push(id);setHidden(ids)}
-async function deleteEvent(id,name){
- const ok=confirm('ลบ/ซ่อนอีเว้นท์ที่จบแล้วออกจากรายการ?\n\n'+name+'\n\nสถิติและ Match History ยังดูย้อนหลังจากลิงก์ Summary ได้');
- if(!ok)return;
- const {app}=getInner();
- markHidden(id);
- hideFromApp(app,id);
- statusBox.textContent='EVENT HIDDEN';
- try{
-  if(app?.db){await app.db.from('psh_events').update({status:'deleted'}).eq('id',id).in('status',FINAL_STATUSES)}
- }catch(e){}
- inject();
-}
-function findCardForEvent(doc,e){
- const name=eventName(e);
- const cards=[...doc.querySelectorAll('section[x-show*="events"] .card, section[x-show*="events"] [class*="card"]')];
- return cards.find(card=>card.textContent.includes(name));
-}
-function addButtons(doc,app,e,card){
- if(card.querySelector('[data-gdsq-event-clear="'+e.id+'"]'))return;
- const bar=doc.createElement('div');
- bar.setAttribute('data-gdsq-event-clear',e.id);
- bar.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;border-top:1px solid rgba(255,255,255,.1);padding-top:10px';
- const copy=doc.createElement('button');
- copy.textContent='COPY SUMMARY';
- copy.style.cssText='border:1px solid rgba(199,255,46,.45);background:#c7ff2e;color:#111;border-radius:14px;padding:12px 8px;font-size:12px;font-weight:1000;cursor:pointer';
- copy.onclick=(ev)=>{ev.stopPropagation();copyText(summaryUrl(e.id));};
- const del=doc.createElement('button');
- del.textContent='DELETE EVENT';
- del.style.cssText='border:1px solid rgba(239,68,68,.45);background:rgba(239,68,68,.18);color:#fecaca;border-radius:14px;padding:12px 8px;font-size:12px;font-weight:1000;cursor:pointer';
- del.onclick=(ev)=>{ev.stopPropagation();deleteEvent(e.id,eventName(e));};
- bar.appendChild(copy);bar.appendChild(del);card.appendChild(bar);
-}
+async function deleteEvent(id,name){const ok=confirm('ลบ/ซ่อนอีเว้นท์ที่จบแล้วออกจากรายการ?\n\n'+name+'\n\nสถิติและ Match History ยังดูย้อนหลังจากลิงก์ Summary ได้');if(!ok)return;const {app}=getInner();markHidden(id);hideFromApp(app,id);statusBox.textContent='EVENT HIDDEN';try{if(app?.db){await app.db.from('psh_events').update({status:'deleted'}).eq('id',id).in('status',FINAL_STATUSES)}}catch(e){}inject(false)}
+function findCardForEvent(doc,e){const name=eventName(e);const cards=[...doc.querySelectorAll('section[x-show*="events"] .card, section[x-show*="events"] [class*="card"]')];return cards.find(card=>card.textContent.includes(name))}
+function addButtons(doc,app,e,card){if(card.querySelector('[data-gdsq-event-clear="'+e.id+'"]'))return;const bar=doc.createElement('div');bar.setAttribute('data-gdsq-event-clear',e.id);bar.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;border-top:1px solid rgba(255,255,255,.1);padding-top:10px';const copy=doc.createElement('button');copy.textContent='COPY SUMMARY';copy.style.cssText='border:1px solid rgba(199,255,46,.45);background:#c7ff2e;color:#111;border-radius:14px;padding:12px 8px;font-size:12px;font-weight:1000;cursor:pointer';copy.onclick=(ev)=>{ev.stopPropagation();copyText(summaryUrl(e.id))};const del=doc.createElement('button');del.textContent='DELETE EVENT';del.style.cssText='border:1px solid rgba(239,68,68,.45);background:rgba(239,68,68,.18);color:#fecaca;border-radius:14px;padding:12px 8px;font-size:12px;font-weight:1000;cursor:pointer';del.onclick=(ev)=>{ev.stopPropagation();deleteEvent(e.id,eventName(e))};bar.appendChild(copy);bar.appendChild(del);card.appendChild(bar)}
 function pairKey(a,b){return [a,b].sort().join('|')}
 function qTime(p){return new Date(p.queue_joined_at||p.created_at||0).getTime()||0}
 function matchTime(m){return new Date(m.ended_at||m.started_at||m.created_at||0).getTime()||0}
 function isHistoryMatch(m){const s=String(m?.status||'').toLowerCase();return !['cancelled','canceled','void','deleted','draft','preview'].includes(s)}
-function strictCache(app){
- const mpsByMatch=new Map();
- for(const row of (app.mps||[])){if(!mpsByMatch.has(row.match_id))mpsByMatch.set(row.match_id,[]);mpsByMatch.get(row.match_id).push(row)}
- const history=(app.matches||[]).filter(isHistoryMatch).sort((a,b)=>matchTime(b)-matchTime(a));
- const same=new Map(),opp=new Map(),waves=[];
- const add=(map,a,b,n=1)=>{if(!a||!b||a===b)return;const k=pairKey(a,b);map.set(k,(map.get(k)||0)+n)};
- for(const m of history){
-  const t=matchTime(m);const rows=mpsByMatch.get(m.id)||[];
-  const A=rows.filter(x=>x.team==='A').map(x=>x.event_player_id||x.player_id).filter(Boolean);
-  const B=rows.filter(x=>x.team==='B').map(x=>x.event_player_id||x.player_id).filter(Boolean);
-  for(let i=0;i<A.length;i++)for(let j=i+1;j<A.length;j++)add(same,A[i],A[j]);
-  for(let i=0;i<B.length;i++)for(let j=i+1;j<B.length;j++)add(same,B[i],B[j]);
-  for(const a of A)for(const b of B)add(opp,a,b);
-  let wave=waves[waves.length-1];
-  if(!wave||Math.abs(wave.time-t)>180000){wave={time:t,players:new Set()};waves.push(wave)}
-  rows.forEach(r=>{const id=r.event_player_id||r.player_id;if(id)wave.players.add(id)})
- }
- const consecutive=new Map();
- for(const p of (app.players||[])){let c=0;for(const w of waves){if(w.players.has(p.id))c++;else break}consecutive.set(p.id,c)}
- return {same,opp,consecutive};
-}
+function buildStrictCache(app){const mpsByMatch=new Map();for(const row of (app.mps||[])){if(!mpsByMatch.has(row.match_id))mpsByMatch.set(row.match_id,[]);mpsByMatch.get(row.match_id).push(row)}const history=(app.matches||[]).filter(isHistoryMatch).sort((a,b)=>matchTime(b)-matchTime(a));const same=new Map(),opp=new Map(),waves=[];const add=(map,a,b,n=1)=>{if(!a||!b||a===b)return;const k=pairKey(a,b);map.set(k,(map.get(k)||0)+n)};for(const m of history){const t=matchTime(m);const rows=mpsByMatch.get(m.id)||[];const A=rows.filter(x=>x.team==='A').map(x=>x.event_player_id||x.player_id).filter(Boolean);const B=rows.filter(x=>x.team==='B').map(x=>x.event_player_id||x.player_id).filter(Boolean);for(let i=0;i<A.length;i++)for(let j=i+1;j<A.length;j++)add(same,A[i],A[j]);for(let i=0;i<B.length;i++)for(let j=i+1;j<B.length;j++)add(same,B[i],B[j]);for(const a of A)for(const b of B)add(opp,a,b);let wave=waves[waves.length-1];if(!wave||Math.abs(wave.time-t)>180000){wave={time:t,players:new Set()};waves.push(wave)}rows.forEach(r=>{const id=r.event_player_id||r.player_id;if(id)wave.players.add(id)})}const consecutive=new Map();for(const p of (app.players||[])){let c=0;for(const w of waves){if(w.players.has(p.id))c++;else break}consecutive.set(p.id,c)}return {same,opp,consecutive,at:Date.now()}}
 function strictPatch(app){
- if(!app||app.__organizerStrictFairPatched)return;
- app.__organizerStrictFairPatched=true;
- app.__strictRules={maxConsecutive:2,candidateLimit:12,queueMinuteWeight:8,matchCountPenalty:10,softConsecutivePenalty:80,latePenaltyMinutes:8,latePenalty:70,teammatePenalty:120,opponentPenalty:28,levelGapPenalty:88,gameGapPenalty:10};
- app.__strictCache=()=>strictCache(app);
+ if(!app||app.__organizerFastFairPatched)return;
+ app.__organizerFastFairPatched=true;
+ app.__strictRules={maxConsecutive:2,candidateLimit:8,lowGameWeight:135,waitMinuteBonus:2.5,softConsecutivePenalty:28,teammatePenalty:95,opponentPenalty:20,levelGapPenalty:78,gameGapPenalty:8};
+ app.__invalidateStrict=()=>{app.__strictCacheData=null};
+ app.__strictCache=()=>app.__strictCacheData||(app.__strictCacheData=buildStrictCache(app));
  app.__strictConsecutive=id=>(app.__strictCache().consecutive.get(id)||0);
  app.__mustRest=p=>app.__strictConsecutive(p.id)>=app.__strictRules.maxConsecutive;
- app.__strictPlayerScore=p=>{
-  const r=app.__strictRules;const now=Date.now();
-  const waitMin=Math.max(0,(now-qTime(p))/60000);
-  const games=Number(p.matches_played||0);
-  const streak=app.__strictConsecutive(p.id);
-  const recentJoinPenalty=waitMin<r.latePenaltyMinutes?r.latePenalty*(1-waitMin/r.latePenaltyMinutes):0;
-  const readyBonus=p.status==='ready'?-12:0;
-  return games*r.matchCountPenalty+streak*r.softConsecutivePenalty+recentJoinPenalty+readyBonus-waitMin*r.queueMinuteWeight;
- };
- app.__strictGroupScore=group=>{
-  const cache=app.__strictCache();let repeat=0;
-  for(let i=0;i<group.length;i++)for(let j=i+1;j<group.length;j++){repeat+=(cache.same.get(pairKey(group[i].id,group[j].id))||0)*18;repeat+=(cache.opp.get(pairKey(group[i].id,group[j].id))||0)*4}
-  const gameSpread=Math.max(...group.map(p=>+p.matches_played||0))-Math.min(...group.map(p=>+p.matches_played||0));
-  return group.reduce((s,p)=>s+app.__strictPlayerScore(p),0)+repeat+gameSpread*34;
- };
- app.__strictPairingScore=(A,B)=>{
-  const cache=app.__strictCache();const r=app.__strictRules;
-  const avg=team=>team.reduce((s,p)=>s+(+p.estimated_level||2.5),0)/team.length;
-  const levelGap=Math.abs(avg(A)-avg(B));
-  const teammateRepeat=(cache.same.get(pairKey(A[0].id,A[1].id))||0)+(cache.same.get(pairKey(B[0].id,B[1].id))||0);
-  let opponentRepeat=0;for(const a of A)for(const b of B)opponentRepeat+=(cache.opp.get(pairKey(a.id,b.id))||0);
-  const gameGap=Math.abs((+A[0].matches_played||0)+(+A[1].matches_played||0)-(+B[0].matches_played||0)-(+B[1].matches_played||0));
-  return levelGap*r.levelGapPenalty+teammateRepeat*r.teammatePenalty+opponentRepeat*r.opponentPenalty+gameGap*r.gameGapPenalty;
- };
+ app.__strictPlayerScore=p=>{const r=app.__strictRules;const waitMin=Math.max(0,(Date.now()-qTime(p))/60000);const games=Number(p.matches_played||0);const streak=app.__strictConsecutive(p.id);const readyBonus=p.status==='ready'?-8:0;return games*r.lowGameWeight+streak*r.softConsecutivePenalty+readyBonus-waitMin*r.waitMinuteBonus};
+ app.__strictGroupScore=group=>{const cache=app.__strictCache();let repeat=0;for(let i=0;i<group.length;i++)for(let j=i+1;j<group.length;j++){repeat+=(cache.same.get(pairKey(group[i].id,group[j].id))||0)*12;repeat+=(cache.opp.get(pairKey(group[i].id,group[j].id))||0)*3}const gameSpread=Math.max(...group.map(p=>+p.matches_played||0))-Math.min(...group.map(p=>+p.matches_played||0));return group.reduce((s,p)=>s+app.__strictPlayerScore(p),0)+repeat+gameSpread*40};
+ app.__strictPairingScore=(A,B)=>{const cache=app.__strictCache();const r=app.__strictRules;const avg=team=>team.reduce((s,p)=>s+(+p.estimated_level||2.5),0)/team.length;const levelGap=Math.abs(avg(A)-avg(B));const teammateRepeat=(cache.same.get(pairKey(A[0].id,A[1].id))||0)+(cache.same.get(pairKey(B[0].id,B[1].id))||0);let opponentRepeat=0;for(const a of A)for(const b of B)opponentRepeat+=(cache.opp.get(pairKey(a.id,b.id))||0);const gameGap=Math.abs((+A[0].matches_played||0)+(+A[1].matches_played||0)-(+B[0].matches_played||0)-(+B[1].matches_played||0));return levelGap*r.levelGapPenalty+teammateRepeat*r.teammatePenalty+opponentRepeat*r.opponentPenalty+gameGap*r.gameGapPenalty};
  app.__strictCombinations=(list,size)=>{const out=[];const go=(start,combo)=>{if(combo.length===size){out.push(combo.slice());return}for(let i=start;i<list.length;i++){combo.push(list[i]);go(i+1,combo);combo.pop()}};go(0,[]);return out};
  app.__strictBestTeams=group=>{const pairings=[[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]];let best=null;for(const pair of pairings){const A=pair[0].map(i=>group[i]);const B=pair[1].map(i=>group[i]);const score=app.__strictPairingScore(A,B);if(!best||score<best.score)best={A,B,score}}return best};
- app.chunkTeams=function(list){
-  const out=[];const used=new Set();const courts=this.freeCourts?this.freeCourts():[];
-  const ready=(this.sortPool?this.sortPool(list):[...list]).filter(p=>!this.__mustRest(p));
-  const mustRest=(list||[]).filter(p=>this.__mustRest(p));
-  if(ready.length<4){this.flash&&this.flash('Strict Fair Queue: มีคนที่เล่นครบ 2 รอบต้องพักก่อน / ยังไม่มีผู้เล่นสดพอ 4 คน');return []}
-  for(const court of courts){
-   const available=ready.filter(p=>!used.has(p.id));if(available.length<4)break;
-   const shortlist=[...available].sort((a,b)=>this.__strictPlayerScore(a)-this.__strictPlayerScore(b)).slice(0,this.__strictRules.candidateLimit);
-   const groups=this.__strictCombinations(shortlist,4);let best=null;
-   for(const group of groups){const score=this.__strictGroupScore(group);if(!best||score<best.score)best={group,score}}
-   if(!best)break;best.group.forEach(p=>used.add(p.id));const teams=this.__strictBestTeams(best.group);
-   out.push({uid:'strict-fair-'+court+'-'+Date.now()+'-'+Math.random().toString(36).slice(2),court,mode:this.autoMode,A:teams.A,B:teams.B,rotationScore:Math.round(best.score+teams.score),restBlockedCount:mustRest.length});
-  }
-  return out;
- };
- app.generateAutoPreviews=function(){
-  if(this.isEventCompleted&&this.isEventCompleted())return this.flash('อีเว้นท์จบแล้ว ดูสถิติย้อนหลังเท่านั้น');
-  const ready=this.readyPlayers?this.readyPlayers():[];
-  const mustRest=ready.filter(p=>this.__mustRest(p));
-  const fresh=ready.filter(p=>!this.__mustRest(p));
-  if(fresh.length<4){this.previews=[];return this.flash('Strict Fair Queue: คนเล่นครบ 2 รอบต้องพักก่อน · ผู้เล่นสดเหลือ '+fresh.length+' คน ยังไม่ครบ 4 คน');}
-  this.previews=this.chunkTeams(ready);
-  const lateNote=' · คนมาช้าจะไม่แซงคิวทันที';
-  const restNote=mustRest.length?' · บังคับพัก '+mustRest.length+' คน':' · ไม่มีคนต้องพัก';
-  this.flash('Strict Fair Queue: สร้างพรีวิว '+this.previews.length+' court(s)'+restNote+lateNote);
- };
- fairBox.textContent='STRICT FAIR ON';
+ app.chunkTeams=function(list){this.__invalidateStrict();this.__strictCache();const out=[];const used=new Set();const courts=this.freeCourts?this.freeCourts():[];const pool=(this.sortPool?this.sortPool(list):[...list]);const mustRest=pool.filter(p=>this.__mustRest(p));const fresh=pool.filter(p=>!this.__mustRest(p));if(fresh.length<4){this.flash&&this.flash('Fair Queue: คนเล่นครบ 2 เกมติดต้องพัก 1 เกม · ผู้เล่นที่พร้อมเหลือ '+fresh.length+' คน ยังไม่ครบ 4');return []}for(const court of courts){const available=fresh.filter(p=>!used.has(p.id));if(available.length<4)break;const shortlist=[...available].sort((a,b)=>this.__strictPlayerScore(a)-this.__strictPlayerScore(b)).slice(0,this.__strictRules.candidateLimit);const groups=this.__strictCombinations(shortlist,4);let best=null;for(const group of groups){const score=this.__strictGroupScore(group);if(!best||score<best.score)best={group,score}}if(!best)break;best.group.forEach(p=>used.add(p.id));const teams=this.__strictBestTeams(best.group);out.push({uid:'fast-fair-'+court+'-'+Date.now()+'-'+Math.random().toString(36).slice(2),court,mode:this.autoMode,A:teams.A,B:teams.B,rotationScore:Math.round(best.score+teams.score),restBlockedCount:mustRest.length})}return out};
+ app.generateAutoPreviews=function(){if(this.__fastFairBusy)return;this.__fastFairBusy=true;try{if(this.isEventCompleted&&this.isEventCompleted())return this.flash('อีเว้นท์จบแล้ว ดูสถิติย้อนหลังเท่านั้น');const ready=this.readyPlayers?this.readyPlayers():[];this.__invalidateStrict();this.__strictCache();const mustRest=ready.filter(p=>this.__mustRest(p));const fresh=ready.filter(p=>!this.__mustRest(p));if(fresh.length<4){this.previews=[];return this.flash('Fair Queue: คนเล่นครบ 2 เกมติดต้องพัก 1 เกม · ผู้เล่นสดเหลือ '+fresh.length+' คน ยังไม่ครบ 4 คน');}this.previews=this.chunkTeams(ready);const restNote=mustRest.length?' · พักบังคับ '+mustRest.length+' คน':' · ไม่มีคนต้องพัก';this.flash('Fair Queue: เล่นน้อยได้ลงก่อน + ห้าม 3 เกมติด · สร้างพรีวิว '+this.previews.length+' court(s)'+restNote)}catch(e){console.error(e);this.flash&&this.flash('Generate error: '+(e.message||e))}finally{setTimeout(()=>{this.__fastFairBusy=false},600)}};
+ fairBox.textContent='FAST FAIR ON';
 }
-function inject(){
- const {outerDoc,doc,app}=getInner();
- if(!doc||!app){statusBox.textContent='LOADING ORGANIZER';return}
- hideOldCleanup(outerDoc);
- strictPatch(app);
- const hidden=new Set(hiddenIds().map(String));
- if(Array.isArray(app.events))app.events=app.events.filter(e=>!hidden.has(String(e.id)));
- const events=(app.events||[]).filter(isFinal);
- events.forEach(e=>{
-  const card=findCardForEvent(doc,e);
-  if(card)addButtons(doc,app,e,card);
- });
- statusBox.textContent=events.length?'DELETE ON EVENT CARD':'ORGANIZER EASY';
-}
-function loop(){inject();setTimeout(loop,900)}
-wrapFrame.addEventListener('load',()=>setTimeout(inject,1200));
+let lastInject=0;
+function inject(force){const now=Date.now();if(!force&&now-lastInject<2200)return;lastInject=now;const {outerDoc,doc,app}=getInner();if(!doc||!app){statusBox.textContent='LOADING ORGANIZER';return}hideOldCleanup(outerDoc);strictPatch(app);const hidden=new Set(hiddenIds().map(String));if(Array.isArray(app.events))app.events=app.events.filter(e=>!hidden.has(String(e.id)));const events=(app.events||[]).filter(isFinal);events.forEach(e=>{const card=findCardForEvent(doc,e);if(card)addButtons(doc,app,e,card)});statusBox.textContent=events.length?'DELETE ON EVENT CARD':'ORGANIZER EASY'}
+function loop(){inject(false);setTimeout(loop,1800)}
+wrapFrame.addEventListener('load',()=>setTimeout(()=>inject(true),1200));
 loop();
 </script>
 </body>
