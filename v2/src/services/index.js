@@ -10,6 +10,7 @@ import { getCourts as getMockCourts } from './mockEventService.js';
 import { getEventPlayers as getMockEventPlayers } from './mockPlayerService.js';
 import { getMatchHistory as getMockMatchHistory } from './mockMatchService.js';
 import { listLocalEventPlayers, checkInLocalPlayer } from './localPlayerStore.js';
+import { mergeLocalPlayerStats, setLocalPlayerStatus, applyLocalMatchResult } from './localPlayerStatsStore.js';
 import { listLocalEventMatches, createLocalMatchPreview, startLocalMatch, confirmLocalScore } from './localMatchStore.js';
 import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus } from './supabaseEventService.js';
 import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer } from './supabasePlayerService.js';
@@ -20,6 +21,12 @@ function requireSupabase(supabase) {
     throw new Error('Supabase client is required in supabase mode.');
   }
   return supabase;
+}
+
+function matchPlayerIds(match) {
+  return [...(match.teamA || match.team_a || []), ...(match.teamB || match.team_b || [])]
+    .map((item) => (typeof item === 'string' ? item : item?.id || item?.playerId || item?.eventPlayerId))
+    .filter(Boolean);
 }
 
 export function createV2Services({ supabase = null, organizationId = '00000000-0000-4000-8000-000000000001', mode = getServiceMode() } = {}) {
@@ -79,7 +86,7 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
       const seedPlayers = await getMockEventPlayers();
       const existingNames = new Set(seedPlayers.map((player) => String(player.displayName || player.name).toLowerCase()));
       const uniqueCheckedIn = checkedInPlayers.filter((player) => !existingNames.has(String(player.displayName || player.name).toLowerCase()));
-      return [...seedPlayers, ...uniqueCheckedIn];
+      return mergeLocalPlayerStats(eventId, [...seedPlayers, ...uniqueCheckedIn]);
     },
 
     async checkInPlayer(payload) {
@@ -111,12 +118,16 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
 
     async startMatch(matchId, payload = {}) {
       if (isSupabase) return startSupabaseMatch(requireSupabase(supabase), matchId);
-      return startLocalMatch(payload.eventId, matchId);
+      const match = startLocalMatch(payload.eventId, matchId);
+      setLocalPlayerStatus(payload.eventId, matchPlayerIds(match), 'playing');
+      return match;
     },
 
     async confirmScore(matchId, payload) {
       if (isSupabase) return confirmSupabaseScore(requireSupabase(supabase), matchId, payload);
-      return confirmLocalScore(payload.eventId, matchId, payload);
+      const match = confirmLocalScore(payload.eventId, matchId, payload);
+      applyLocalMatchResult(payload.eventId, match);
+      return match;
     }
   };
 }
