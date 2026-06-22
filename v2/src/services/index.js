@@ -17,9 +17,7 @@ import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInS
 import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, startMatch as startSupabaseMatch, confirmScore as confirmSupabaseScore } from './supabaseMatchService.js';
 
 function requireSupabase(supabase) {
-  if (!supabase) {
-    throw new Error('Supabase client is required in supabase mode.');
-  }
+  if (!supabase) throw new Error('Supabase client is required in supabase mode.');
   return supabase;
 }
 
@@ -57,12 +55,7 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
     },
 
     async createEvent(payload) {
-      if (isSupabase) {
-        return createSupabaseEvent(requireSupabase(supabase), {
-          ...payload,
-          organizationId: payload.organizationId || organizationId
-        });
-      }
+      if (isSupabase) return createSupabaseEvent(requireSupabase(supabase), { ...payload, organizationId: payload.organizationId || organizationId });
       return createLocalEvent(payload);
     },
 
@@ -86,17 +79,24 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
       const seedPlayers = await getMockEventPlayers();
       const existingNames = new Set(seedPlayers.map((player) => String(player.displayName || player.name).toLowerCase()));
       const uniqueCheckedIn = checkedInPlayers.filter((player) => !existingNames.has(String(player.displayName || player.name).toLowerCase()));
-      return mergeLocalPlayerStats(eventId, [...seedPlayers, ...uniqueCheckedIn]);
+      return mergeLocalPlayerStats(eventId, [...seedPlayers, ...uniqueCheckedIn]).filter((player) => player.status !== 'removed');
     },
 
     async checkInPlayer(payload) {
-      if (isSupabase) {
-        return checkInSupabasePlayer(requireSupabase(supabase), {
-          ...payload,
-          organizationId: payload.organizationId || organizationId
-        });
-      }
+      if (isSupabase) return checkInSupabasePlayer(requireSupabase(supabase), { ...payload, organizationId: payload.organizationId || organizationId });
       return checkInLocalPlayer(payload);
+    },
+
+    async setPlayerStatus(eventId, playerId, status) {
+      if (isSupabase) throw new Error('setPlayerStatus for Supabase mode is not implemented yet.');
+      setLocalPlayerStatus(eventId, [playerId], status);
+      return this.listEventPlayers(eventId);
+    },
+
+    async removePlayer(eventId, playerId) {
+      if (isSupabase) throw new Error('removePlayer for Supabase mode is not implemented yet.');
+      setLocalPlayerStatus(eventId, [playerId], 'removed');
+      return this.listEventPlayers(eventId);
     },
 
     async forceAllPlayersReady(eventId) {
@@ -114,12 +114,7 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
     },
 
     async createMatchPreview(payload) {
-      if (isSupabase) {
-        return createSupabaseMatchPreview(requireSupabase(supabase), {
-          ...payload,
-          organizationId: payload.organizationId || organizationId
-        });
-      }
+      if (isSupabase) return createSupabaseMatchPreview(requireSupabase(supabase), { ...payload, organizationId: payload.organizationId || organizationId });
       return createLocalMatchPreview(payload);
     },
 
