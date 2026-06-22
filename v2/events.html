@@ -7,22 +7,22 @@
 <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-<header class="topbar"><div class="topbar-inner"><div><div class="brand">EVENTS v2</div><div class="small muted">เลือก / สร้างอีเว้นท์</div></div><a class="tag" href="./index.html" style="text-decoration:none">HOME</a></div></header>
+<header class="topbar"><div class="topbar-inner"><div><div class="brand">EVENTS v2</div><div class="small muted">เลือก / สร้างอีเว้นท์</div></div><span id="modeBadge" class="tag">MODE</span></div></header>
 <main class="app grid">
 <section class="card cut hero">
 <div class="micro lime">EVENT MANAGER</div>
 <h1 style="font-size:36px;line-height:1.05;margin:8px 0 10px">สร้างอีเว้นท์ให้เร็ว เหมือนชุดแรก</h1>
-<p class="muted">หน้านี้เริ่มใช้งานได้แบบ local mock แล้ว: สร้าง event → เลือก event → Organizer อ่าน event ที่เลือก</p>
+<p class="muted">หน้านี้เริ่มใช้ service adapter แล้ว: วันนี้เป็น mock mode แต่โครงพร้อมสลับ Supabase mode ภายหลัง</p>
 <div id="selectedState" class="notice" style="margin-top:12px">Loading selected event...</div>
 </section>
 <section class="card grid">
-<div class="between mobile-stack"><div><h2 class="section-title lime">Create New Event</h2><p class="muted small">ฟอร์มสั้นสำหรับหน้างานจริง</p></div><span class="pill status-online">LOCAL MOCK</span></div>
+<div class="between mobile-stack"><div><h2 class="section-title lime">Create New Event</h2><p class="muted small">ฟอร์มสั้นสำหรับหน้างานจริง</p></div><span class="pill status-online">SERVICE ADAPTER</span></div>
 <div class="grid grid-2"><div><label class="label">Event name</label><input id="newName" class="input" value="GDSQ Open Play — Saturday"></div><div><label class="label">Venue</label><select id="venue"><option>Club46</option><option>Sukspace</option><option>Garden Square</option></select></div><div><label class="label">Date</label><input id="eventDate" class="input" type="date" value="2026-06-22"></div><div><label class="label">Courts</label><input id="courtCount" class="input" type="number" min="1" max="20" value="4"></div><div><label class="label">Start time</label><input id="startTime" class="input" type="time" value="16:00"></div><div><label class="label">End time</label><input id="endTime" class="input" type="time" value="18:00"></div></div>
 <div class="grid grid-2"><button id="createBtn" class="btn" onclick="window.createMockEvent()">Create + Select</button><button class="btn secondary" onclick="window.resetMockEvents()">Reset Demo Events</button></div>
-<div id="createState" class="notice">ตอนนี้เก็บใน localStorage ก่อน ต่อ Supabase ภายหลัง</div>
+<div id="createState" class="notice">ตอนนี้ adapter ใช้ mock/localStorage เป็นค่าเริ่มต้น</div>
 </section>
 <section class="card">
-<div class="between mobile-stack"><div><h2 class="section-title lime">Select Event</h2><p class="muted small">เลือก event แล้ว Organizer v2 จะเปิดตาม event นั้น</p></div><a class="btn secondary" href="./organizer.html?v=event-store-01">Open Selected Event</a></div>
+<div class="between mobile-stack"><div><h2 class="section-title lime">Select Event</h2><p class="muted small">เลือก event แล้ว Organizer v2 จะเปิดตาม event นั้น</p></div><a class="btn secondary" href="./organizer.html?v=adapter-01">Open Selected Event</a></div>
 <div id="eventList" class="list" style="margin-top:12px"><div class="notice">Loading events...</div></div>
 </section>
 <section class="card">
@@ -31,18 +31,34 @@
 </section>
 </main>
 <script type="module">
-import { listEvents, getSelectedEvent, selectEvent, createEvent, updateEventStatus, resetEvents } from './src/services/localEventStore.js';
+import { createV2Services } from './src/services/index.js';
+import { modeLabel } from './src/services/serviceMode.js';
+import { resetEvents } from './src/services/localEventStore.js';
+
+const services = createV2Services();
+let selectedEvent = null;
+let events = [];
+
+document.getElementById('modeBadge').textContent = modeLabel();
 
 function statusClass(status){if(status==='live')return 'pill status-online';if(status==='draft')return 'pill status-slow';if(status==='archived'||status==='deleted')return 'pill status-offline';return 'pill'}
-function formatEventMeta(event){return `${event.venueName} · ${event.eventDate} · ${event.courtCount} courts · ${event.startTime}-${event.endTime}`}
+function eventName(event){return event.name || event.title || 'Untitled Event'}
+function venueName(event){return event.venueName || event.venue?.name || event.venue_name || 'Venue'}
+function courtCount(event){return event.courtCount || event.court_count || 1}
+function eventDate(event){return event.eventDate || event.event_date || '-'}
+function startTime(event){return event.startTime || event.start_time || '--:--'}
+function endTime(event){return event.endTime || event.end_time || '--:--'}
+function eventStatus(event){return event.status || 'draft'}
+function formatEventMeta(event){return `${venueName(event)} · ${eventDate(event)} · ${courtCount(event)} courts · ${startTime(event)}-${endTime(event)}`}
 function setCreateState(text, type='notice'){const el=document.getElementById('createState');el.className=type;el.textContent=text}
-function renderSelected(){const event=getSelectedEvent();document.getElementById('selectedState').className='ok';document.getElementById('selectedState').innerHTML=`Selected: <b>${event.name}</b><br>${formatEventMeta(event)}`}
-function renderEvents(){renderSelected();const selected=getSelectedEvent();const events=listEvents();document.getElementById('eventList').innerHTML=events.map(event=>`<div class="court ${event.id===selected.id?'live':''}"><div class="between mobile-stack"><div><b>${event.name}</b><div class="small muted">${formatEventMeta(event)}</div></div><span class="${statusClass(event.status)}">${event.status.toUpperCase()}</span></div><div class="grid grid-2" style="margin-top:12px"><button class="btn ${event.id===selected.id?'secondary':''}" onclick="window.selectMockEvent('${event.id}')">${event.id===selected.id?'Selected':'Select'}</button><a class="btn secondary" href="./organizer.html?v=event-store-01">Organizer</a><a class="btn secondary" href="./summary.html">Summary</a><button class="btn red" onclick="window.archiveMockEvent('${event.id}')">Archive</button></div></div>`).join('')}
-window.selectMockEvent=function(eventId){const event=selectEvent(eventId);if(event){setCreateState(`Selected ${event.name}`,'ok');renderEvents()}}
-window.createMockEvent=function(){const btn=document.getElementById('createBtn');btn.disabled=true;btn.textContent='Creating...';setCreateState('กำลังสร้าง event ใน localStorage...');setTimeout(()=>{const event=createEvent({name:document.getElementById('newName').value.trim(),venueName:document.getElementById('venue').value,eventDate:document.getElementById('eventDate').value,courtCount:document.getElementById('courtCount').value,startTime:document.getElementById('startTime').value,endTime:document.getElementById('endTime').value,status:'draft'});btn.disabled=false;btn.textContent='Create + Select';setCreateState(`Created and selected: ${event.name}`,'ok');renderEvents()},500)}
-window.archiveMockEvent=function(eventId){updateEventStatus(eventId,'archived');setCreateState('Archived event mock','notice');renderEvents()}
-window.resetMockEvents=function(){resetEvents();setCreateState('Demo events reset','ok');renderEvents()}
-renderEvents();
+async function refreshEvents(){events = await services.listEvents();selectedEvent = await services.getCurrentEvent();renderEvents()}
+function renderSelected(){if(!selectedEvent){document.getElementById('selectedState').className='danger';document.getElementById('selectedState').textContent='No selected event';return}document.getElementById('selectedState').className='ok';document.getElementById('selectedState').innerHTML=`Selected: <b>${eventName(selectedEvent)}</b><br>${formatEventMeta(selectedEvent)}`}
+function renderEvents(){renderSelected();document.getElementById('eventList').innerHTML=events.map(event=>`<div class="court ${selectedEvent&&event.id===selectedEvent.id?'live':''}"><div class="between mobile-stack"><div><b>${eventName(event)}</b><div class="small muted">${formatEventMeta(event)}</div></div><span class="${statusClass(eventStatus(event))}">${eventStatus(event).toUpperCase()}</span></div><div class="grid grid-2" style="margin-top:12px"><button class="btn ${selectedEvent&&event.id===selectedEvent.id?'secondary':''}" onclick="window.selectMockEvent('${event.id}')">${selectedEvent&&event.id===selectedEvent.id?'Selected':'Select'}</button><a class="btn secondary" href="./organizer.html?v=adapter-01">Organizer</a><a class="btn secondary" href="./summary.html">Summary</a><button class="btn red" onclick="window.archiveMockEvent('${event.id}')">Archive</button></div></div>`).join('')}
+window.selectMockEvent=async function(eventId){const event=await services.selectEvent(eventId);if(event){setCreateState(`Selected ${eventName(event)}`,'ok');await refreshEvents()}}
+window.createMockEvent=function(){const btn=document.getElementById('createBtn');btn.disabled=true;btn.textContent='Creating...';setCreateState('กำลังสร้าง event ผ่าน service adapter...');setTimeout(async()=>{try{const event=await services.createEvent({name:document.getElementById('newName').value.trim(),venueName:document.getElementById('venue').value,eventDate:document.getElementById('eventDate').value,courtCount:document.getElementById('courtCount').value,startTime:document.getElementById('startTime').value,endTime:document.getElementById('endTime').value,status:'draft'});btn.disabled=false;btn.textContent='Create + Select';setCreateState(`Created and selected: ${eventName(event)}`,'ok');await refreshEvents()}catch(error){btn.disabled=false;btn.textContent='Create + Select';setCreateState(error.message,'danger')}},500)}
+window.archiveMockEvent=async function(eventId){await services.updateEventStatus(eventId,'archived');setCreateState('Archived event mock','notice');await refreshEvents()}
+window.resetMockEvents=async function(){resetEvents();setCreateState('Demo events reset','ok');await refreshEvents()}
+refreshEvents().catch(error=>setCreateState(error.message,'danger'));
 </script>
 </body>
 </html>
