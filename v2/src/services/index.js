@@ -8,11 +8,12 @@ import {
 } from './localEventStore.js';
 import { getCourts as getMockCourts } from './mockEventService.js';
 import { getEventPlayers as getMockEventPlayers } from './mockPlayerService.js';
-import { getMatchHistory as getMockMatchHistory, confirmScore as confirmMockScore } from './mockMatchService.js';
+import { getMatchHistory as getMockMatchHistory } from './mockMatchService.js';
 import { listLocalEventPlayers, checkInLocalPlayer } from './localPlayerStore.js';
+import { listLocalEventMatches, createLocalMatchPreview, startLocalMatch, confirmLocalScore } from './localMatchStore.js';
 import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus } from './supabaseEventService.js';
 import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer } from './supabasePlayerService.js';
-import { listEventMatches as listSupabaseEventMatches, confirmScore as confirmSupabaseScore } from './supabaseMatchService.js';
+import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, startMatch as startSupabaseMatch, confirmScore as confirmSupabaseScore } from './supabaseMatchService.js';
 
 function requireSupabase(supabase) {
   if (!supabase) {
@@ -93,12 +94,29 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
 
     async listEventMatches(eventId) {
       if (isSupabase) return listSupabaseEventMatches(requireSupabase(supabase), eventId);
-      return getMockMatchHistory();
+      const localMatches = listLocalEventMatches(eventId);
+      const seedHistory = await getMockMatchHistory();
+      return [...localMatches, ...seedHistory];
+    },
+
+    async createMatchPreview(payload) {
+      if (isSupabase) {
+        return createSupabaseMatchPreview(requireSupabase(supabase), {
+          ...payload,
+          organizationId: payload.organizationId || organizationId
+        });
+      }
+      return createLocalMatchPreview(payload);
+    },
+
+    async startMatch(matchId, payload = {}) {
+      if (isSupabase) return startSupabaseMatch(requireSupabase(supabase), matchId);
+      return startLocalMatch(payload.eventId, matchId);
     },
 
     async confirmScore(matchId, payload) {
       if (isSupabase) return confirmSupabaseScore(requireSupabase(supabase), matchId, payload);
-      return confirmMockScore(matchId, payload);
+      return confirmLocalScore(payload.eventId, matchId, payload);
     }
   };
 }
