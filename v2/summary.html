@@ -7,28 +7,49 @@
 <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-<header class="topbar"><div class="topbar-inner"><div><div class="brand">SUMMARY v2</div><div class="small muted">Public read-only event recap</div></div><a class="tag" href="./index.html" style="text-decoration:none">HOME</a></div></header>
+<header class="topbar"><div class="topbar-inner"><div><div class="brand">SUMMARY v2</div><div class="small muted">Public read-only event recap</div></div><span id="modeBadge" class="tag">MODE</span></div></header>
 <main class="app grid">
 <section class="card cut hero">
 <div class="micro lime">FINAL RESULTS</div>
-<h1 style="font-size:34px;line-height:1.05;margin:8px 0">GDSQ Open Play Summary</h1>
-<p class="muted">Club46 · 24 players · 18 confirmed matches</p>
+<h1 id="eventName" style="font-size:34px;line-height:1.05;margin:8px 0">Loading summary...</h1>
+<p id="eventMeta" class="muted">Loading event data...</p>
 <div class="row wrap" style="margin-top:12px"><button class="btn" onclick="copyMock(this)">Copy Link</button><button class="btn orange" onclick="copyMock(this)">Copy Message</button></div>
 </section>
-<section class="grid grid-4"><div class="stat"><small>Players</small><b>24</b></div><div class="stat"><small>Matches</small><b>18</b></div><div class="stat"><small>Top Player</small><b class="lime" style="font-size:18px">Ann</b></div><div class="stat"><small>Status</small><b style="font-size:18px">Final</b></div></section>
+<section class="grid grid-4"><div class="stat"><small>Players</small><b id="sumPlayers">-</b></div><div class="stat"><small>Matches</small><b id="sumMatches">-</b></div><div class="stat"><small>Top Player</small><b id="sumTop" class="lime" style="font-size:18px">-</b></div><div class="stat"><small>Status</small><b id="sumStatus" style="font-size:18px">-</b></div></section>
 <section class="card">
-<div class="between"><div><h2 class="section-title lime">Ranking</h2><p class="muted small">แตะผู้เล่นเพื่อดูรายละเอียด</p></div><span class="pill">24 players</span></div>
-<div class="list" style="margin-top:12px"><div class="rank"><div class="rank-no">1</div><div><b>Ann</b><div class="small muted">5 games · 4W 1L · 82% win</div></div><div class="score">51</div></div><div class="rank"><div class="rank-no">2</div><div><b>Tom</b><div class="small muted">5 games · 3W 2L · 60% win</div></div><div class="score">42</div></div><div class="rank"><div class="rank-no">3</div><div><b>Nattapong</b><div class="small muted">4 games · 3W 1L · 75% win</div></div><div class="score">39</div></div></div>
+<div class="between"><div><h2 class="section-title lime">Ranking</h2><p class="muted small">คำนวณจาก ranking module กลาง</p></div><span id="rankingCount" class="pill">0 players</span></div>
+<div id="rankingList" class="list" style="margin-top:12px"><div class="notice">Loading ranking...</div></div>
 </section>
 <section class="card">
 <h2 class="section-title orange">Match History</h2>
-<div class="list" style="margin-top:12px"><div class="court"><div class="between"><b>Court 1</b><span class="pill">Final</span></div><div class="teamBox" style="margin-top:10px"><div class="team"><b>Ann / Pat</b><div class="score">11</div></div><div class="vs">VS</div><div class="team"><b>Tom / Bank</b><div class="score">8</div></div></div></div><div class="court"><div class="between"><b>Court 3</b><span class="pill">Final</span></div><div class="teamBox" style="margin-top:10px"><div class="team"><b>May / Gun</b><div class="score">11</div></div><div class="vs">VS</div><div class="team"><b>Beam / Art</b><div class="score">9</div></div></div></div></div>
+<div id="matchList" class="list" style="margin-top:12px"><div class="notice">Loading match history...</div></div>
 </section>
 <section class="card">
 <h2 class="section-title">Public page rules</h2>
-<div class="grid" style="margin-top:12px"><div class="ok">Read-only: ไม่แก้ข้อมูลจากหน้านี้</div><div class="notice">URL ต้องมี eventId เพื่อป้องกันเปิดผิด event</div><div class="notice">Mobile-first: ปุ่ม share ต้องไม่กินพื้นที่ ranking</div></div>
+<div class="grid" style="margin-top:12px"><div class="ok">Read-only: ไม่แก้ข้อมูลจากหน้านี้</div><div class="notice">URL ต้องมี eventId เพื่อป้องกันเปิดผิด event ใน production</div><div class="notice">Mobile-first: ปุ่ม share ต้องไม่กินพื้นที่ ranking</div></div>
 </section>
 </main>
-<script>function copyMock(btn){const old=btn.textContent;btn.textContent='Copied';setTimeout(()=>btn.textContent=old,900)}</script>
+<script type="module">
+import { createV2Services } from './src/services/index.js';
+import { modeLabel } from './src/services/serviceMode.js';
+import { calculatePlayerRanking } from './src/logic/ranking/calculatePlayerRanking.js';
+
+const services = createV2Services();
+document.getElementById('modeBadge').textContent = modeLabel();
+
+function eventName(event){return event?.name || 'Untitled Event'}
+function venueName(event){return event?.venueName || event?.venue?.name || event?.venue_name || 'Venue'}
+function eventDate(event){return event?.eventDate || event?.event_date || 'Today'}
+function startTime(event){return event?.startTime || event?.start_time || '--:--'}
+function endTime(event){return event?.endTime || event?.end_time || '--:--'}
+function playerName(player){return player.displayName || player.display_name || player.name || 'Player'}
+function normalizePlayer(player){return {...player,displayName:playerName(player),matchesPlayed:Number(player.matchesPlayed??player.matches_played??0),wins:Number(player.wins??0),losses:Number(player.losses??0),pointsFor:Number(player.pointsFor??player.points_for??0),pointsAgainst:Number(player.pointsAgainst??player.points_against??0)}}
+function normalizeMatch(match){return {...match,teamA:match.teamA||match.team_a||[],teamB:match.teamB||match.team_b||[],teamAScore:match.teamAScore??match.team_a_score,teamBScore:match.teamBScore??match.team_b_score,status:match.status||'confirmed',courtName:match.courtName||match.court_name||`Court ${match.court_number||'-'}`}}
+function byId(players,id){return players.find(player=>player.id===id)}
+function matchNames(players,ids){return ids.map(id=>playerName(byId(players,id)||{name:id})).join(' / ')}
+window.copyMock=function(btn){const old=btn.textContent;btn.textContent='Copied';setTimeout(()=>btn.textContent=old,900)}
+async function init(){try{const event=await services.getCurrentEvent();if(!event) throw new Error('No selected event');const [rawPlayers,rawMatches]=await Promise.all([services.listEventPlayers(event.id),services.listEventMatches(event.id)]);const players=(rawPlayers||[]).map(normalizePlayer);const matches=(rawMatches||[]).map(normalizeMatch);const ranking=calculatePlayerRanking(players);document.getElementById('eventName').textContent=`${eventName(event)} Summary`;document.getElementById('eventMeta').textContent=`${venueName(event)} · ${eventDate(event)} · ${startTime(event)}-${endTime(event)}`;document.getElementById('sumPlayers').textContent=players.length;document.getElementById('sumMatches').textContent=matches.length;document.getElementById('sumTop').textContent=ranking[0]?.displayName || '-';document.getElementById('sumStatus').textContent=(event.status||'draft').toUpperCase();document.getElementById('rankingCount').textContent=`${players.length} players`;document.getElementById('rankingList').innerHTML=ranking.length?ranking.map((player,index)=>`<div class="rank"><div class="rank-no">${index+1}</div><div><b>${player.displayName}</b><div class="small muted">${player.matchesPlayed} games · ${player.wins}W ${player.losses}L · ${Math.round((player.winRate||0)*100)}% win</div></div><div class="score">${player.score}</div></div>`).join(''):'<div class="notice">No ranking yet</div>';document.getElementById('matchList').innerHTML=matches.length?matches.map(match=>`<div class="court"><div class="between"><b>${match.courtName}</b><span class="pill">${match.status}</span></div><div class="teamBox" style="margin-top:10px"><div class="team"><b>${matchNames(players,match.teamA)}</b><div class="score">${match.teamAScore ?? '-'}</div></div><div class="vs">VS</div><div class="team"><b>${matchNames(players,match.teamB)}</b><div class="score">${match.teamBScore ?? '-'}</div></div></div></div>`).join(''):'<div class="notice">No matches yet</div>'}catch(error){document.getElementById('eventName').textContent='Summary Error';document.getElementById('eventMeta').textContent=error.message}}
+init();
+</script>
 </body>
 </html>
