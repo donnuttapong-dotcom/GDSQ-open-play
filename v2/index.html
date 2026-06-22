@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GDSQ OpenPlay v2 Prototype</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner"><div><div class="brand">GDSQ OPENPLAY v2</div><div class="small muted">Internal prototype · ไม่แตะระบบเก่า</div></div><span class="tag">SANDBOX</span></div></header>
+<main class="app grid">
+<section class="card cut hero">
+<div class="micro lime">PLATFORM V2</div>
+<h1 style="font-size:38px;line-height:1.05;margin:8px 0 10px">Pickleball Event & Club Operating System</h1>
+<p class="muted">ต้นแบบระบบใหม่สำหรับสนาม / ผู้จัด / club / coach แยกจากระบบเก่า 100% เพื่อพัฒนาให้เสถียรก่อนใช้งานจริง</p>
+<div class="notice" style="margin-top:14px">สถานะตอนนี้: Static prototype เท่านั้น ยังไม่ต่อ Supabase และยังไม่บันทึกข้อมูลจริง</div>
+</section>
+<section class="grid grid-4">
+<a class="card" href="./organizer.html" style="text-decoration:none;color:white"><div class="micro lime">01</div><h2>Organizer</h2><p class="muted small">คุมงาน / queue / court / score</p></a>
+<a class="card" href="./checkin.html" style="text-decoration:none;color:white"><div class="micro lime">02</div><h2>Check-in</h2><p class="muted small">ผู้เล่นเข้า event / เลือก level</p></a>
+<a class="card" href="./player.html" style="text-decoration:none;color:white"><div class="micro lime">03</div><h2>Player</h2><p class="muted small">ผู้เล่นดูสถานะ / court / stats</p></a>
+<a class="card" href="./summary.html" style="text-decoration:none;color:white"><div class="micro lime">04</div><h2>Summary</h2><p class="muted small">ลิงก์สรุปหลังจบงาน</p></a>
+</section>
+<section class="card">
+<div class="between mobile-stack"><div><h2 class="section-title lime">Build Rules</h2><p class="muted">กติกาการพัฒนาระบบใหม่</p></div><span class="pill status-online">OLD SYSTEM SAFE</span></div>
+<div class="grid" style="margin-top:12px">
+<div class="ok">ทำงานเฉพาะใน <b>v2/</b> และเอกสาร <b>docs/v2-*</b></div>
+<div class="danger">ห้ามแก้ไฟล์เก่าที่ใช้งานจริงจนกว่า v2 ผ่าน dry run</div>
+<div class="notice">เริ่มจาก UI prototype → logic module → test → Supabase → pilot</div>
+</div>
+</section>
+<section class="card">
+<h2 class="section-title">Docs</h2>
+<div class="list" style="margin-top:10px">
+<a class="btn secondary" href="../docs/v2-product-requirements.md">Product Requirements</a>
+<a class="btn secondary" href="../docs/v2-technical-architecture.md">Technical Architecture</a>
+<a class="btn secondary" href="../docs/v2-data-model.md">Data Model</a>
+<a class="btn secondary" href="../docs/v2-build-plan-for-codex.md">Build Plan for Codex</a>
+</div>
+</section>
+</main>
+</body>
+</html>
