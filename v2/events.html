@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GDSQ v2 Events</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner"><div><div class="brand">EVENTS v2</div><div class="small muted">เลือก / สร้างอีเว้นท์</div></div><a class="tag" href="./index.html" style="text-decoration:none">HOME</a></div></header>
+<main class="app grid">
+<section class="card cut hero">
+<div class="micro lime">EVENT MANAGER</div>
+<h1 style="font-size:36px;line-height:1.05;margin:8px 0 10px">สร้างอีเว้นท์ให้เร็ว เหมือนชุดแรก</h1>
+<p class="muted">หน้านี้คือจุดเริ่มต้นของ Organizer v2: เลือกอีเว้นท์เดิม หรือสร้างอีเว้นท์ใหม่แบบไม่ซับซ้อน</p>
+<div class="notice" style="margin-top:12px">Prototype only — ยังไม่บันทึกจริง แต่ล็อก UX flow สำหรับต่อ Supabase</div>
+</section>
+<section class="card grid">
+<div class="between mobile-stack"><div><h2 class="section-title lime">Create New Event</h2><p class="muted small">ฟอร์มสั้นสำหรับหน้างานจริง</p></div><span class="pill status-online">DRAFT</span></div>
+<div class="grid grid-2"><div><label class="label">Event name</label><input id="newName" class="input" value="GDSQ Open Play — Saturday"></div><div><label class="label">Venue</label><select id="venue"><option>Club46</option><option>Sukspace</option><option>Garden Square</option></select></div><div><label class="label">Date</label><input class="input" type="date" value="2026-06-22"></div><div><label class="label">Courts</label><input class="input" type="number" min="1" max="20" value="4"></div><div><label class="label">Start time</label><input class="input" type="time" value="16:00"></div><div><label class="label">End time</label><input class="input" type="time" value="18:00"></div></div>
+<button id="createBtn" class="btn" onclick="createMockEvent()">Create Event Mock</button>
+<div id="createState" class="notice">หลังต่อ Supabase ปุ่มนี้จะสร้าง event, court setup, check-in QR และเปิด Organizer ได้ทันที</div>
+</section>
+<section class="card">
+<div class="between mobile-stack"><div><h2 class="section-title lime">Select Event</h2><p class="muted small">อีเว้นท์ล่าสุดของสนาม</p></div><a class="btn secondary" href="./organizer.html?v=score-input-01">Open Active Event</a></div>
+<div class="list" style="margin-top:12px">
+<div class="court live"><div class="between"><div><b>GDSQ Open Play — Saturday</b><div class="small muted">Club46 · Today · 4 courts</div></div><span class="pill status-online">LIVE</span></div><div class="grid grid-2" style="margin-top:12px"><a class="btn" href="./organizer.html?v=score-input-01">Organizer</a><a class="btn secondary" href="./summary.html">Summary</a></div></div>
+<div class="court"><div class="between"><div><b>GDSQ Social Play</b><div class="small muted">Garden Square · Yesterday · Completed</div></div><span class="pill">COMPLETED</span></div><div class="grid grid-2" style="margin-top:12px"><a class="btn secondary" href="./summary.html">View Summary</a><button class="btn red" onclick="mockArchive(this)">Archive</button></div></div>
+<div class="court"><div class="between"><div><b>Beginner Open Court</b><div class="small muted">Sukspace · Draft</div></div><span class="pill status-slow">DRAFT</span></div><div class="grid grid-2" style="margin-top:12px"><button class="btn secondary" onclick="mockToast('Edit draft mock')">Edit</button><button class="btn" onclick="mockToast('Open check-in mock')">Open Check-in</button></div></div>
+</div>
+</section>
+<section class="card">
+<h2 class="section-title">UX rules</h2>
+<div class="list" style="margin-top:12px"><div class="ok">สร้างอีเว้นท์ต้องใช้ไม่เกิน 1 นาที</div><div class="notice">สร้างแล้วต้องได้ QR และ Organizer link ทันที</div><div class="danger">ห้ามทำ form ยาวเกินก่อนใช้งานจริง</div></div>
+</section>
+</main>
+<script>
+function mockToast(text){const el=document.getElementById('createState');const old=el.textContent;el.className='ok';el.textContent=text;setTimeout(()=>{el.className='notice';el.textContent=old},1200)}
+function createMockEvent(){const btn=document.getElementById('createBtn');const state=document.getElementById('createState');btn.disabled=true;btn.textContent='Creating...';state.className='notice';state.textContent='กำลังสร้าง event mock...';setTimeout(()=>{btn.disabled=false;btn.textContent='Create Event Mock';state.className='ok';state.innerHTML='<b>Event ready.</b><br>ต่อไปจะเปิด Organizer + Check-in QR ได้ทันที';},850)}
+function mockArchive(btn){btn.disabled=true;btn.textContent='Archived'}
+</script>
+</body>
+</html>
