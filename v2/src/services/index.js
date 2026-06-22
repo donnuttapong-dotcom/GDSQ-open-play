@@ -10,7 +10,7 @@ import { getCourts as getMockCourts } from './mockEventService.js';
 import { getEventPlayers as getMockEventPlayers } from './mockPlayerService.js';
 import { getMatchHistory as getMockMatchHistory } from './mockMatchService.js';
 import { listLocalEventPlayers, checkInLocalPlayer } from './localPlayerStore.js';
-import { mergeLocalPlayerStats, setLocalPlayerStatus, applyLocalMatchResult } from './localPlayerStatsStore.js';
+import { mergeLocalPlayerStats, setLocalPlayerStatus, forceAllLocalPlayersReady, applyLocalMatchResult } from './localPlayerStatsStore.js';
 import { listLocalEventMatches, createLocalMatchPreview, startLocalMatch, cancelLocalMatch, confirmLocalScore } from './localMatchStore.js';
 import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus } from './supabaseEventService.js';
 import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer } from './supabasePlayerService.js';
@@ -97,6 +97,13 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
         });
       }
       return checkInLocalPlayer(payload);
+    },
+
+    async forceAllPlayersReady(eventId) {
+      if (isSupabase) throw new Error('forceAllPlayersReady for Supabase mode is not implemented yet.');
+      const players = await this.listEventPlayers(eventId);
+      forceAllLocalPlayersReady(eventId, players);
+      return this.listEventPlayers(eventId);
     },
 
     async listEventMatches(eventId) {
