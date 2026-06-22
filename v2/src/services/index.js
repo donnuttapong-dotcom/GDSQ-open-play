@@ -11,7 +11,7 @@ import { getEventPlayers as getMockEventPlayers } from './mockPlayerService.js';
 import { getMatchHistory as getMockMatchHistory } from './mockMatchService.js';
 import { listLocalEventPlayers, checkInLocalPlayer } from './localPlayerStore.js';
 import { mergeLocalPlayerStats, setLocalPlayerStatus, applyLocalMatchResult } from './localPlayerStatsStore.js';
-import { listLocalEventMatches, createLocalMatchPreview, startLocalMatch, confirmLocalScore } from './localMatchStore.js';
+import { listLocalEventMatches, createLocalMatchPreview, startLocalMatch, cancelLocalMatch, confirmLocalScore } from './localMatchStore.js';
 import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus } from './supabaseEventService.js';
 import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer } from './supabasePlayerService.js';
 import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, startMatch as startSupabaseMatch, confirmScore as confirmSupabaseScore } from './supabaseMatchService.js';
@@ -120,6 +120,13 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
       if (isSupabase) return startSupabaseMatch(requireSupabase(supabase), matchId);
       const match = startLocalMatch(payload.eventId, matchId);
       setLocalPlayerStatus(payload.eventId, matchPlayerIds(match), 'playing');
+      return match;
+    },
+
+    async cancelMatch(matchId, payload = {}) {
+      if (isSupabase) throw new Error('cancelMatch for Supabase mode is not implemented yet.');
+      const match = cancelLocalMatch(payload.eventId, matchId, payload.reason || 'cancelled_by_organizer');
+      setLocalPlayerStatus(payload.eventId, matchPlayerIds(match), 'ready');
       return match;
     },
 
