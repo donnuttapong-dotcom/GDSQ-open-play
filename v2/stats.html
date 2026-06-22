@@ -7,17 +7,17 @@
 <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-<header class="topbar"><div class="topbar-inner"><div><div class="brand">STATS v2</div><div class="small muted">Organizer / venue dashboard</div></div><a class="tag" href="./index.html" style="text-decoration:none">HOME</a></div></header>
+<header class="topbar"><div class="topbar-inner"><div><div class="brand">STATS v2</div><div class="small muted">Organizer / venue dashboard</div></div><span id="modeBadge" class="tag">MODE</span></div></header>
 <main class="app grid">
 <section class="card cut hero">
 <div class="micro lime">VENUE INSIGHT</div>
 <h1 style="font-size:36px;line-height:1.05;margin:8px 0 10px">สถิติสำหรับสนาม / ผู้จัด</h1>
-<p class="muted">หน้า Stats นี้ต่างจาก Summary: Summary เอาไว้ส่งให้ผู้เล่นดู ส่วน Stats เอาไว้ให้ organizer/สนามวิเคราะห์กิจกรรม</p>
+<p id="statsMeta" class="muted">Loading adapter data...</p>
 </section>
-<section class="grid grid-4"><div class="stat"><small>Total Players</small><b>248</b></div><div class="stat"><small>Events</small><b>18</b></div><div class="stat"><small>Avg / Event</small><b>27</b></div><div class="stat"><small>Repeat Rate</small><b class="lime">62%</b></div></section>
+<section class="grid grid-4"><div class="stat"><small>Total Players</small><b id="totalPlayers">-</b></div><div class="stat"><small>Events</small><b id="totalEvents">-</b></div><div class="stat"><small>Avg / Event</small><b id="avgEvent">-</b></div><div class="stat"><small>Matches</small><b id="totalMatches" class="lime">-</b></div></section>
 <section class="grid grid-2">
-<div class="card"><h2 class="section-title lime">Event Performance</h2><div class="list" style="margin-top:12px"><div class="rank"><div class="rank-no">1</div><div><b>Saturday Open Play</b><div class="small muted">36 players · 28 matches</div></div><div class="score">A</div></div><div class="rank"><div class="rank-no">2</div><div><b>Beginner Night</b><div class="small muted">22 players · 16 matches</div></div><div class="score">B+</div></div><div class="rank"><div class="rank-no">3</div><div><b>Social Mix</b><div class="small muted">18 players · 12 matches</div></div><div class="score">B</div></div></div></div>
-<div class="card"><h2 class="section-title orange">Top Players</h2><div class="list" style="margin-top:12px"><div class="player"><div class="avatar">A</div><div><b>Ann</b><div class="small muted">12 events · 68% win · 4.7 avg games</div></div><span class="score right">1</span></div><div class="player"><div class="avatar">T</div><div><b>Tom</b><div class="small muted">10 events · 61% win · 4.2 avg games</div></div><span class="score right">2</span></div><div class="player"><div class="avatar">N</div><div><b>Nattapong</b><div class="small muted">8 events · 58% win · 4.0 avg games</div></div><span class="score right">3</span></div></div></div>
+<div class="card"><h2 class="section-title lime">Event Performance</h2><div id="eventPerformance" class="list" style="margin-top:12px"><div class="notice">Loading events...</div></div></div>
+<div class="card"><h2 class="section-title orange">Top Players</h2><div id="topPlayers" class="list" style="margin-top:12px"><div class="notice">Loading players...</div></div></div>
 </section>
 <section class="card">
 <h2 class="section-title lime">Venue decisions this dashboard should help</h2>
@@ -28,5 +28,22 @@
 <div class="list" style="margin-top:12px"><div class="player"><div class="avatar">1</div><div><b>Player retention</b><div class="small muted">ผู้เล่นกลับมาเล่นซ้ำใน 30/60/90 วัน</div></div></div><div class="player"><div class="avatar">2</div><div><b>Peak time</b><div class="small muted">ช่วงเวลาที่คนมาเยอะที่สุด</div></div></div><div class="player"><div class="avatar">3</div><div><b>Average wait time</b><div class="small muted">ใช้ปรับจำนวน court และรอบ session</div></div></div><div class="player"><div class="avatar">4</div><div><b>Revenue module later</b><div class="small muted">ต่อยอดกับ ticket / membership / sponsor</div></div></div></div>
 </section>
 </main>
+<script type="module">
+import { createV2Services } from './src/services/index.js';
+import { modeLabel } from './src/services/serviceMode.js';
+import { calculatePlayerRanking } from './src/logic/ranking/calculatePlayerRanking.js';
+
+const services = createV2Services();
+document.getElementById('modeBadge').textContent = modeLabel();
+
+function initials(name){return String(name||'?').trim().charAt(0).toUpperCase() || '?'}
+function eventName(event){return event?.name || 'Untitled Event'}
+function venueName(event){return event?.venueName || event?.venue?.name || event?.venue_name || 'Venue'}
+function eventDate(event){return event?.eventDate || event?.event_date || '-'}
+function playerName(player){return player.displayName || player.display_name || player.name || 'Player'}
+function normalizePlayer(player){return {...player,displayName:playerName(player),matchesPlayed:Number(player.matchesPlayed??player.matches_played??0),wins:Number(player.wins??0),losses:Number(player.losses??0),pointsFor:Number(player.pointsFor??player.points_for??0),pointsAgainst:Number(player.pointsAgainst??player.points_against??0)}}
+async function init(){try{const [events,currentEvent]=await Promise.all([services.listEvents(),services.getCurrentEvent()]);const [players,matches]=currentEvent?await Promise.all([services.listEventPlayers(currentEvent.id),services.listEventMatches(currentEvent.id)]):[[],[]];const normalizedPlayers=(players||[]).map(normalizePlayer);const ranking=calculatePlayerRanking(normalizedPlayers);document.getElementById('statsMeta').textContent=currentEvent?`Current: ${eventName(currentEvent)} · ${venueName(currentEvent)} · ${eventDate(currentEvent)}`:'No selected event';document.getElementById('totalPlayers').textContent=normalizedPlayers.length;document.getElementById('totalEvents').textContent=events.length;document.getElementById('avgEvent').textContent=events.length?Math.round(normalizedPlayers.length/events.length):0;document.getElementById('totalMatches').textContent=(matches||[]).length;document.getElementById('eventPerformance').innerHTML=events.length?events.map((event,index)=>`<div class="rank"><div class="rank-no">${index+1}</div><div><b>${eventName(event)}</b><div class="small muted">${venueName(event)} · ${eventDate(event)} · ${event.status||'draft'}</div></div><div class="score">${event.status==='live'?'LIVE':'-'}</div></div>`).join(''):'<div class="notice">No events yet</div>';document.getElementById('topPlayers').innerHTML=ranking.length?ranking.slice(0,6).map((player,index)=>`<div class="player"><div class="avatar">${initials(player.displayName)}</div><div><b>${player.displayName}</b><div class="small muted">${player.matchesPlayed} games · ${player.wins}W ${player.losses}L · score ${player.score}</div></div><span class="score right">${index+1}</span></div>`).join(''):'<div class="notice">No player stats yet</div>'}catch(error){document.getElementById('statsMeta').textContent=error.message}}
+init();
+</script>
 </body>
 </html>
