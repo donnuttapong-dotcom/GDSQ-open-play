@@ -16,9 +16,21 @@ import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, u
 import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer } from './supabasePlayerService.js';
 import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, startMatch as startSupabaseMatch, confirmScore as confirmSupabaseScore } from './supabaseMatchService.js';
 
+const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
+
 function requireSupabase(supabase) {
   if (!supabase) throw new Error('Supabase client is required in supabase mode.');
   return supabase;
+}
+
+function requestedEventId() {
+  const params = typeof location !== 'undefined' ? new URLSearchParams(location.search) : new URLSearchParams();
+  const fromUrl = params.get('event') || params.get('eventId') || params.get('id');
+  if (fromUrl) {
+    localStorage.setItem(SELECTED_EVENT_KEY, fromUrl);
+    return fromUrl;
+  }
+  return localStorage.getItem(SELECTED_EVENT_KEY) || '';
 }
 
 function matchPlayerIds(match) {
@@ -39,16 +51,22 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
     },
 
     async getCurrentEvent() {
+      const eventId = requestedEventId();
       if (isSupabase) {
         const events = await listSupabaseEvents(requireSupabase(supabase), organizationId);
-        return events.find((event) => event.status === 'live') || events[0] || null;
+        const selected = eventId ? events.find((event) => String(event.id) === String(eventId)) : null;
+        return selected || events.find((event) => event.status === 'live') || events[0] || null;
+      }
+      if (eventId) {
+        const selected = selectLocalEvent(eventId);
+        if (selected) return selected;
       }
       return getSelectedEvent();
     },
 
     async selectEvent(eventId) {
       if (isSupabase) {
-        localStorage.setItem('gdsq_v2_selected_event_id', eventId);
+        localStorage.setItem(SELECTED_EVENT_KEY, eventId);
         return eventId;
       }
       return selectLocalEvent(eventId);
