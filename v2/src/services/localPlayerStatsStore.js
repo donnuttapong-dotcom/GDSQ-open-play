@@ -80,6 +80,20 @@ export function setLocalPlayerStatus(eventId, playerIds = [], status) {
   return stats;
 }
 
+export function forceAllLocalPlayersReady(eventId, players = []) {
+  const stats = readStats(eventId);
+  const now = new Date().toISOString();
+  for (const player of players) {
+    const id = playerId(player);
+    if (!id) continue;
+    const record = ensurePlayer(stats, String(id));
+    record.status = 'ready';
+    record.queueJoinedAt = now;
+  }
+  writeStats(eventId, stats);
+  return stats;
+}
+
 export function applyLocalMatchResult(eventId, match) {
   const stats = readStats(eventId);
   const teamA = (match.teamA || match.team_a || []).map(playerId).filter(Boolean).map(String);
