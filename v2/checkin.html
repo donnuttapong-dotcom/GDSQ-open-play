@@ -7,27 +7,53 @@
 <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-<header class="topbar"><div class="topbar-inner"><div><div class="brand">CHECK-IN v2</div><div class="small muted">Event-specific player join</div></div><a class="tag" href="./index.html" style="text-decoration:none">HOME</a></div></header>
+<header class="topbar"><div class="topbar-inner"><div><div class="brand">CHECK-IN v2</div><div class="small muted">Event-specific player join</div></div><span id="modeBadge" class="tag">MODE</span></div></header>
 <main class="app grid">
 <section class="card cut hero">
 <div class="micro lime">JOIN EVENT</div>
-<h1 style="font-size:34px;line-height:1.05;margin:8px 0">GDSQ Open Play</h1>
-<p class="muted">Club46 · Today 16:00–18:00</p>
-<div class="ok" style="margin-top:12px">Prototype only — ยังไม่บันทึกข้อมูลจริง</div>
+<h1 id="eventName" style="font-size:34px;line-height:1.05;margin:8px 0">Loading event...</h1>
+<p id="eventMeta" class="muted">Loading venue...</p>
+<div id="eventState" class="ok" style="margin-top:12px">กำลังโหลด event ที่เลือก</div>
 </section>
 <section class="card grid">
 <div><label class="label">Player name</label><input id="name" class="input" placeholder="ใส่ชื่อเล่น / ชื่อผู้เล่น" /></div>
 <div><label class="label">Estimated level</label><select id="level"><option>2.00 Beginner</option><option>2.25</option><option>2.50</option><option selected>2.75</option><option>3.00</option><option>3.25</option><option>3.50+</option></select></div>
-<button id="joinBtn" class="btn" onclick="joinEvent()">Join Event</button>
-<div id="state" class="notice">เมื่อเชื่อม Supabase แล้ว หน้านี้จะสร้าง event_player และเข้าสู่ queue</div>
+<button id="joinBtn" class="btn" onclick="window.joinEvent()">Join Event</button>
+<div id="state" class="notice">หน้านี้ใช้ service adapter แล้ว: mock ตอนนี้ / Supabase ภายหลัง</div>
+</section>
+<section class="card">
+<div class="between mobile-stack"><div><h2 class="section-title lime">Checked-in Players</h2><p class="muted small">รายชื่อ mock/local ต่อ event ที่เลือก</p></div><button class="btn secondary" onclick="window.refreshPlayers()">Refresh</button></div>
+<div id="playerList" class="list" style="margin-top:12px"><div class="notice">Loading players...</div></div>
 </section>
 <section class="card">
 <h2 class="section-title lime">Player UX rules</h2>
 <div class="list" style="margin-top:12px"><div class="ok">หลัง join สำเร็จ ต้องเห็นสถานะของตัวเองทันที</div><div class="notice">ถ้าเน็ตอ่อน ให้เก็บ draft และให้กด retry ได้</div><div class="danger">ห้ามให้ผู้เล่นกดซ้ำแล้วสร้างชื่อซ้ำใน event เดียว</div></div>
 </section>
 </main>
-<script>
-function joinEvent(){const btn=document.getElementById('joinBtn');const state=document.getElementById('state');const name=document.getElementById('name').value.trim()||'Guest Player';btn.disabled=true;btn.textContent='Joining...';state.className='notice';state.textContent='กำลังบันทึก check-in mock...';setTimeout(()=>{btn.textContent='Joined';state.className='ok';state.innerHTML='<b>'+name+'</b> checked in successfully · Ready for queue';},850)}
+<script type="module">
+import { createV2Services } from './src/services/index.js';
+import { modeLabel } from './src/services/serviceMode.js';
+
+const services = createV2Services();
+let currentEvent = null;
+
+document.getElementById('modeBadge').textContent = modeLabel();
+
+function eventName(event){return event?.name || 'Untitled Event'}
+function venueName(event){return event?.venueName || event?.venue?.name || event?.venue_name || 'Venue'}
+function startTime(event){return event?.startTime || event?.start_time || '--:--'}
+function endTime(event){return event?.endTime || event?.end_time || '--:--'}
+function eventDate(event){return event?.eventDate || event?.event_date || 'Today'}
+function initials(name){return String(name||'?').trim().charAt(0).toUpperCase() || '?'}
+function playerName(player){return player.displayName || player.display_name || player.name || 'Player'}
+function playerLevel(player){return player.level || player.estimatedLevel || player.estimated_level || '-'}
+function setState(text,type='notice'){const el=document.getElementById('state');el.className=type;el.innerHTML=text}
+function renderEvent(){document.getElementById('eventName').textContent=eventName(currentEvent);document.getElementById('eventMeta').textContent=`${venueName(currentEvent)} · ${eventDate(currentEvent)} · ${startTime(currentEvent)}-${endTime(currentEvent)}`;document.getElementById('eventState').innerHTML=`Selected event: <b>${eventName(currentEvent)}</b>`}
+function renderPlayers(players){document.getElementById('playerList').innerHTML=players.length?players.map(player=>`<div class="player"><div class="avatar">${initials(playerName(player))}</div><div><b>${playerName(player)}</b><div class="small muted">Level ${playerLevel(player)} · ${player.status||'ready'}</div></div><span class="pill status-online right">Ready</span></div>`).join(''):'<div class="notice">No players yet</div>'}
+window.refreshPlayers=async function(){if(!currentEvent)return;const players=await services.listEventPlayers(currentEvent.id);renderPlayers(players)}
+window.joinEvent=async function(){const btn=document.getElementById('joinBtn');const name=document.getElementById('name').value.trim();const level=document.getElementById('level').value;if(!name){setState('กรุณาใส่ชื่อผู้เล่น','danger');return}btn.disabled=true;btn.textContent='Joining...';setState('กำลังบันทึก check-in ผ่าน service adapter...','notice');try{const player=await services.checkInPlayer({eventId:currentEvent.id,displayName:name,estimatedLevel:level});btn.disabled=false;btn.textContent='Join Event';if(player.duplicate){setState(`<b>${playerName(player)}</b> checked in already · ไม่สร้างชื่อซ้ำ`,'notice')}else{setState(`<b>${playerName(player)}</b> checked in successfully · Ready for queue`,'ok')}document.getElementById('name').value='';await window.refreshPlayers()}catch(error){btn.disabled=false;btn.textContent='Retry Join';setState(error.message,'danger')}}
+async function init(){try{currentEvent=await services.getCurrentEvent();if(!currentEvent)throw new Error('No selected event. Please create/select event first.');renderEvent();await window.refreshPlayers();setState('พร้อมรับ check-in','ok')}catch(error){document.getElementById('eventState').className='danger';document.getElementById('eventState').textContent=error.message;setState(error.message,'danger')}}
+init();
 </script>
 </body>
 </html>
