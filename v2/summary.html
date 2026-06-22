@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GDSQ v2 Summary Prototype</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner"><div><div class="brand">SUMMARY v2</div><div class="small muted">Public read-only event recap</div></div><a class="tag" href="./index.html" style="text-decoration:none">HOME</a></div></header>
+<main class="app grid">
+<section class="card cut hero">
+<div class="micro lime">FINAL RESULTS</div>
+<h1 style="font-size:34px;line-height:1.05;margin:8px 0">GDSQ Open Play Summary</h1>
+<p class="muted">Club46 · 24 players · 18 confirmed matches</p>
+<div class="row wrap" style="margin-top:12px"><button class="btn" onclick="copyMock(this)">Copy Link</button><button class="btn orange" onclick="copyMock(this)">Copy Message</button></div>
+</section>
+<section class="grid grid-4"><div class="stat"><small>Players</small><b>24</b></div><div class="stat"><small>Matches</small><b>18</b></div><div class="stat"><small>Top Player</small><b class="lime" style="font-size:18px">Ann</b></div><div class="stat"><small>Status</small><b style="font-size:18px">Final</b></div></section>
+<section class="card">
+<div class="between"><div><h2 class="section-title lime">Ranking</h2><p class="muted small">แตะผู้เล่นเพื่อดูรายละเอียด</p></div><span class="pill">24 players</span></div>
+<div class="list" style="margin-top:12px"><div class="rank"><div class="rank-no">1</div><div><b>Ann</b><div class="small muted">5 games · 4W 1L · 82% win</div></div><div class="score">51</div></div><div class="rank"><div class="rank-no">2</div><div><b>Tom</b><div class="small muted">5 games · 3W 2L · 60% win</div></div><div class="score">42</div></div><div class="rank"><div class="rank-no">3</div><div><b>Nattapong</b><div class="small muted">4 games · 3W 1L · 75% win</div></div><div class="score">39</div></div></div>
+</section>
+<section class="card">
+<h2 class="section-title orange">Match History</h2>
+<div class="list" style="margin-top:12px"><div class="court"><div class="between"><b>Court 1</b><span class="pill">Final</span></div><div class="teamBox" style="margin-top:10px"><div class="team"><b>Ann / Pat</b><div class="score">11</div></div><div class="vs">VS</div><div class="team"><b>Tom / Bank</b><div class="score">8</div></div></div></div><div class="court"><div class="between"><b>Court 3</b><span class="pill">Final</span></div><div class="teamBox" style="margin-top:10px"><div class="team"><b>May / Gun</b><div class="score">11</div></div><div class="vs">VS</div><div class="team"><b>Beam / Art</b><div class="score">9</div></div></div></div></div>
+</section>
+<section class="card">
+<h2 class="section-title">Public page rules</h2>
+<div class="grid" style="margin-top:12px"><div class="ok">Read-only: ไม่แก้ข้อมูลจากหน้านี้</div><div class="notice">URL ต้องมี eventId เพื่อป้องกันเปิดผิด event</div><div class="notice">Mobile-first: ปุ่ม share ต้องไม่กินพื้นที่ ranking</div></div>
+</section>
+</main>
+<script>function copyMock(btn){const old=btn.textContent;btn.textContent='Copied';setTimeout(()=>btn.textContent=old,900)}</script>
+</body>
+</html>
