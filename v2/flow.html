@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GDSQ v2 Simple Flow</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner"><div><div class="brand">V2 SIMPLE FLOW</div><div class="small muted">Keep the original GDSQ flow, make it safer</div></div><a class="tag" href="./index.html" style="text-decoration:none">HOME</a></div></header>
+<main class="app grid">
+<section class="card cut hero">
+<div class="micro lime">UX DIRECTION</div>
+<h1 style="font-size:36px;line-height:1.05;margin:8px 0 10px">ง่ายเหมือนชุดแรก แต่เสถียรกว่า</h1>
+<p class="muted">v2 จะไม่ทำให้คนใช้งานรู้สึกเหมือนเปลี่ยนระบบใหม่ทั้งหมด แต่จะเก็บ flow เดิม แล้วเพิ่มความปลอดภัยของปุ่ม / save / retry / internet warning</p>
+</section>
+<section class="grid">
+<div class="card"><div class="between mobile-stack"><div><div class="micro lime">STEP 01</div><h2 class="section-title">Event</h2><p class="muted">สร้างหรือเลือกอีเว้นท์ เหมือนการเริ่ม session เดิม</p></div><a class="btn secondary" href="./organizer.html">Open Organizer</a></div></div>
+<div class="card"><div class="between mobile-stack"><div><div class="micro lime">STEP 02</div><h2 class="section-title">Players / Check-in</h2><p class="muted">ผู้เล่นเข้า QR, เลือก level, Organizer เห็นรายชื่อทันที</p></div><a class="btn secondary" href="./checkin.html">Open Check-in</a></div></div>
+<div class="card"><div class="between mobile-stack"><div><div class="micro lime">STEP 03</div><h2 class="section-title">Courts</h2><p class="muted">Generate match, ดู court board, start match, confirm score</p></div><a class="btn secondary" href="./organizer.html">Go to Courts</a></div></div>
+<div class="card"><div class="between mobile-stack"><div><div class="micro lime">STEP 04</div><h2 class="section-title">Results</h2><p class="muted">Ranking, Match History, Copy Summary Link หลังจบงาน</p></div><a class="btn secondary" href="./summary.html">Open Summary</a></div></div>
+</section>
+<section class="card">
+<h2 class="section-title lime">One-primary-action rule</h2>
+<p class="muted">แต่ละหน้าควรมีปุ่มหลักชัดเจนเพียง 1 อย่าง เพื่อให้ staff หน้างานไม่งง</p>
+<div class="grid grid-2" style="margin-top:12px"><div class="ok"><b>Good</b><br>Generate Next Matches</div><div class="danger"><b>Avoid</b><br>ปุ่มเยอะเกินไปใน card เดียว</div></div>
+</section>
+<section class="card">
+<h2 class="section-title">Live Event Screen</h2>
+<div class="list" style="margin-top:12px">
+<div class="player"><div class="avatar">1</div><div><b>เห็น event ปัจจุบัน</b><div class="small muted">ไม่ต้องเลือกซับซ้อนตอนหน้างาน</div></div></div>
+<div class="player"><div class="avatar">2</div><div><b>เห็น court board ก่อน</b><div class="small muted">รู้ทันทีว่าคอร์ทไหนว่าง/กำลังเล่น</div></div></div>
+<div class="player"><div class="avatar">3</div><div><b>ปุ่มสำคัญต้องมี saving state</b><div class="small muted">กดแล้วต้องรู้ว่าระบบกำลังทำงาน</div></div></div>
+<div class="player"><div class="avatar">4</div><div><b>ถ้าเน็ตหลุดต้องไม่เสียคะแนน</b><div class="small muted">เก็บ draft และ retry ได้</div></div></div>
+</div>
+</section>
+</main>
+</body>
+</html>
