@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GDSQ v2 Check-in Prototype</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner"><div><div class="brand">CHECK-IN v2</div><div class="small muted">Event-specific player join</div></div><a class="tag" href="./index.html" style="text-decoration:none">HOME</a></div></header>
+<main class="app grid">
+<section class="card cut hero">
+<div class="micro lime">JOIN EVENT</div>
+<h1 style="font-size:34px;line-height:1.05;margin:8px 0">GDSQ Open Play</h1>
+<p class="muted">Club46 · Today 16:00–18:00</p>
+<div class="ok" style="margin-top:12px">Prototype only — ยังไม่บันทึกข้อมูลจริง</div>
+</section>
+<section class="card grid">
+<div><label class="label">Player name</label><input id="name" class="input" placeholder="ใส่ชื่อเล่น / ชื่อผู้เล่น" /></div>
+<div><label class="label">Estimated level</label><select id="level"><option>2.00 Beginner</option><option>2.25</option><option>2.50</option><option selected>2.75</option><option>3.00</option><option>3.25</option><option>3.50+</option></select></div>
+<button id="joinBtn" class="btn" onclick="joinEvent()">Join Event</button>
+<div id="state" class="notice">เมื่อเชื่อม Supabase แล้ว หน้านี้จะสร้าง event_player และเข้าสู่ queue</div>
+</section>
+<section class="card">
+<h2 class="section-title lime">Player UX rules</h2>
+<div class="list" style="margin-top:12px"><div class="ok">หลัง join สำเร็จ ต้องเห็นสถานะของตัวเองทันที</div><div class="notice">ถ้าเน็ตอ่อน ให้เก็บ draft และให้กด retry ได้</div><div class="danger">ห้ามให้ผู้เล่นกดซ้ำแล้วสร้างชื่อซ้ำใน event เดียว</div></div>
+</section>
+</main>
+<script>
+function joinEvent(){const btn=document.getElementById('joinBtn');const state=document.getElementById('state');const name=document.getElementById('name').value.trim()||'Guest Player';btn.disabled=true;btn.textContent='Joining...';state.className='notice';state.textContent='กำลังบันทึก check-in mock...';setTimeout(()=>{btn.textContent='Joined';state.className='ok';state.innerHTML='<b>'+name+'</b> checked in successfully · Ready for queue';},850)}
+</script>
+</body>
+</html>
