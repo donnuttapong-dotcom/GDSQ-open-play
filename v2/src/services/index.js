@@ -9,6 +9,7 @@ import {
 import { getCourts as getMockCourts } from './mockEventService.js';
 import { getEventPlayers as getMockEventPlayers } from './mockPlayerService.js';
 import { getMatchHistory as getMockMatchHistory, confirmScore as confirmMockScore } from './mockMatchService.js';
+import { listLocalEventPlayers, checkInLocalPlayer } from './localPlayerStore.js';
 import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus } from './supabaseEventService.js';
 import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer } from './supabasePlayerService.js';
 import { listEventMatches as listSupabaseEventMatches, confirmScore as confirmSupabaseScore } from './supabaseMatchService.js';
@@ -41,7 +42,6 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
 
     async selectEvent(eventId) {
       if (isSupabase) {
-        // In supabase mode, selection is a client concern. Persist selected ID locally for now.
         localStorage.setItem('gdsq_v2_selected_event_id', eventId);
         return eventId;
       }
@@ -74,7 +74,11 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
 
     async listEventPlayers(eventId) {
       if (isSupabase) return listSupabaseEventPlayers(requireSupabase(supabase), eventId);
-      return getMockEventPlayers();
+      const checkedInPlayers = listLocalEventPlayers(eventId);
+      const seedPlayers = await getMockEventPlayers();
+      const existingNames = new Set(seedPlayers.map((player) => String(player.displayName || player.name).toLowerCase()));
+      const uniqueCheckedIn = checkedInPlayers.filter((player) => !existingNames.has(String(player.displayName || player.name).toLowerCase()));
+      return [...seedPlayers, ...uniqueCheckedIn];
     },
 
     async checkInPlayer(payload) {
@@ -84,7 +88,7 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
           organizationId: payload.organizationId || organizationId
         });
       }
-      throw new Error('checkInPlayer is not implemented in mock adapter yet. Use mockPlayerService for static check-in prototype.');
+      return checkInLocalPlayer(payload);
     },
 
     async listEventMatches(eventId) {
