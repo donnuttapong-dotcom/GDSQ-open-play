@@ -57,6 +57,7 @@ export function startLocalMatch(eventId, matchId) {
   const index = matches.findIndex((match) => match.id === matchId);
   if (index < 0) throw new Error('Match not found');
   if (matches[index].status === 'confirmed') return matches[index];
+  if (matches[index].status === 'cancelled') throw new Error('Cancelled match cannot be started');
   matches[index] = {
     ...matches[index],
     status: 'playing',
@@ -67,10 +68,27 @@ export function startLocalMatch(eventId, matchId) {
   return matches[index];
 }
 
+export function cancelLocalMatch(eventId, matchId, reason = 'cancelled_by_organizer') {
+  const matches = list(eventId);
+  const index = matches.findIndex((match) => match.id === matchId);
+  if (index < 0) throw new Error('Match not found');
+  if (matches[index].status === 'confirmed') throw new Error('Confirmed match cannot be cancelled');
+  matches[index] = {
+    ...matches[index],
+    status: 'cancelled',
+    cancelReason: reason,
+    cancelledAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  save(eventId, matches);
+  return matches[index];
+}
+
 export function confirmLocalScore(eventId, matchId, payload) {
   const matches = list(eventId);
   const index = matches.findIndex((match) => match.id === matchId);
   if (index < 0) throw new Error('Match not found');
+  if (matches[index].status === 'cancelled') throw new Error('Cancelled match cannot be confirmed');
   if (matches[index].status === 'confirmed') {
     return { ...matches[index], alreadyConfirmed: true };
   }
