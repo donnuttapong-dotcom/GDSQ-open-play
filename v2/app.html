@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GDSQ OpenPlay v2 App Shell</title>
+<link rel="stylesheet" href="./styles.css" />
+<style>
+.shellHero{position:relative;overflow:hidden}.shellHero:after{content:'';position:absolute;right:-80px;top:-80px;width:220px;height:220px;border-radius:999px;background:rgba(199,255,46,.12);filter:blur(4px)}.flowGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.stepCard{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);border-radius:20px;padding:14px}.stepNo{width:34px;height:34px;border-radius:999px;background:var(--lime);color:#111;display:grid;place-items:center;font-weight:1000;margin-bottom:8px}.linkBox{font-size:11px;color:#cbd5e1;word-break:break-all;background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px}.statusLine{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.eventActions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.tiny{font-size:11px}.copyOk{color:#d9f99d}.copyFail{color:#fecaca}@media(max-width:760px){.flowGrid,.statusLine,.eventActions{grid-template-columns:1fr}.stepCard{padding:12px}}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner"><div><div class="brand">GDSQ OPENPLAY v2</div><div class="small muted">App Shell · ประกอบร่างระบบหลัก</div></div><div class="row wrap"><span id="modeBadge" class="tag">MODE</span><a class="tag" href="./index.html?v=v2-assembled-01" style="text-decoration:none">HOME</a></div></div></header>
+<main class="app grid">
+<section class="card cut hero shellHero">
+  <div class="micro lime">V2 ASSEMBLED FLOW</div>
+  <h1 id="eventTitle" style="font-size:38px;line-height:1.05;margin:8px 0 10px">Loading Event...</h1>
+  <p id="eventMeta" class="muted">กำลังประกอบ flow ของ event</p>
+  <div class="row wrap" style="margin-top:14px"><select id="eventSelect" class="input" style="max-width:420px"></select><button class="btn secondary" onclick="window.refreshAll()">Refresh</button><a id="eventsLink" class="btn secondary" href="./events.html?v=v2-deeplink-01">Events</a></div>
+  <div id="eventState" class="notice" style="margin-top:14px">Loading service adapter...</div>
+</section>
+<section class="statusLine">
+  <div class="stat"><small>Players</small><b id="sumPlayers">-</b></div>
+  <div class="stat"><small>Ready</small><b id="sumReady">-</b></div>
+  <div class="stat"><small>Matches</small><b id="sumMatches">-</b></div>
+  <div class="stat"><small>Top Player</small><b id="sumTop" class="lime" style="font-size:18px">-</b></div>
+  <div class="stat"><small>Status</small><b id="sumStatus" style="font-size:18px">-</b></div>
+</section>
+<section class="card">
+  <div class="between mobile-stack"><div><h2 class="section-title lime">Event Direct Links</h2><p class="muted small">ลิงก์ทั้งหมดผูก event id ตรง ไม่หลุดไป event อื่น</p></div><span id="selectedPill" class="pill status-online">SELECTED EVENT</span></div>
+  <div class="eventActions" style="margin-top:12px"><a id="organizerLink" class="btn" href="#">Organizer</a><a id="checkinLink" class="btn secondary" href="#">Check-in QR</a><a id="summaryLink" class="btn orange" href="#">Event Stats</a><a id="playerLink" class="btn secondary" href="#">Player</a></div>
+  <div class="grid grid-2" style="margin-top:12px"><button class="btn secondary" onclick="copyCheckinLink()">Copy Check-in Link</button><button class="btn orange" onclick="copySummaryMessage()">Copy Summary Message</button></div>
+  <div id="linkText" class="linkBox" style="margin-top:12px">-</div>
+  <div id="copyState" class="tiny muted" style="margin-top:8px">Ready</div>
+</section>
+<section class="card">
+  <div class="between mobile-stack"><div><h2 class="section-title lime">Dry Run Flow</h2><p class="muted small">ใช้ flow นี้ตอนทดสอบหน้างานจริง</p></div><span class="pill status-slow">V1 FLOW / V2 CORE</span></div>
+  <div class="flowGrid" style="margin-top:12px">
+    <div class="stepCard"><div class="stepNo">1</div><b>Setup Event</b><p class="muted small">สร้าง/เลือก event ให้ถูกก่อน</p><a id="stepEvents" class="btn secondary" href="#">Open Events</a></div>
+    <div class="stepCard"><div class="stepNo">2</div><b>Player Check-in</b><p class="muted small">ส่ง QR ให้ผู้เล่นเข้า</p><a id="stepCheckin" class="btn secondary" href="#">Open Check-in</a></div>
+    <div class="stepCard"><div class="stepNo">3</div><b>Run Courts</b><p class="muted small">Generate → Start → Confirm</p><a id="stepOrganizer" class="btn secondary" href="#">Open Organizer</a></div>
+    <div class="stepCard"><div class="stepNo">4</div><b>Share Stats</b><p class="muted small">ส่ง ranking + match history</p><a id="stepSummary" class="btn secondary" href="#">Open Stats</a></div>
+  </div>
+</section>
+<section class="grid grid-2">
+  <div class="card"><div class="between"><div><h2 class="section-title lime">Top Ranking Preview</h2><p class="muted small">ดึงจาก ranking module เดียวกับหน้า stats</p></div><span id="rankCount" class="pill">0</span></div><div id="rankList" class="list" style="margin-top:12px"><div class="notice">Loading ranking...</div></div></div>
+  <div class="card"><div class="between"><div><h2 class="section-title orange">Recent Match Preview</h2><p class="muted small">เห็นทันทีว่ามี match history แล้วไหม</p></div><span id="matchCount" class="pill">0</span></div><div id="matchList" class="list" style="margin-top:12px"><div class="notice">Loading matches...</div></div></div>
+</section>
+<section class="card">
+  <h2 class="section-title lime">Assembly Notes</h2>
+  <div class="list" style="margin-top:12px"><div class="ok"><b>V2 หลัก:</b> ใช้หน้า app นี้เป็นทางเข้ากลาง แล้วแยกไป Organizer / Check-in / Event Stats จาก event เดียวกัน</div><div class="notice"><b>V1 reference:</b> เก็บ flow เดิมไว้เป็นต้นแบบ ไม่เอาลิงก์ V1 มาปนใน V2</div><div class="danger"><b>ก่อน Pilot:</b> ต้อง dry run ด้วยมือถือจริง 2–3 เครื่อง และ confirm score อย่างน้อย 2 match</div></div>
+</section>
+</main>
+<script type="module">
+import { createV2Services } from './src/services/index.js';
+import { modeLabel } from './src/services/serviceMode.js';
+import { calculatePlayerRanking, summarizeEvent } from './src/logic/ranking/calculatePlayerRanking.js';
+
+const VERSION='v2-assembled-01';
+const services=createV2Services();
+let events=[];
+let currentEvent=null;
+let players=[];
+let matches=[];
+let ranking=[];
+modeBadge.textContent=modeLabel();
+function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function eventName(e){return e?.name||e?.name_th||e?.name_en||'OpenPlay'}
+function venueName(e){return e?.venueName||e?.venue?.name||e?.venue_name||e?.venue||'Venue'}
+function eventDate(e){return e?.eventDate||e?.event_date||e?.event_time||'-'}
+function courtCount(e){return e?.courtCount||e?.court_count||1}
+function eventStatus(e){return e?.status||'draft'}
+function playerName(p){return p?.displayName||p?.display_name||p?.name||p?.nickname||'Player'}
+function normalizePlayer(p){return {...p,displayName:playerName(p),matchesPlayed:Number(p.matchesPlayed??p.matches_played??0),wins:Number(p.wins??0),losses:Number(p.losses??0),pointsFor:Number(p.pointsFor??p.points_for??0),pointsAgainst:Number(p.pointsAgainst??p.points_against??0),level:p.level??p.estimatedLevel??p.estimated_level??p.default_level??'-',status:p.status||'ready'}}
+function normalizeMatch(m){return {...m,teamA:m.teamA||m.team_a||[],teamB:m.teamB||m.team_b||[],teamAScore:m.teamAScore??m.team_a_score,teamBScore:m.teamBScore??m.team_b_score,status:m.status||'confirmed',courtName:m.courtName||m.court_name||`Court ${m.court_number||'-'}`}}
+function pageLink(page,id=currentEvent?.id){const q=new URLSearchParams();if(id)q.set('event',id);q.set('v',VERSION);return `./${page}?${q.toString()}`}
+function absLink(page,id=currentEvent?.id){return new URL(pageLink(page,id),location.href).toString()}
+function readyCount(){return players.filter(p=>['ready','checked_in'].includes(String(p.status||'ready'))).length}
+function byId(id){return players.find(p=>String(p.id)===String(id))}
+function itemName(item){return typeof item==='string'?playerName(byId(item)||{name:item}):playerName(item)}
+function teamNames(team){return (team||[]).map(itemName).join(' / ')||'-'}
+function summaryMessage(){return `สรุปผล ${eventName(currentEvent)} @ ${venueName(currentEvent)} มาแล้วครับ\nดูอันดับ ผลแข่ง และสถิติรายคนได้ที่ลิงก์นี้:\n${absLink('summary.html')}`}
+async function copyText(text,ok='Copied'){try{await navigator.clipboard.writeText(text);copyState.textContent=ok;copyState.className='tiny copyOk'}catch(e){copyState.textContent='เปิดช่อง copy สำรอง';copyState.className='tiny copyFail';prompt('Copy',text)}}
+window.copyCheckinLink=()=>copyText(absLink('checkin.html'),'Copied check-in link');
+window.copySummaryMessage=()=>copyText(summaryMessage(),'Copied summary message');
+window.refreshAll=()=>loadAll();
+eventSelect.onchange=async()=>{await services.selectEvent(eventSelect.value);history.replaceState(null,'',pageLink('app.html',eventSelect.value));await loadAll()};
+function renderLinks(){const id=currentEvent?.id;organizerLink.href=pageLink('organizer.html',id);checkinLink.href=pageLink('checkin.html',id);summaryLink.href=pageLink('summary.html',id);playerLink.href=pageLink('player.html',id);stepEvents.href=pageLink('events.html',id);stepCheckin.href=pageLink('checkin.html',id);stepOrganizer.href=pageLink('organizer.html',id);stepSummary.href=pageLink('summary.html',id);linkText.textContent=`Organizer: ${absLink('organizer.html',id)}\nCheck-in: ${absLink('checkin.html',id)}\nStats: ${absLink('summary.html',id)}`}
+function renderEvent(){eventSelect.innerHTML=events.map(e=>`<option value="${e.id}">${esc(eventName(e))}</option>`).join('');if(currentEvent)eventSelect.value=currentEvent.id;eventTitle.textContent=eventName(currentEvent);eventMeta.textContent=`${venueName(currentEvent)} · ${eventDate(currentEvent)} · ${courtCount(currentEvent)} courts`;sumPlayers.textContent=players.length;sumReady.textContent=readyCount();sumMatches.textContent=matches.length;sumStatus.textContent=String(eventStatus(currentEvent)).toUpperCase();eventState.className='ok';eventState.innerHTML=`ประกอบร่าง event แล้ว: <b>${esc(eventName(currentEvent))}</b> · ใช้ลิงก์ตรงได้ครบทุกหน้า`;selectedPill.textContent=currentEvent?.id||'NO EVENT'}
+function renderRanking(){rankCount.textContent=ranking.length;sumTop.textContent=ranking[0]?.displayName||'-';rankList.innerHTML=ranking.slice(0,5).map(p=>`<div class="rank"><div class="rank-no">${p.rank}</div><div><b>${esc(p.displayName)}</b><div class="small muted">${p.matchesPlayed} games · ${p.wins}W ${p.losses}L · ${Math.round((p.winRate||0)*100)}% win</div></div><div class="score">${p.score}</div></div>`).join('')||'<div class="notice">No ranking yet</div>'}
+function renderMatches(){matchCount.textContent=matches.length;matchList.innerHTML=matches.slice(0,5).map(m=>`<div class="court"><div class="between"><b>${esc(m.courtName)}</b><span class="pill">${esc(String(m.status).toUpperCase())}</span></div><div class="small muted" style="margin-top:8px">${esc(teamNames(m.teamA))} vs ${esc(teamNames(m.teamB))} · ${m.teamAScore??'-'}-${m.teamBScore??'-'}</div></div>`).join('')||'<div class="notice">No matches yet</div>'}
+async function loadAll(){try{events=await services.listEvents();currentEvent=await services.getCurrentEvent();if(!currentEvent)throw new Error('No selected event');const [rawPlayers,rawMatches]=await Promise.all([services.listEventPlayers(currentEvent.id),services.listEventMatches(currentEvent.id)]);players=(rawPlayers||[]).map(normalizePlayer);matches=(rawMatches||[]).map(normalizeMatch);ranking=calculatePlayerRanking(players);summarizeEvent({players,matches});renderEvent();renderLinks();renderRanking();renderMatches();copyState.textContent='Ready';copyState.className='tiny muted'}catch(e){eventTitle.textContent='V2 App Error';eventMeta.textContent=e.message;eventState.className='danger';eventState.textContent=e.message}}
+loadAll();
+</script>
+</body>
+</html>
