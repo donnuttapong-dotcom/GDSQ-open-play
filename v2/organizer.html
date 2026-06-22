@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GDSQ v2 Organizer Prototype</title>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner"><div><div class="brand">ORGANIZER v2</div><div class="small muted">GDSQ OpenPlay · Mobile-first prototype</div></div><span id="netBadge" class="pill status-online">ONLINE</span></div></header>
+<main class="app">
+<section class="card cut hero">
+<div class="between mobile-stack"><div><div class="micro lime">LIVE EVENT</div><h1 style="font-size:34px;line-height:1.05;margin:6px 0">GDSQ Open Play — Saturday</h1><p class="muted">Club46 · 4 Courts · 16:00–18:00</p></div><span class="tag">LIVE</span></div>
+<div class="grid grid-4" style="margin-top:14px"><div class="stat"><small>Players</small><b>24</b></div><div class="stat"><small>Ready</small><b>12</b></div><div class="stat"><small>Playing</small><b>8</b></div><div class="stat"><small>Pending</small><b>1</b></div></div>
+</section>
+<nav class="tabs"><button class="tab active" data-tab="checkin">Check-in</button><button class="tab" data-tab="queue">Queue</button><button class="tab" data-tab="courts">Courts</button><button class="tab" data-tab="results">Results</button></nav>
+<section id="tab-checkin" class="tabPanel grid" style="margin-top:12px">
+<div class="card"><div class="between"><div><h2 class="section-title lime">Check-in</h2><p class="muted small">ผู้เล่นที่เข้ามาล่าสุด</p></div><button class="btn secondary" onclick="mockToast('QR copied')">QR</button></div><div class="list" style="margin-top:12px"><div class="player"><div class="avatar">N</div><div><b>Nara</b><div class="small muted">Level 2.75 · Ready</div></div><span class="pill status-online right">Ready</span></div><div class="player"><div class="avatar">T</div><div><b>Tom</b><div class="small muted">Level 3.00 · Ready</div></div><span class="pill status-online right">Ready</span></div><div class="player"><div class="avatar">B</div><div><b>Bank</b><div class="small muted">Level 2.50 · Checked-in</div></div><span class="pill right">Waiting</span></div></div></div>
+<div class="card"><h2 class="section-title">Staff quick action</h2><div class="grid grid-2" style="margin-top:12px"><button class="btn secondary">Add Walk-in</button><button class="btn secondary">Edit Level</button></div></div>
+</section>
+<section id="tab-queue" class="tabPanel grid hidden" style="margin-top:12px">
+<div class="card"><div class="between"><div><h2 class="section-title lime">Ready Queue</h2><p class="muted small">ระบบ v2 จะให้คนเล่นน้อยขึ้นก่อน และพักเมื่อเล่นติดครบ 2 เกม</p></div><span class="pill">12 ready</span></div><div class="list" style="margin-top:12px"><div class="player"><div class="avatar">P</div><div><b>Pat</b><div class="small muted">0 games · waited 14m</div></div><span class="level right">Lv 2.50</span></div><div class="player"><div class="avatar">A</div><div><b>Ann</b><div class="small muted">1 game · waited 10m</div></div><span class="level right">Lv 3.00</span></div><div class="player"><div class="avatar">K</div><div><b>Krit</b><div class="small muted">2 games · must rest</div></div><span class="pill status-slow right">Rest</span></div></div></div>
+<div class="notice">Future logic: Generate Preview จะเป็น pure matchmaking engine ไม่ผูกกับ DOM หรือ iframe</div>
+</section>
+<section id="tab-courts" class="tabPanel grid hidden" style="margin-top:12px">
+<div class="between mobile-stack"><div><h2 class="section-title lime">Court Board</h2><p class="muted small">สถานะคอร์ทแบบ mobile-first</p></div><button id="genBtn" class="btn" onclick="generatePreview()">Generate Next Matches</button></div>
+<div class="grid grid-2"><div class="court live"><div class="between"><b>Court 1</b><span class="pill status-online">Playing</span></div><div class="teamBox" style="margin-top:12px"><div class="team"><div class="small muted">Team A</div><b>Ann / Pat</b><div class="score">7</div></div><div class="vs">VS</div><div class="team"><div class="small muted">Team B</div><b>Tom / Bank</b><div class="score">5</div></div></div><button class="btn orange" style="margin-top:12px" onclick="openScoreState(this)">Confirm Score</button></div><div class="court"><div class="between"><b>Court 2</b><span class="pill">Available</span></div><p class="muted small">Ready for next generated match</p><button class="btn secondary">Manual Pick</button></div><div class="court"><div class="between"><b>Court 3</b><span class="pill status-online">Playing</span></div><p class="muted small">Started 8 min ago</p></div><div class="court"><div class="between"><b>Court 4</b><span class="pill">Available</span></div><p class="muted small">No assignment</p></div></div>
+</section>
+<section id="tab-results" class="tabPanel grid hidden" style="margin-top:12px">
+<div class="card"><div class="between"><div><h2 class="section-title lime">Pending Scores</h2><p class="muted small">ปุ่มสำคัญต้องมี saving / retry state</p></div><span class="pill status-slow">1 pending</span></div><div class="notice" style="margin-top:12px">Confirm Score v2 จะป้องกัน double click และเก็บ draft ถ้าเน็ตหลุด</div></div>
+<div class="card"><h2 class="section-title">Recent Results</h2><div class="list" style="margin-top:12px"><div class="court"><b>Court 3</b><p class="muted small">May / Gun def. Beam / Art · 11–8</p></div><div class="court"><b>Court 1</b><p class="muted small">Mook / Ken def. Nat / Ploy · 11–6</p></div></div></div>
+</section>
+</main>
+<div class="footer-actions"><div class="footer-inner"><button class="btn secondary" onclick="mockToast('Draft saved locally')">Save Draft</button><button class="btn orange" onclick="mockToast('Summary link ready')">Summary Link</button></div></div>
+<script>
+const tabs=[...document.querySelectorAll('.tab')];const panels={checkin:document.getElementById('tab-checkin'),queue:document.getElementById('tab-queue'),courts:document.getElementById('tab-courts'),results:document.getElementById('tab-results')};tabs.forEach(btn=>btn.onclick=()=>{tabs.forEach(b=>b.classList.remove('active'));btn.classList.add('active');Object.values(panels).forEach(p=>p.classList.add('hidden'));panels[btn.dataset.tab].classList.remove('hidden')});
+function mockToast(text){const badge=document.getElementById('netBadge');const old=badge.textContent;badge.textContent=text;setTimeout(()=>badge.textContent=old,1100)}
+function generatePreview(){const b=document.getElementById('genBtn');b.disabled=true;b.textContent='Generating...';setTimeout(()=>{b.disabled=false;b.textContent='Preview Ready';mockToast('Preview ready')},850)}
+function openScoreState(btn){btn.disabled=true;btn.textContent='Saving score...';setTimeout(()=>{btn.textContent='Score Confirmed';btn.classList.remove('orange');btn.classList.add('secondary');mockToast('Synced')},900)}
+</script>
+</body>
+</html>
