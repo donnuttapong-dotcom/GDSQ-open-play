@@ -23,12 +23,12 @@
 <div id="createState" class="notice">ตอนนี้ adapter ใช้ mock/localStorage เป็นค่าเริ่มต้น</div>
 </section>
 <section class="card">
-<div class="between mobile-stack"><div><h2 class="section-title lime">Select Event</h2><p class="muted small">เลือก event แล้วลิงก์ V2 จะพาไป event นั้นตรง ๆ</p></div><a id="openSelected" class="btn secondary" href="./organizer.html?v=v2-deeplink-01">Open Selected Event</a></div>
+<div class="between mobile-stack"><div><h2 class="section-title lime">Select Event</h2><p class="muted small">เลือก event แล้วลิงก์ V2 จะพาไป event นั้นตรง ๆ</p></div><a id="openSelected" class="btn secondary" href="./organizer-manual.html?v=v2-manual-pair-01">Open Selected Event</a></div>
 <div id="eventList" class="list" style="margin-top:12px"><div class="notice">Loading events...</div></div>
 </section>
 <section class="card">
 <h2 class="section-title">UX rules</h2>
-<div class="list" style="margin-top:12px"><div class="ok">สร้างอีเว้นท์ต้องใช้ไม่เกิน 1 นาที</div><div class="notice">สร้างแล้วต้องได้ Organizer / Check-in / Summary link ทันที</div><div class="danger">ห้ามทำ form ยาวเกินก่อนใช้งานจริง</div></div>
+<div class="list" style="margin-top:12px"><div class="ok">สร้างอีเว้นท์ต้องใช้ไม่เกิน 1 นาที</div><div class="notice">สร้างแล้วต้องได้ Organizer Manual / Check-in / Summary link ทันที</div><div class="danger">ห้ามทำ form ยาวเกินก่อนใช้งานจริง</div></div>
 </section>
 </main>
 <script type="module">
@@ -40,7 +40,7 @@ const services = createV2Services();
 let selectedEvent = null;
 let events = [];
 
-const VERSION = 'v2-deeplink-01';
+const VERSION = 'v2-manual-pair-01';
 document.getElementById('modeBadge').textContent = modeLabel();
 
 function statusClass(status){if(status==='live')return 'pill status-online';if(status==='draft')return 'pill status-slow';if(status==='archived'||status==='deleted'||status==='completed')return 'pill status-offline';return 'pill'}
@@ -60,12 +60,12 @@ function renderSelected(){
   if(!selectedEvent){document.getElementById('selectedState').className='danger';document.getElementById('selectedState').textContent='No selected event';links.innerHTML='';return}
   document.getElementById('selectedState').className='ok';
   document.getElementById('selectedState').innerHTML=`Selected: <b>${eventName(selectedEvent)}</b><br>${formatEventMeta(selectedEvent)}`;
-  document.getElementById('openSelected').href=pageLink('organizer.html',selectedEvent.id);
-  links.innerHTML=`<a class="btn" href="${pageLink('organizer.html',selectedEvent.id)}">Organizer</a><a class="btn secondary" href="${pageLink('checkin.html',selectedEvent.id)}">Check-in QR</a><a class="btn secondary" href="${pageLink('summary.html',selectedEvent.id)}">Summary</a><a class="btn secondary" href="${pageLink('stats.html',selectedEvent.id)}">Stats</a>`;
+  document.getElementById('openSelected').href=pageLink('organizer-manual.html',selectedEvent.id);
+  links.innerHTML=`<a class="btn" href="${pageLink('organizer-manual.html',selectedEvent.id)}">Organizer Manual</a><a class="btn secondary" href="${pageLink('checkin.html',selectedEvent.id)}">Check-in QR</a><a class="btn secondary" href="${pageLink('summary.html',selectedEvent.id)}">Summary</a><a class="btn secondary" href="${pageLink('stats.html',selectedEvent.id)}">Stats</a>`;
 }
 function renderEvents(){
   renderSelected();
-  document.getElementById('eventList').innerHTML=events.map(event=>`<div class="court ${selectedEvent&&event.id===selectedEvent.id?'live':''}"><div class="between mobile-stack"><div><b>${eventName(event)}</b><div class="small muted">${formatEventMeta(event)}</div></div><span class="${statusClass(eventStatus(event))}">${eventStatus(event).toUpperCase()}</span></div><div class="grid grid-2" style="margin-top:12px"><button class="btn ${selectedEvent&&event.id===selectedEvent.id?'secondary':''}" onclick="window.selectMockEvent('${event.id}')">${selectedEvent&&event.id===selectedEvent.id?'Selected':'Select'}</button><a class="btn secondary" href="${pageLink('organizer.html',event.id)}">Organizer</a><a class="btn secondary" href="${pageLink('checkin.html',event.id)}">Check-in</a><a class="btn secondary" href="${pageLink('summary.html',event.id)}">Summary</a><button class="btn red" onclick="window.archiveMockEvent('${event.id}')">Archive</button></div></div>`).join('') || '<div class="notice">No events yet</div>'
+  document.getElementById('eventList').innerHTML=events.map(event=>`<div class="court ${selectedEvent&&event.id===selectedEvent.id?'live':''}"><div class="between mobile-stack"><div><b>${eventName(event)}</b><div class="small muted">${formatEventMeta(event)}</div></div><span class="${statusClass(eventStatus(event))}">${eventStatus(event).toUpperCase()}</span></div><div class="grid grid-2" style="margin-top:12px"><button class="btn ${selectedEvent&&event.id===selectedEvent.id?'secondary':''}" onclick="window.selectMockEvent('${event.id}')">${selectedEvent&&event.id===selectedEvent.id?'Selected':'Select'}</button><a class="btn secondary" href="${pageLink('organizer-manual.html',event.id)}">Organizer Manual</a><a class="btn secondary" href="${pageLink('checkin.html',event.id)}">Check-in</a><a class="btn secondary" href="${pageLink('summary.html',event.id)}">Summary</a><button class="btn red" onclick="window.archiveMockEvent('${event.id}')">Archive</button></div></div>`).join('') || '<div class="notice">No events yet</div>'
 }
 window.selectMockEvent=async function(eventId){const event=await services.selectEvent(eventId);if(event){setCreateState(`Selected ${eventName(event)}`,'ok');await refreshEvents()}}
 window.createMockEvent=function(){const btn=document.getElementById('createBtn');btn.disabled=true;btn.textContent='Creating...';setCreateState('กำลังสร้าง event ผ่าน service adapter...');setTimeout(async()=>{try{const event=await services.createEvent({name:document.getElementById('newName').value.trim(),venueName:document.getElementById('venue').value,eventDate:document.getElementById('eventDate').value,courtCount:document.getElementById('courtCount').value,startTime:document.getElementById('startTime').value,endTime:document.getElementById('endTime').value,status:'draft'});btn.disabled=false;btn.textContent='Create + Select';setCreateState(`Created and selected: ${eventName(event)}`,'ok');await refreshEvents()}catch(error){btn.disabled=false;btn.textContent='Create + Select';setCreateState(error.message,'danger')}},500)}
