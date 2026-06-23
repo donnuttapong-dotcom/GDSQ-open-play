@@ -45,7 +45,7 @@ import { generateMatches } from './src/logic/matchmaking/generateMatches.js';
 import { saveScoreDraft, getScoreDraft, clearScoreDraft } from './src/services/localDraftService.js';
 import { writeAuditLog, getAuditLogs } from './src/services/mockAuditService.js';
 
-const VERSION='v2-cancel-safe-01';
+const VERSION='v2-staff-lock-01';
 const services=createV2Services();
 const state={event:null,allCourts:[],courts:[],players:[],matches:[],audit:[],buildMode:'auto'};
 const tabs=[...document.querySelectorAll('.tab')];
@@ -119,5 +119,6 @@ async function refreshAll(){try{state.event=await services.getCurrentEvent();if(
 window.refreshAll=refreshAll;
 refreshAll();
 </script>
+<script type="module" src="./src/security/staffLock.js"></script>
 </body>
 </html>
