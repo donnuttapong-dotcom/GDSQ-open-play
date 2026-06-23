@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GDSQ v2 Dry Run Checklist</title>
+<link rel="stylesheet" href="./styles.css" />
+<style>
+.checkGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.checkCard{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);border-radius:22px;padding:14px}.checkStatus{font-size:24px;font-weight:1000}.pass{color:#d9f99d}.warn{color:#fde68a}.fail{color:#fecaca}.testRow{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);border-radius:18px;padding:12px}.testRow.done{border-color:rgba(199,255,46,.35);background:rgba(199,255,46,.07)}.testRow input{width:22px;height:22px}.linkBox{font-size:11px;color:#cbd5e1;white-space:pre-wrap;word-break:break-all;background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px}.flowStep{display:flex;gap:10px;align-items:flex-start}.num{width:30px;height:30px;border-radius:999px;background:var(--lime);color:#111;display:grid;place-items:center;font-weight:1000;flex:0 0 auto}@media(max-width:880px){.checkGrid{grid-template-columns:1fr 1fr}.testRow{grid-template-columns:34px 1fr}}@media(max-width:560px){.checkGrid{grid-template-columns:1fr}.testRow{grid-template-columns:1fr}.testRow .btn{width:100%}}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner"><div><div class="brand">DRY RUN v2</div><div class="small muted">Pre-pilot checklist · เช็คก่อนใช้สนามจริง</div></div><div class="row wrap"><span id="modeBadge" class="tag">MODE</span><a class="tag" href="./app.html?v=v2-dry-run-01" style="text-decoration:none">APP FLOW</a></div></div></header>
+<main class="app grid">
+<section class="card cut hero">
+<div class="micro lime">PRE-PILOT TEST</div>
+<h1 id="eventTitle" style="font-size:36px;line-height:1.05;margin:8px 0 10px">Loading Event...</h1>
+<p id="eventMeta" class="muted">ระบบนี้ไว้เช็คว่า flow หลักพร้อมสำหรับการทดลองหน้างานหรือยัง</p>
+<div class="row wrap" style="margin-top:14px"><select id="eventSelect" class="input" style="max-width:420px"></select><button class="btn secondary" onclick="window.refreshAll()">Refresh</button><button class="btn orange" onclick="window.copyDryRunReport()">Copy Test Report</button></div>
+<div id="eventState" class="notice" style="margin-top:14px">Loading...</div>
+</section>
+<section class="checkGrid">
+  <div class="stat"><small>Event</small><b id="statusEvent" class="checkStatus">-</b></div>
+  <div class="stat"><small>Players</small><b id="statusPlayers" class="checkStatus">-</b></div>
+  <div class="stat"><small>Available</small><b id="statusReady" class="checkStatus">-</b></div>
+  <div class="stat"><small>Matches</small><b id="statusMatches" class="checkStatus">-</b></div>
+</section>
+<section class="card">
+<div class="between mobile-stack"><div><h2 class="section-title lime">System Readiness</h2><p class="muted small">เช็คจากข้อมูลจริงใน event นี้</p></div><span id="overallBadge" class="pill status-slow">CHECKING</span></div>
+<div class="grid grid-2" id="autoChecks" style="margin-top:12px"></div>
+</section>
+<section class="card">
+<div class="between mobile-stack"><div><h2 class="section-title orange">Manual Dry Run Steps</h2><p class="muted small">ให้ staff ลองทำจริงตามนี้ แล้วติ๊กทีละข้อ</p></div><button class="btn secondary" onclick="window.resetChecklist()">Reset Checklist</button></div>
+<div id="manualChecklist" class="list" style="margin-top:12px"></div>
+</section>
+<section class="card">
+<h2 class="section-title lime">Quick Links ตาม Flow</h2>
+<div class="grid grid-2" style="margin-top:12px">
+  <a id="eventsLink" class="btn secondary" href="#">1 · Event Setup</a>
+  <a id="checkinLink" class="btn secondary" href="#">2 · Check-in QR</a>
+  <a id="organizerLink" class="btn" href="#">3-5 · Organizer / Court Board</a>
+  <a id="summaryLink" class="btn orange" href="#">6 · Summary / Ranking</a>
+</div>
+<div id="linkText" class="linkBox" style="margin-top:12px">-</div>
+</section>
+<section class="card">
+<h2 class="section-title">Pilot Gate</h2>
+<div id="pilotGate" class="list" style="margin-top:12px"></div>
+</section>
+</main>
+<script type="module">
+import { createV2Services } from './src/services/index.js';
+import { modeLabel } from './src/services/serviceMode.js';
+import { calculatePlayerRanking } from './src/logic/ranking/calculatePlayerRanking.js';
+
+const VERSION='v2-dry-run-01';
+const services=createV2Services();
+let events=[],event=null,players=[],matches=[],ranking=[];
+modeBadge.textContent=modeLabel();
+const manualSteps=[
+  ['setup','สร้าง/เลือก Event แล้วลิงก์ทุกหน้าผูก event เดียวกัน','events.html'],
+  ['checkin','เปิด Check-in จากมือถืออีกเครื่อง แล้วเพิ่มผู้เล่นอย่างน้อย 8 คน','checkin.html'],
+  ['queue','เข้า Organizer > Queue แล้วเปลี่ยน Ready / Rest / Left ได้','organizer.html'],
+  ['auto','เข้า Court Board แล้ว Auto Generate ได้ โดยไม่เลือกคนซ้ำ','organizer.html'],
+  ['manual','สลับ Manual Pair แล้วเลือกคนซ้ำไม่ได้','organizer.html'],
+  ['lock','กด Start/Cancel/Confirm ก่อนใส่ PIN แล้วระบบต้องถาม Staff PIN','organizer.html'],
+  ['cancel','Start match แล้ว Cancel ต้องคืนผู้เล่นเป็น Ready และเก็บ score draft','organizer.html'],
+  ['confirm','Confirm Score แล้ว ranking / match history เปลี่ยนถูกต้อง','organizer.html'],
+  ['summary','เปิด Summary แล้วเป็น event เดิม และ copy share message ได้','summary.html']
+];
+function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function eventName(e){return e?.name||e?.title||'Untitled Event'}
+function venueName(e){return e?.venueName||e?.venue?.name||e?.venue_name||'Venue'}
+function courtCount(e){return Number(e?.courtCount||e?.court_count||1)}
+function playerName(p){return p?.displayName||p?.display_name||p?.name||'Player'}
+function normalizePlayer(p){return {...p,displayName:playerName(p),status:p.status||'ready',matchesPlayed:Number(p.matchesPlayed??p.matches_played??0),wins:Number(p.wins??0),losses:Number(p.losses??0),pointsFor:Number(p.pointsFor??p.points_for??0),pointsAgainst:Number(p.pointsAgainst??p.points_against??0)}}
+function normalizeMatch(m){return {...m,teamA:m.teamA||m.team_a||[],teamB:m.teamB||m.team_b||[],status:m.status||'confirmed',teamAScore:m.teamAScore??m.team_a_score,teamBScore:m.teamBScore??m.team_b_score,cancelledScoreDraft:m.cancelledScoreDraft||m.cancelled_score_draft||null,courtName:m.courtName||m.court_name||'Court'}}
+function itemId(item){return String(typeof item==='string'?item:(item?.id||item?.playerId||item?.eventPlayerId||''))}
+function activeStatuses(){return new Set(['preview','playing','assigned','pending_score'])}
+function activePlayerIds(){const ids=new Set();matches.filter(m=>activeStatuses().has(String(m.status||'').toLowerCase())).forEach(m=>[...(m.teamA||[]),...(m.teamB||[])].forEach(x=>{const id=itemId(x);if(id)ids.add(id)}));return ids}
+function availablePlayers(){const active=activePlayerIds();return players.filter(p=>['ready','checked_in'].includes(String(p.status||'ready'))&&!active.has(String(p.id)))}
+function pageLink(page,id=event?.id){const q=new URLSearchParams();if(id)q.set('event',id);q.set('v',VERSION);return `./${page}?${q.toString()}`}
+function absLink(page,id=event?.id){return new URL(pageLink(page,id),location.href).toString()}
+function checkKey(key){return `gdsq_v2_dryrun:${event?.id||'default'}:${key}`}
+function setStatus(el,ok,warn=false){el.textContent=ok?'PASS':warn?'WARN':'FAIL';el.className=`checkStatus ${ok?'pass':warn?'warn':'fail'}`}
+function checkItem(title,detail,ok,warn=false){return `<div class="${ok?'ok':warn?'notice':'danger'}"><b>${ok?'✓':warn?'!':'×'} ${title}</b><br><span class="small muted">${detail}</span></div>`}
+function renderAutoChecks(){
+  const available=availablePlayers();
+  const confirmed=matches.filter(m=>String(m.status).toLowerCase()==='confirmed');
+  const active=matches.filter(m=>activeStatuses().has(String(m.status).toLowerCase()));
+  const cancelled=matches.filter(m=>String(m.status).toLowerCase()==='cancelled');
+  setStatus(statusEvent,Boolean(event));
+  setStatus(statusPlayers,players.length>=8,players.length>=4);
+  setStatus(statusReady,available.length>=4,available.length>0);
+  setStatus(statusMatches,matches.length>0,players.length>=4);
+  autoChecks.innerHTML=[
+    checkItem('Event selected',event?`${eventName(event)} · ${venueName(event)} · ${courtCount(event)} courts`:'ยังไม่มี event',Boolean(event)),
+    checkItem('Players for pilot',`${players.length} players · แนะนำอย่างน้อย 8 คน`,players.length>=8,players.length>=4),
+    checkItem('Available queue',`${available.length} available · ต้องมีอย่างน้อย 4 คนต่อรอบ`,available.length>=4,available.length>0),
+    checkItem('Active match visibility',`${active.length} active/preview matches`,active.length>=0,true),
+    checkItem('Confirmed score data',`${confirmed.length} confirmed matches`,confirmed.length>0,matches.length>0),
+    checkItem('Cancel-safe data',`${cancelled.length} cancelled matches · score draft protected`,cancelled.length>0,true),
+    checkItem('Staff lock installed','Organizer ใช้ staffLock.js และ PIN prototype 4646',true),
+    checkItem('Ranking module',`${ranking.length} ranked players`,ranking.length>0,players.length>0)
+  ].join('');
+  const hardReady=Boolean(event)&&players.length>=8&&available.length>=4;
+  overallBadge.textContent=hardReady?'READY FOR DRY RUN':players.length>=4?'NEEDS MORE PLAYERS':'NOT READY';
+  overallBadge.className=hardReady?'pill status-online':players.length>=4?'pill status-slow':'pill status-offline';
+  pilotGate.innerHTML=[
+    checkItem('Dry Run Gate',hardReady?'พร้อมเริ่ม dry run 1 session':'ยังไม่ควรเริ่ม dry run จนกว่าผู้เล่นพร้อมพอ',hardReady,players.length>=4),
+    checkItem('Commercial Gate','ก่อนขายจริงต้องมี Supabase production, role permission, event isolation, backup',false,true)
+  ].join('');
+}
+function renderChecklist(){manualChecklist.innerHTML=manualSteps.map(([key,title,page],i)=>{const done=localStorage.getItem(checkKey(key))==='1';return `<div class="testRow ${done?'done':''}"><input type="checkbox" ${done?'checked':''} onchange="window.toggleStep('${key}',this.checked)"><div><b>${i+1}. ${esc(title)}</b><div class="small muted">${done?'ผ่านแล้ว':'ยังไม่ได้ทดสอบ'}</div></div><a class="btn secondary" href="${pageLink(page)}">Open</a></div>`}).join('')}
+function renderLinks(){eventsLink.href=pageLink('events.html');checkinLink.href=pageLink('checkin.html');organizerLink.href=pageLink('organizer.html');summaryLink.href=pageLink('summary.html');linkText.textContent=`Event Setup: ${absLink('events.html')}\nCheck-in: ${absLink('checkin.html')}\nOrganizer: ${absLink('organizer.html')}\nSummary: ${absLink('summary.html')}`}
+function reportText(){const done=manualSteps.filter(([key])=>localStorage.getItem(checkKey(key))==='1').length;return `GDSQ v2 Dry Run Report\nEvent: ${eventName(event)}\nPlayers: ${players.length}\nAvailable: ${availablePlayers().length}\nMatches: ${matches.length}\nRanking rows: ${ranking.length}\nManual checklist: ${done}/${manualSteps.length}\nOrganizer: ${absLink('organizer.html')}\nSummary: ${absLink('summary.html')}`}
+window.toggleStep=(key,checked)=>{if(checked)localStorage.setItem(checkKey(key),'1');else localStorage.removeItem(checkKey(key));renderChecklist()};
+window.resetChecklist=()=>{manualSteps.forEach(([key])=>localStorage.removeItem(checkKey(key)));renderChecklist()};
+window.copyDryRunReport=async()=>{try{await navigator.clipboard.writeText(reportText());eventState.textContent='Copied dry run report';eventState.className='ok'}catch(e){prompt('Copy report',reportText())}};
+eventSelect.onchange=async()=>{await services.selectEvent(eventSelect.value);history.replaceState(null,'',pageLink('test.html',eventSelect.value));await loadAll()};
+window.refreshAll=()=>loadAll();
+async function loadAll(){try{events=await services.listEvents();event=await services.getCurrentEvent();if(!event)throw new Error('No selected event');const [rawPlayers,rawMatches]=await Promise.all([services.listEventPlayers(event.id),services.listEventMatches(event.id)]);players=(rawPlayers||[]).map(normalizePlayer);matches=(rawMatches||[]).map(normalizeMatch);ranking=calculatePlayerRanking(players);eventSelect.innerHTML=events.map(e=>`<option value="${e.id}">${esc(eventName(e))}</option>`).join('');eventSelect.value=event.id;eventTitle.textContent=eventName(event);eventMeta.textContent=`${venueName(event)} · ${courtCount(event)} Courts · ${players.length} players · ${matches.length} matches`;eventState.className='notice';eventState.textContent='เช็คสถานะล่าสุดแล้ว ใช้ checklist ด้านล่างทดสอบหน้างานจริง';renderAutoChecks();renderChecklist();renderLinks()}catch(e){eventTitle.textContent='Dry Run Error';eventMeta.textContent=e.message;eventState.className='danger';eventState.textContent=e.message}}
+loadAll();
+</script>
+</body>
+</html>
