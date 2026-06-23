@@ -6,7 +6,7 @@
 <title>GDSQ v2 Open Play · Queue & Match System</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-body{background:#11161b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif}.cut{clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}.card{background:#222931;border:1px solid #39434d}.soft{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.1);border-radius:16px}.lime{color:#c7ff2e}.bg-lime{background:#c7ff2e;color:#111}.btn{border:1px solid rgba(255,255,255,.15);font-weight:900}input,select{background:#10151b!important;color:#fff!important;border-color:#3a424a!important}.mini{font-size:12px;color:#94a3b8}.chip{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px;text-align:center}.status-pill{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:1000;border:1px solid rgba(255,255,255,.14);white-space:nowrap}.status-ready{background:rgba(199,255,46,.16);color:#c7ff2e;border-color:rgba(199,255,46,.55)}.status-playing{background:rgba(251,146,60,.17);color:#fb923c;border-color:rgba(251,146,60,.55)}.status-paused{background:rgba(56,189,248,.15);color:#38bdf8;border-color:rgba(56,189,248,.55)}.status-left{background:rgba(148,163,184,.12);color:#94a3b8;border-color:rgba(148,163,184,.35)}.queue-card{border-left:5px solid transparent}.queue-ready{border-left-color:#c7ff2e}.queue-playing{border-left-color:#fb923c}.queue-paused{border-left-color:#38bdf8}.queue-left{border-left-color:#64748b}.bar{height:8px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}.bar-fill{height:100%;border-radius:999px;background:#c7ff2e}.warn-fill{background:#fb923c}.bad-fill{background:#ef4444}.row-hover:hover{background:rgba(199,255,46,.08)}.hidden{display:none!important}.tab-active{background:#c7ff2e!important;color:#111!important}.tab-idle{background:rgba(255,255,255,.05)}
+body{background:#11161b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif}.cut{clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}.card{background:#222931;border:1px solid #39434d}.soft{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.1);border-radius:16px}.lime{color:#c7ff2e}.bg-lime{background:#c7ff2e;color:#111}.btn{border:1px solid rgba(255,255,255,.15);font-weight:900}input,select{background:#10151b!important;color:#fff!important;border-color:#3a424a!important}.mini{font-size:12px;color:#94a3b8}.chip{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px;text-align:center}.status-pill{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:1000;border:1px solid rgba(255,255,255,.14);white-space:nowrap}.status-pill i{width:11px;height:11px;border-radius:999px;display:inline-block;box-shadow:0 0 14px currentColor}.status-ready{background:rgba(199,255,46,.16);color:#c7ff2e;border-color:rgba(199,255,46,.55)}.status-playing{background:rgba(251,146,60,.17);color:#fb923c;border-color:rgba(251,146,60,.55)}.status-paused{background:rgba(56,189,248,.15);color:#38bdf8;border-color:rgba(56,189,248,.55)}.status-left{background:rgba(148,163,184,.12);color:#94a3b8;border-color:rgba(148,163,184,.35)}.queue-card{border-left:5px solid transparent}.queue-ready{border-left-color:#c7ff2e}.queue-playing{border-left-color:#fb923c}.queue-paused{border-left-color:#38bdf8}.queue-left{border-left-color:#64748b}.bar{height:8px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}.bar-fill{height:100%;border-radius:999px;background:#c7ff2e}.warn-fill{background:#fb923c}.bad-fill{background:#ef4444}.row-hover:hover{background:rgba(199,255,46,.08)}.hidden{display:none!important}.tab-active{background:#c7ff2e!important;color:#111!important}.tab-idle{background:rgba(255,255,255,.05)}
 </style>
 </head>
 <body>
@@ -18,33 +18,33 @@ body{background:#11161b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-s
 </header>
 <main class="max-w-7xl mx-auto p-3">
   <nav class="grid grid-cols-4 gap-2 text-xs font-black text-center mb-4">
-    <button id="tabBtn-events" class="cut btn py-3 tab-active" onclick="setTab('events')">Events</button>
-    <button id="tabBtn-join" class="cut btn py-3 tab-idle" onclick="setTab('join')">Join</button>
-    <button id="tabBtn-manage" class="cut btn py-3 tab-idle" onclick="setTab('manage')">Manage</button>
-    <button id="tabBtn-stats" class="cut btn py-3 tab-idle" onclick="setTab('stats')">Stats</button>
+    <button id="tabBtn-events" class="cut btn py-3 tab-active" type="button" data-tab="events">Events</button>
+    <button id="tabBtn-join" class="cut btn py-3 tab-idle" type="button" data-tab="join">Join</button>
+    <button id="tabBtn-manage" class="cut btn py-3 tab-idle" type="button" data-tab="manage">Manage</button>
+    <button id="tabBtn-stats" class="cut btn py-3 tab-idle" type="button" data-tab="stats">Stats</button>
   </nav>
   <div id="msg" class="mb-3 p-3 rounded-xl border border-lime-300/40 bg-lime-300/10 text-lime-200 whitespace-pre-wrap hidden"></div>
 
   <section id="tab-events">
-    <div class="flex justify-between items-end gap-3 mb-4"><div><h1 class="text-3xl font-black">Events</h1><p class="mini">กิจกรรมสดและย้อนหลัง / Live & Past Events</p></div><button class="cut btn bg-white/5 px-3 py-2" onclick="loadAll()">รีเฟรช / REFRESH</button></div>
+    <div class="flex justify-between items-end gap-3 mb-4"><div><h1 class="text-3xl font-black">Events</h1><p class="mini">กิจกรรมสดและย้อนหลัง / Live & Past Events</p></div><button id="refreshEventsBtn" class="cut btn bg-white/5 px-3 py-2" type="button">รีเฟรช / REFRESH</button></div>
     <div id="eventList" class="grid md:grid-cols-3 gap-4"></div>
   </section>
 
   <section id="tab-join" class="hidden">
     <div class="grid lg:grid-cols-[1fr_.9fr] gap-4">
-      <div class="cut card p-4"><h2 class="text-2xl font-black">Join Open Play</h2><p id="joinEventName" class="lime">-</p><div class="grid sm:grid-cols-2 gap-3 mt-4"><input id="joinName" class="rounded-lg border p-3" placeholder="ชื่อเล่น / Nickname"><select id="joinLevel" class="rounded-lg border p-3"></select></div><button class="cut bg-lime w-full p-4 mt-4 font-black text-black" onclick="savePlayer()">บันทึกและเข้าคิว / SAVE READY</button></div>
+      <div class="cut card p-4"><h2 class="text-2xl font-black">Join Open Play</h2><p id="joinEventName" class="lime">-</p><div class="grid sm:grid-cols-2 gap-3 mt-4"><input id="joinName" class="rounded-lg border p-3" placeholder="ชื่อเล่น / Nickname"><select id="joinLevel" class="rounded-lg border p-3"></select></div><button id="savePlayerBtn" class="cut bg-lime w-full p-4 mt-4 font-black text-black" type="button">บันทึกและเข้าคิว / SAVE READY</button></div>
       <div class="cut card p-4"><h3 class="text-xl font-black">Players</h3><p class="mini mt-1">ลำดับคิว / Queue: Ready → Playing → Rest → Left</p><div id="joinPlayers" class="grid gap-2 mt-3"></div></div>
     </div>
   </section>
 
   <section id="tab-manage" class="hidden">
     <div class="space-y-4">
-      <div class="cut card p-4"><div class="flex flex-wrap justify-between gap-2 items-start"><div><h2 class="text-2xl font-black">Organizer</h2><p id="manageEventName" class="mini">-</p></div><div class="flex gap-2 flex-wrap"><button class="cut btn bg-white/5 px-3 py-2" onclick="loadCurrent()">รีเฟรช / REFRESH</button><button class="cut bg-red-500 px-3 py-2 font-black" onclick="endEvent()">จบอีเว้นท์ / END EVENT</button></div></div><select id="eventSelect" class="w-full rounded-lg border p-3 mt-3" onchange="pickEvent(this.value)"></select><div class="grid sm:grid-cols-[1fr_140px] gap-3 mt-3"><label class="text-xs text-slate-400">โหมดจับคู่อัตโนมัติ / AUTO MATCHING MODE<select id="autoMode" class="w-full rounded-lg border p-3 mt-1"><option value="fair">Fair Match · สมดุล</option><option value="beginner">Beginner Friendly · มือใหม่</option><option value="competitive">Competitive · แข่งขัน</option></select></label><label class="text-xs text-slate-400">จำนวนคอร์ท / COURTS<input id="courtCount" class="w-full rounded-lg border p-3 mt-1 text-center" type="number" min="1" max="12" value="4"></label></div><div class="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4 text-xs font-black"><div class="chip">ผู้เล่น<br><span class="mini">Players</span><br><b id="chipPlayers" class="text-xl">0</b></div><div class="chip">รอ/พร้อม<br><span class="mini">Ready</span><br><b id="chipReady" class="text-xl lime">0</b></div><div class="chip">กำลังเล่น<br><span class="mini">Live</span><br><b id="chipLive" class="text-xl text-orange-300">0</b></div><div class="chip">พรีวิว<br><span class="mini">Preview</span><br><b id="chipPreview" class="text-xl text-cyan-300">0</b></div><div class="chip">คอร์ท<br><span class="mini">Courts</span><br><b id="chipCourts" class="text-xl">4</b></div></div></div>
-      <div class="grid xl:grid-cols-[.9fr_1.1fr] gap-4"><div class="space-y-4"><div class="cut card p-4"><h3 class="font-black text-lime-300">ควบคุมการจับคู่อัตโนมัติ / AUTO MATCH CONTROL</h3><p class="mini mt-1">เหมือน V1: สร้างพรีวิวก่อน แล้วค่อย Start</p><div class="grid gap-2 mt-3"><button class="cut bg-lime p-4 font-black text-black" onclick="generateAutoPreviews()">สร้างพรีวิวอัตโนมัติ / GENERATE AUTO PREVIEW</button><button class="cut bg-orange-400 p-4 font-black text-black" onclick="startAllPreviews()">เริ่มทุกพรีวิว / START ALL PREVIEWS</button><button class="cut btn bg-white/5 p-4" onclick="clearPreviews()">ล้างพรีวิว / CLEAR PREVIEW</button></div></div><div class="cut card p-4 border-yellow-300/30"><h3 class="font-black text-yellow-300">เลือกคู่เอง / MANUAL PICK</h3><p class="mini">เลือกผู้เล่นเองได้ตลอด แยกจาก Auto Mode</p><div class="grid sm:grid-cols-2 gap-2 mt-2"><select id="manual0" class="rounded-lg border p-3"></select><select id="manual1" class="rounded-lg border p-3"></select><select id="manual2" class="rounded-lg border p-3"></select><select id="manual3" class="rounded-lg border p-3"></select></div><button class="cut bg-yellow-300 text-black p-3 mt-3 font-black w-full" onclick="generateManualPreview()">สร้างพรีวิว Manual / CREATE MANUAL PREVIEW</button><button class="cut btn bg-white/5 p-3 mt-2 w-full" onclick="clearManual()">ล้างรายชื่อ / CLEAR SELECTED</button></div><div class="cut card p-4"><h3 class="font-black lime">คิวผู้เล่น / PLAYER QUEUE</h3><div id="managePlayers" class="grid gap-2 mt-3"></div></div></div><div id="matchPanels" class="space-y-4"></div></div>
+      <div class="cut card p-4"><div class="flex flex-wrap justify-between gap-2 items-start"><div><h2 class="text-2xl font-black">Organizer</h2><p id="manageEventName" class="mini">-</p></div><div class="flex gap-2 flex-wrap"><button id="refreshManageBtn" class="cut btn bg-white/5 px-3 py-2" type="button">รีเฟรช / REFRESH</button><button id="endEventBtn" class="cut bg-red-500 px-3 py-2 font-black" type="button">จบอีเว้นท์ / END EVENT</button></div></div><select id="eventSelect" class="w-full rounded-lg border p-3 mt-3"></select><div class="grid sm:grid-cols-[1fr_140px] gap-3 mt-3"><label class="text-xs text-slate-400">โหมดจับคู่อัตโนมัติ / AUTO MATCHING MODE<select id="autoMode" class="w-full rounded-lg border p-3 mt-1"><option value="fair">Fair Match · สมดุล</option><option value="beginner">Beginner Friendly · มือใหม่</option><option value="competitive">Competitive · แข่งขัน</option></select></label><label class="text-xs text-slate-400">จำนวนคอร์ท / COURTS<input id="courtsInput" class="w-full rounded-lg border p-3 mt-1 text-center" type="number" min="1" max="12" value="4"></label></div><div class="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4 text-xs font-black"><div class="chip">ผู้เล่น<br><span class="mini">Players</span><br><b id="chipPlayers" class="text-xl">0</b></div><div class="chip">รอ/พร้อม<br><span class="mini">Ready</span><br><b id="chipReady" class="text-xl lime">0</b></div><div class="chip">กำลังเล่น<br><span class="mini">Live</span><br><b id="chipLive" class="text-xl text-orange-300">0</b></div><div class="chip">พรีวิว<br><span class="mini">Preview</span><br><b id="chipPreview" class="text-xl text-cyan-300">0</b></div><div class="chip">คอร์ท<br><span class="mini">Courts</span><br><b id="chipCourts" class="text-xl">4</b></div></div></div>
+      <div class="grid xl:grid-cols-[.9fr_1.1fr] gap-4"><div class="space-y-4"><div class="cut card p-4"><h3 class="font-black text-lime-300">ควบคุมการจับคู่อัตโนมัติ / AUTO MATCH CONTROL</h3><p class="mini mt-1">เหมือน V1: สร้างพรีวิวก่อน แล้วค่อย Start</p><div class="grid gap-2 mt-3"><button id="generateAutoBtn" class="cut bg-lime p-4 font-black text-black" type="button">สร้างพรีวิวอัตโนมัติ / GENERATE AUTO PREVIEW</button><button id="startAllBtn" class="cut bg-orange-400 p-4 font-black text-black" type="button">เริ่มทุกพรีวิว / START ALL PREVIEWS</button><button id="clearPreviewBtn" class="cut btn bg-white/5 p-4" type="button">ล้างพรีวิว / CLEAR PREVIEW</button></div></div><div class="cut card p-4 border-yellow-300/30"><h3 class="font-black text-yellow-300">เลือกคู่เอง / MANUAL PICK</h3><p class="mini">เลือกผู้เล่นเองได้ตลอด แยกจาก Auto Mode</p><div class="grid sm:grid-cols-2 gap-2 mt-2"><select id="manual0" class="rounded-lg border p-3"></select><select id="manual1" class="rounded-lg border p-3"></select><select id="manual2" class="rounded-lg border p-3"></select><select id="manual3" class="rounded-lg border p-3"></select></div><button id="manualPreviewBtn" class="cut bg-yellow-300 text-black p-3 mt-3 font-black w-full" type="button">สร้างพรีวิว Manual / CREATE MANUAL PREVIEW</button><button id="manualClearBtn" class="cut btn bg-white/5 p-3 mt-2 w-full" type="button">ล้างรายชื่อ / CLEAR SELECTED</button></div><div class="cut card p-4"><h3 class="font-black lime">คิวผู้เล่น / PLAYER QUEUE</h3><div id="managePlayers" class="grid gap-2 mt-3"></div></div></div><div id="matchPanels" class="space-y-4"></div></div>
     </div>
   </section>
 
-  <section id="tab-stats" class="hidden"><div class="space-y-4"><div class="cut card p-4"><div class="flex flex-wrap justify-between items-end gap-3"><div><h2 class="text-2xl font-black">Ranking / สถิติ</h2><p class="mini">เหมือน V1: ดูอันดับและประวัติ match ในหน้าเดียว</p></div><button class="cut btn bg-white/5 px-3 py-2" onclick="loadCurrent()">รีเฟรชสถิติ / REFRESH STATS</button></div><div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4"><div class="chip">ผู้เล่น<br><span class="mini">Players</span><br><b id="statPlayers" class="text-2xl">0</b></div><div class="chip">แมตช์จบแล้ว<br><span class="mini">Completed</span><br><b id="statCompleted" class="text-2xl lime">0</b></div><div class="chip">เกมรวม<br><span class="mini">Total Games</span><br><b id="statGames" class="text-2xl text-orange-300">0</b></div><div class="chip">เลเวลเฉลี่ย<br><span class="mini">Avg Level</span><br><b id="statLevel" class="text-2xl text-cyan-300">0</b></div></div></div><div class="grid lg:grid-cols-3 gap-4"><div class="cut card p-4"><h3 class="font-black lime">คะแนนสูงสุด / TOP SCORE</h3><div id="topScore"></div></div><div class="cut card p-4"><h3 class="font-black text-orange-300">เล่นมากสุด / MOST PLAYED</h3><div id="mostPlayed"></div></div><div class="cut card p-4"><h3 class="font-black text-cyan-300">แต้มต่างดีที่สุด / BEST DIFF</h3><div id="bestDiff"></div></div></div><div class="cut card p-4"><h3 class="text-xl font-black">ตารางสถิติผู้เล่น / PLAYER STATS TABLE</h3><div id="rankingTable" class="overflow-auto"></div></div><div class="cut card p-4"><h3 class="text-xl font-black text-orange-300">ประวัติการแข่งขัน / MATCH HISTORY</h3><div id="matchHistory" class="overflow-auto"></div></div></div></section>
+  <section id="tab-stats" class="hidden"><div class="space-y-4"><div class="cut card p-4"><div class="flex flex-wrap justify-between items-end gap-3"><div><h2 class="text-2xl font-black">Ranking / สถิติ</h2><p class="mini">เหมือน V1: ดูอันดับและประวัติ match ในหน้าเดียว</p></div><button id="refreshStatsBtn" class="cut btn bg-white/5 px-3 py-2" type="button">รีเฟรชสถิติ / REFRESH STATS</button></div><div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4"><div class="chip">ผู้เล่น<br><span class="mini">Players</span><br><b id="statPlayers" class="text-2xl">0</b></div><div class="chip">แมตช์จบแล้ว<br><span class="mini">Completed</span><br><b id="statCompleted" class="text-2xl lime">0</b></div><div class="chip">เกมรวม<br><span class="mini">Total Games</span><br><b id="statGames" class="text-2xl text-orange-300">0</b></div><div class="chip">เลเวลเฉลี่ย<br><span class="mini">Avg Level</span><br><b id="statLevel" class="text-2xl text-cyan-300">0</b></div></div></div><div class="grid lg:grid-cols-3 gap-4"><div class="cut card p-4"><h3 class="font-black lime">คะแนนสูงสุด / TOP SCORE</h3><div id="topScore"></div></div><div class="cut card p-4"><h3 class="font-black text-orange-300">เล่นมากสุด / MOST PLAYED</h3><div id="mostPlayed"></div></div><div class="cut card p-4"><h3 class="font-black text-cyan-300">แต้มต่างดีที่สุด / BEST DIFF</h3><div id="bestDiff"></div></div></div><div class="cut card p-4"><h3 class="text-xl font-black">ตารางสถิติผู้เล่น / PLAYER STATS TABLE</h3><div id="rankingTable" class="overflow-auto"></div></div><div class="cut card p-4"><h3 class="text-xl font-black text-orange-300">ประวัติการแข่งขัน / MATCH HISTORY</h3><div id="matchHistory" class="overflow-auto"></div></div></div></section>
 </main>
 
 <script type="module">
@@ -54,66 +54,278 @@ import { generateMatches } from './src/logic/matchmaking/generateMatches.js';
 import { calculatePlayerRanking } from './src/logic/ranking/calculatePlayerRanking.js';
 import { saveScoreDraft, getScoreDraft, clearScoreDraft } from './src/services/localDraftService.js';
 
-const services=createV2Services();
-let tab='events',events=[],event=null,players=[],matches=[],previews=[];
-const levels=[2.0,2.5,3.0,3.5,4.0,4.5,5.0];
-modeBadge.textContent=modeLabel();
-joinLevel.innerHTML=levels.map(l=>`<option value="${l}">${l.toFixed(1)}</option>`).join('');
-function msg(t){const el=document.getElementById('msg');el.textContent=t;el.classList.remove('hidden');setTimeout(()=>el.classList.add('hidden'),2200)}
-function setTab(next){tab=next;['events','join','manage','stats'].forEach(x=>{document.getElementById('tab-'+x).classList.toggle('hidden',x!==next);document.getElementById('tabBtn-'+x).className='cut btn py-3 '+(x===next?'tab-active':'tab-idle')});renderAll()} window.setTab=setTab;
-function nameOf(e){return e?.name||e?.name_th||e?.name_en||'Untitled Event'}
-function pName(p){return p?.displayName||p?.display_name||p?.nickname||p?.name||'Player'}
-function pLevel(p){return Number(p.level??p.estimatedLevel??p.estimated_level??2.5)}
-function normalizePlayer(p){return {...p,id:p.id,displayName:pName(p),nickname:pName(p),status:p.status||'ready',estimated_level:pLevel(p),matches_played:Number(p.matchesPlayed??p.matches_played??0),wins:Number(p.wins??0),losses:Number(p.losses??0),points_for:Number(p.pointsFor??p.points_for??0),points_against:Number(p.pointsAgainst??p.points_against??0)}}
-function normalizeMatch(m){return {...m,id:m.id,teamA:m.teamA||m.team_a||[],teamB:m.teamB||m.team_b||[],status:m.status||'confirmed',courtName:m.courtName||m.court_name||`Court ${m.court_number||'-'}`,court_number:m.court_number||m.courtNumber||1,teamAScore:m.teamAScore??m.team_a_score,teamBScore:m.teamBScore??m.team_b_score,startedAt:m.startedAt||m.started_at||null,match_type:m.matchMode||m.match_type||m.matchmaking_mode||'fair'}}
-function itemId(x){return String(typeof x==='string'?x:(x?.id||x?.playerId||x?.eventPlayerId||''))}
-function byId(id){return players.find(p=>String(p.id)===String(id))}
-function itemName(x){return typeof x==='string'?(byId(x)?.nickname||x):pName(x)}
-function teamNames(m,side){return (side==='A'?m.teamA:m.teamB).map(itemName).join(' / ')}
-function activeStatuses(){return new Set(['preview','playing','assigned','pending_score'])}
-function activeMatches(){return matches.filter(m=>activeStatuses().has(String(m.status).toLowerCase()))}
-function activePlayerIds(){const ids=new Set();activeMatches().forEach(m=>[...m.teamA,...m.teamB].forEach(x=>ids.add(itemId(x))));previews.forEach(pr=>[...pr.teamA,...pr.teamB].forEach(x=>ids.add(itemId(x))));return ids}
-function readyPlayers(){const active=activePlayerIds();return players.filter(p=>['ready','checked_in'].includes(String(p.status))&&!active.has(String(p.id)))}
-function statusLabel(s){return ({ready:'Ready',checked_in:'Ready',playing:'Playing',resting:'Paused',left:'Left'})[s]||s}
-function statusClass(s){return s==='ready'||s==='checked_in'?'status-ready':s==='playing'?'status-playing':s==='resting'?'status-paused':'status-left'}
-function queueClass(s){return s==='playing'?'queue-playing':s==='resting'?'queue-paused':s==='left'?'queue-left':'queue-ready'}
-function modeName(m){return ({fair:'Fair Match',beginner:'Beginner Friendly',competitive:'Competitive',manual:'Manual'})[m]||m}
-function courtCount(){return Math.max(1,Math.min(12,Number(courtCount.value||event?.courtCount||event?.court_count||4)))}
-function courtList(){return Array.from({length:courtCount()},(_,i)=>({id:`court-${i+1}`,name:`COURT ${i+1}`,courtNumber:i+1}))}
-function rank(){return calculatePlayerRanking(players).map((p,i)=>({...p,rank:i+1,nickname:p.displayName||p.nickname||p.name,score:p.score||0,winRate:p.winRate||0}))}
-function diff(p){return Number(p.points_for||0)-Number(p.points_against||0)}
-function winRate(p){const total=(p.wins||0)+(p.losses||0);return total?Math.round((p.wins||0)/total*100):0}
-function completed(){return matches.filter(m=>String(m.status).toLowerCase()==='confirmed')}
-function renderEvents(){eventList.innerHTML=events.map(e=>`<div class="cut card p-4 ${event&&event.id===e.id?'ring-2 ring-lime-300':''}"><div class="flex justify-between text-xs"><span class="rounded-full px-2 py-1 font-black ${e.status==='completed'?'bg-slate-600':'bg-lime text-black'}">${e.status==='completed'?'ARCHIVED':e.status||'live'}</span><span>${e.courtCount||e.court_count||1} courts</span></div><h2 class="text-xl font-black mt-3">${nameOf(e)}</h2><p class="text-sm text-slate-300">${e.eventDate||e.event_date||e.event_time||'-'} · ${e.venueName||e.venue||'-'}</p><p class="mini">โหมดอัตโนมัติ / Auto: Fair Match</p><div class="grid grid-cols-2 gap-2 mt-4"><button class="cut p-3 font-black bg-lime text-black" onclick="pickEvent('${e.id}','join')">เข้าร่วม / Join</button><button class="cut btn bg-white/5 p-3" onclick="pickEvent('${e.id}','manage')">จัดการ / Manage</button></div></div>`).join('')||'<div class="soft p-4">No events</div>'}
-function playerRow(p,controls=false){return `<div class="soft queue-card ${queueClass(p.status)} p-3 flex justify-between items-center gap-2"><div><div class="flex items-center gap-2"><b>${p.nickname}</b></div><div class="mini">Lv ${p.estimated_level.toFixed(1)} · ${p.matches_played||0} games</div></div><span class="status-pill ${statusClass(p.status)}"><i></i><span>${statusLabel(p.status)}</span></span>${controls?`<div class="flex gap-1"><button class="cut btn bg-white/5 px-2 py-1 text-xs" onclick="setPlayerStatus('${p.id}','ready')">Ready</button><button class="cut btn bg-white/5 px-2 py-1 text-xs" onclick="setPlayerStatus('${p.id}','resting')">Rest</button><button class="cut btn bg-white/5 px-2 py-1 text-xs" onclick="setPlayerStatus('${p.id}','left')">Left</button></div>`:''}</div>`}
-function renderJoin(){joinEventName.textContent=event?nameOf(event):'-';joinPlayers.innerHTML=players.map(p=>playerRow(p,false)).join('')||'<div class="soft p-3 mini">No players yet</div>'}
-function renderManageHeader(){manageEventName.textContent=event?nameOf(event):'-';eventSelect.innerHTML=events.map(e=>`<option value="${e.id}">${e.status==='completed'?'[ARCHIVED] ':'[LIVE] '}${nameOf(e)}</option>`).join('');if(event)eventSelect.value=event.id;chipPlayers.textContent=players.length;chipReady.textContent=readyPlayers().length;chipLive.textContent=activeMatches().filter(m=>m.status==='playing').length;chipPreview.textContent=previews.length+activeMatches().filter(m=>m.status!=='playing').length;chipCourts.textContent=courtCount.value||event?.courtCount||event?.court_count||4;managePlayers.innerHTML=players.map(p=>playerRow(p,true)).join('')||'<div class="soft p-3 mini">No players</div>';renderManualOptions()}
-function renderManualOptions(){[manual0,manual1,manual2,manual3].forEach((sel,i)=>{const old=sel.value;const picked=new Set([manual0,manual1,manual2,manual3].filter((_,idx)=>idx!==i).map(s=>s.value).filter(Boolean));sel.innerHTML='<option value="">- เลือกผู้เล่น / Select player -</option>'+readyPlayers().filter(p=>!picked.has(String(p.id))||String(p.id)===old).map(p=>`<option value="${p.id}">${p.nickname} · Lv ${p.estimated_level.toFixed(1)}</option>`).join('');sel.value=[...sel.options].some(o=>o.value===old)?old:''})}
-function previewCard(pr){return `<div class="cut card p-4 bg-[#1a2028]"><div class="flex justify-between mb-3"><b class="text-cyan-300">${pr.courtName}</b><span class="mini">${modeName(pr.matchMode)}</span></div><div class="grid grid-cols-2 gap-3"><div class="rounded-xl border border-orange-400/40 bg-orange-500/10 p-3"><b class="text-orange-300">ทีม A / TEAM A</b>${pr.teamA.map(x=>`<div>${itemName(x)}</div>`).join('')}</div><div class="rounded-xl border border-lime-300/40 bg-lime-500/10 p-3"><b class="lime">ทีม B / TEAM B</b>${pr.teamB.map(x=>`<div>${itemName(x)}</div>`).join('')}</div></div><div class="grid grid-cols-2 gap-2 mt-3"><button class="cut bg-red-500 p-3 text-xs font-black" onclick="cancelPreview('${pr.uid}')">ยกเลิก / CANCEL</button><button class="cut bg-orange-400 text-black p-3 text-xs font-black" onclick="startPreview('${pr.uid}')">เริ่ม / START</button></div></div>`}
-function liveCard(m){const draft=getScoreDraft(m.id)||{};return `<div class="cut card p-4 bg-[#1a2028]"><div class="flex justify-between mb-3"><h3 class="text-xl font-black">${m.courtName}</h3><span class="lime">${m.status==='playing'?'PLAYING':'PREVIEW'}</span></div><div class="grid grid-cols-2 gap-3"><div class="rounded-xl border border-orange-400/40 bg-orange-500/10 p-3"><b class="text-orange-300">ทีม A / TEAM A</b><div>${teamNames(m,'A')}</div></div><div class="rounded-xl border border-lime-300/40 bg-lime-500/10 p-3"><b class="lime">ทีม B / TEAM B</b><div>${teamNames(m,'B')}</div></div></div><div class="grid grid-cols-2 gap-2 mt-3"><input class="rounded-lg border p-3 text-center text-xl font-black" type="number" data-score-a="${m.id}" value="${draft.teamAScore??m.teamAScore??11}" placeholder="A"><input class="rounded-lg border p-3 text-center text-xl font-black" type="number" data-score-b="${m.id}" value="${draft.teamBScore??m.teamBScore??8}" placeholder="B"></div><div class="grid grid-cols-3 gap-2 mt-2"><button class="cut bg-orange-400 text-black p-3 font-black" ${m.status==='playing'?'disabled':''} onclick="startMatch('${m.id}')">START</button><button class="cut bg-red-500 p-3 font-black" onclick="cancelMatch('${m.id}')">CANCEL</button><button class="cut bg-lime p-3 font-black text-black" onclick="confirmScore('${m.id}')">CONFIRM</button></div></div>`}
-function renderMatches(){const active=activeMatches();matchPanels.innerHTML=`<div class="cut card p-4 border-cyan-300/40"><h3 class="text-xl font-black text-cyan-300">พรีวิวแมตช์ / MATCH PREVIEW</h3><div class="grid md:grid-cols-2 gap-3 mt-3">${previews.map(previewCard).join('')||'<div class="soft p-4 text-slate-400">ยังไม่มีพรีวิว / No preview yet</div>'}</div></div><div class="cut card p-4"><h3 class="text-xl font-black lime">คอร์ทกำลังเล่น / LIVE COURTS</h3><div class="grid md:grid-cols-2 gap-3 mt-3">${active.map(liveCard).join('')||'<div class="soft p-4 text-slate-400">No live courts</div>'}</div></div>`}
-function renderStats(){const r=rank();statPlayers.textContent=players.length;statCompleted.textContent=completed().length;statGames.textContent=players.reduce((s,p)=>s+(p.matches_played||0),0);statLevel.textContent=(players.reduce((s,p)=>s+p.estimated_level,0)/(players.length||1)).toFixed(2);topScore.innerHTML=r.slice(0,5).map((p,i)=>`<button class="soft p-3 mt-2 flex justify-between w-full text-left row-hover"><div><b>${i+1}. ${p.nickname}</b><div class="mini">W/L ${p.wins||0}/${p.losses||0} · ${winRate(p)}%</div></div><b class="lime">${p.score}</b></button>`).join('');mostPlayed.innerHTML=[...players].sort((a,b)=>(b.matches_played||0)-(a.matches_played||0)).slice(0,5).map(p=>`<div class="soft p-3 mt-2 flex justify-between"><b>${p.nickname}</b><b>${p.matches_played||0} games</b></div>`).join('');bestDiff.innerHTML=[...players].sort((a,b)=>diff(b)-diff(a)).slice(0,5).map(p=>`<div class="soft p-3 mt-2 flex justify-between"><b>${p.nickname}</b><b class="${diff(p)>=0?'lime':'text-red-400'}">${diff(p)}</b></div>`).join('');rankingTable.innerHTML=`<table class="mt-3 w-full min-w-[760px] text-sm text-left"><thead class="text-slate-400 text-xs"><tr><th>#</th><th>Player</th><th>Score</th><th>Win%</th><th>W</th><th>L</th><th>Diff</th><th>Games</th><th>Status</th></tr></thead><tbody>${r.map((p,i)=>`<tr class="border-t border-white/10"><td class="py-3">${i+1}</td><td class="font-bold">${p.nickname}</td><td class="lime font-black">${p.score}</td><td>${winRate(p)}%</td><td>${p.wins||0}</td><td>${p.losses||0}</td><td class="${diff(p)>=0?'lime':'text-red-400'}">${diff(p)}</td><td>${p.matches_played||0}</td><td>${statusLabel(p.status)}</td></tr>`).join('')}</tbody></table>`;matchHistory.innerHTML=`<table class="mt-3 w-full min-w-[760px] text-sm text-left"><thead class="text-slate-400 text-xs"><tr><th>Court</th><th>Team A</th><th>Score</th><th>Team B</th><th>Mode</th></tr></thead><tbody>${completed().map(m=>`<tr class="border-t border-white/10"><td class="py-3">${m.courtName}</td><td>${teamNames(m,'A')}</td><td><b>${m.teamAScore??'-'}-${m.teamBScore??'-'}</b></td><td>${teamNames(m,'B')}</td><td>${modeName(m.match_type)}</td></tr>`).join('')}</tbody></table>`}
-function renderAll(){renderEvents();renderJoin();renderManageHeader();renderMatches();renderStats()}
-async function pickEvent(id,nextTab){await services.selectEvent(id);event=await services.getCurrentEvent();previews=[];await loadCurrent();if(nextTab)setTab(nextTab)} window.pickEvent=pickEvent;
-window.savePlayer=async()=>{try{const name=joinName.value.trim();if(!name){msg('ใส่ชื่อเล่นก่อน');return}await services.checkInPlayer({eventId:event.id,displayName:name,level:Number(joinLevel.value)});joinName.value='';msg('เข้าคิวแล้ว / Ready');await loadCurrent()}catch(e){msg(e.message)}};
-window.setPlayerStatus=async(id,status)=>{await services.setPlayerStatus(event.id,id,status);await loadCurrent()};
-window.forceAllReady=async()=>{await services.forceAllPlayersReady(event.id);await loadCurrent()};
-window.generateAutoPreviews=()=>{const result=generateMatches({players:readyPlayers(),courts:courtList(),history:matches,rules:{candidateLimit:Number(autoMode.value==='competitive'?16:8),lowGamesWeight:autoMode.value==='beginner'?260:120}});previews=result.previews.map((p,i)=>({...p,uid:`pr-${Date.now()}-${i}`,matchMode:autoMode.value,courtName:p.courtName||`COURT ${i+1}`}));if(!previews.length)msg(result.reason||'ผู้เล่นพร้อมไม่พอ');renderAll()};
-window.startAllPreviews=async()=>{for(const pr of [...previews])await startPreview(pr.uid);previews=[];await loadCurrent()};
-window.clearPreviews=()=>{previews=[];renderAll()};
-window.generateManualPreview=()=>{const ids=[manual0.value,manual1.value,manual2.value,manual3.value].filter(Boolean);if(ids.length!==4||new Set(ids).size!==4){msg('เลือกผู้เล่นให้ครบ 4 คน ห้ามซ้ำ');return}previews=[...previews,{uid:`manual-${Date.now()}`,courtId:'court-1',courtName:'COURT 1',teamA:ids.slice(0,2).map(byId),teamB:ids.slice(2).map(byId),matchMode:'manual'}];clearManual();renderAll()};
-window.clearManual=()=>{[manual0,manual1,manual2,manual3].forEach(s=>s.value='');renderManualOptions()};
-window.cancelPreview=(uid)=>{previews=previews.filter(p=>p.uid!==uid);renderAll()};
-window.startPreview=async(uid)=>{const pr=previews.find(p=>p.uid===uid);if(!pr)return;const created=await services.createMatchPreview({eventId:event.id,courtId:pr.courtId,courtName:pr.courtName,teamA:pr.teamA,teamB:pr.teamB,matchMode:pr.matchMode});await services.startMatch(created.id,{eventId:event.id});previews=previews.filter(p=>p.uid!==uid);await loadCurrent()};
-window.startMatch=async(id)=>{await services.startMatch(id,{eventId:event.id});await loadCurrent()};
-function scoreFor(id){return {teamAScore:document.querySelector(`[data-score-a="${id}"]`)?.value,teamBScore:document.querySelector(`[data-score-b="${id}"]`)?.value}}
-window.cancelMatch=async(id)=>{const score=scoreFor(id);saveScoreDraft(id,{...score,cancelled:true});await services.cancelMatch(id,{eventId:event.id,reason:'cancelled',...score,keepScoreDraft:true});await loadCurrent()};
-window.confirmScore=async(id)=>{const score=scoreFor(id);await services.confirmScore(id,{eventId:event.id,...score});clearScoreDraft(id);await loadCurrent()};
-window.endEvent=async()=>{await services.updateEventStatus(event.id,'completed');await loadAll();setTab('stats')};
-async function loadCurrent(){event=await services.getCurrentEvent();if(!event)return;const [ps,ms]=await Promise.all([services.listEventPlayers(event.id),services.listEventMatches(event.id)]);players=ps.map(normalizePlayer);matches=ms.map(normalizeMatch);renderAll()}
-window.loadCurrent=loadCurrent;
-async function loadAll(){events=await services.listEvents();event=await services.getCurrentEvent();await loadCurrent();renderAll()}
-window.loadAll=loadAll;
+const $ = (id) => document.getElementById(id);
+const dom = {
+  modeBadge: $('modeBadge'), msg: $('msg'), eventList: $('eventList'), joinName: $('joinName'), joinLevel: $('joinLevel'),
+  joinEventName: $('joinEventName'), joinPlayers: $('joinPlayers'), manageEventName: $('manageEventName'), eventSelect: $('eventSelect'),
+  autoMode: $('autoMode'), courtsInput: $('courtsInput'), chipPlayers: $('chipPlayers'), chipReady: $('chipReady'), chipLive: $('chipLive'), chipPreview: $('chipPreview'), chipCourts: $('chipCourts'),
+  managePlayers: $('managePlayers'), matchPanels: $('matchPanels'), statPlayers: $('statPlayers'), statCompleted: $('statCompleted'), statGames: $('statGames'), statLevel: $('statLevel'),
+  topScore: $('topScore'), mostPlayed: $('mostPlayed'), bestDiff: $('bestDiff'), rankingTable: $('rankingTable'), matchHistory: $('matchHistory')
+};
+const services = createV2Services();
+const levels = [2.0,2.5,3.0,3.5,4.0,4.5,5.0];
+let currentTab = 'events';
+let events = [];
+let event = null;
+let players = [];
+let matches = [];
+let previews = [];
+dom.modeBadge.textContent = modeLabel();
+dom.joinLevel.innerHTML = levels.map((level) => `<option value="${level}">${level.toFixed(1)}</option>`).join('');
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[char]));
+}
+function showMessage(text) {
+  dom.msg.textContent = text;
+  dom.msg.classList.remove('hidden');
+  setTimeout(() => dom.msg.classList.add('hidden'), 1800);
+}
+function setTab(next) {
+  currentTab = next;
+  ['events','join','manage','stats'].forEach((name) => {
+    $(`tab-${name}`).classList.toggle('hidden', name !== next);
+    $(`tabBtn-${name}`).className = `cut btn py-3 ${name === next ? 'tab-active' : 'tab-idle'}`;
+  });
+  renderAll();
+}
+function eventTitle(item) { return item?.name || item?.name_th || item?.name_en || 'Untitled Event'; }
+function venueTitle(item) { return item?.venueName || item?.venue_name || item?.venue || 'Venue'; }
+function playerName(player) { return player?.displayName || player?.display_name || player?.nickname || player?.name || 'Player'; }
+function playerLevel(player) { return Number(player?.level ?? player?.estimatedLevel ?? player?.estimated_level ?? 2.5); }
+function normalizePlayer(player) {
+  return { ...player, id: player.id, nickname: playerName(player), displayName: playerName(player), status: player.status || 'ready', estimated_level: playerLevel(player), matches_played: Number(player.matchesPlayed ?? player.matches_played ?? 0), wins: Number(player.wins ?? 0), losses: Number(player.losses ?? 0), points_for: Number(player.pointsFor ?? player.points_for ?? 0), points_against: Number(player.pointsAgainst ?? player.points_against ?? 0) };
+}
+function normalizeMatch(match) {
+  return { ...match, id: match.id, teamA: match.teamA || match.team_a || [], teamB: match.teamB || match.team_b || [], status: match.status || 'confirmed', courtName: match.courtName || match.court_name || `Court ${match.court_number || '-'}`, court_number: match.court_number || match.courtNumber || 1, teamAScore: match.teamAScore ?? match.team_a_score, teamBScore: match.teamBScore ?? match.team_b_score, startedAt: match.startedAt || match.started_at || null, match_type: match.matchMode || match.match_type || match.matchmaking_mode || 'fair' };
+}
+function itemId(item) { return String(typeof item === 'string' ? item : (item?.id || item?.playerId || item?.eventPlayerId || '')); }
+function byId(id) { return players.find((player) => String(player.id) === String(id)); }
+function itemName(item) { return typeof item === 'string' ? (byId(item)?.nickname || item) : playerName(item); }
+function teamNames(match, side) { return (side === 'A' ? match.teamA : match.teamB).map(itemName).join(' / '); }
+function activeStatuses() { return new Set(['preview','playing','assigned','pending_score']); }
+function activeMatches() { return matches.filter((match) => activeStatuses().has(String(match.status).toLowerCase())); }
+function activePlayerIds() {
+  const ids = new Set();
+  activeMatches().forEach((match) => [...match.teamA, ...match.teamB].forEach((item) => ids.add(itemId(item))));
+  previews.forEach((preview) => [...preview.teamA, ...preview.teamB].forEach((item) => ids.add(itemId(item))));
+  return ids;
+}
+function readyPlayers() {
+  const active = activePlayerIds();
+  return players.filter((player) => ['ready','checked_in'].includes(String(player.status)) && !active.has(String(player.id)));
+}
+function statusLabel(status) { return ({ ready:'Ready', checked_in:'Ready', playing:'Playing', resting:'Paused', left:'Left' })[status] || status; }
+function statusClass(status) { return status === 'ready' || status === 'checked_in' ? 'status-ready' : status === 'playing' ? 'status-playing' : status === 'resting' ? 'status-paused' : 'status-left'; }
+function queueClass(status) { return status === 'playing' ? 'queue-playing' : status === 'resting' ? 'queue-paused' : status === 'left' ? 'queue-left' : 'queue-ready'; }
+function modeName(mode) { return ({ fair:'Fair Match', beginner:'Beginner Friendly', competitive:'Competitive', manual:'Manual' })[mode] || mode; }
+function activeCourtCount() { return Math.max(1, Math.min(12, Number(dom.courtsInput.value || event?.courtCount || event?.court_count || 4))); }
+function courtList() { return Array.from({ length: activeCourtCount() }, (_, index) => ({ id: `court-${index + 1}`, name: `COURT ${index + 1}`, courtNumber: index + 1 })); }
+function rankPlayers() {
+  return calculatePlayerRanking(players).map((player, index) => ({ ...player, rank: index + 1, nickname: player.displayName || player.nickname || player.name, score: Number(player.score || 0), winRate: Number(player.winRate || 0) }));
+}
+function diff(player) { return Number(player.points_for || 0) - Number(player.points_against || 0); }
+function winRate(player) { const total = (player.wins || 0) + (player.losses || 0); return total ? Math.round((player.wins || 0) / total * 100) : 0; }
+function completedMatches() { return matches.filter((match) => String(match.status).toLowerCase() === 'confirmed'); }
+
+function renderEvents() {
+  dom.eventList.innerHTML = events.map((item) => `<div class="cut card p-4 ${event && event.id === item.id ? 'ring-2 ring-lime-300' : ''}"><div class="flex justify-between text-xs"><span class="rounded-full px-2 py-1 font-black ${item.status === 'completed' ? 'bg-slate-600' : 'bg-lime text-black'}">${item.status === 'completed' ? 'ARCHIVED' : item.status || 'live'}</span><span>${item.courtCount || item.court_count || 1} courts</span></div><h2 class="text-xl font-black mt-3">${escapeHtml(eventTitle(item))}</h2><p class="text-sm text-slate-300">${escapeHtml(item.eventDate || item.event_date || item.event_time || '-')} · ${escapeHtml(venueTitle(item))}</p><p class="mini">โหมดอัตโนมัติ / Auto: Fair Match</p><div class="grid grid-cols-2 gap-2 mt-4"><button class="cut p-3 font-black bg-lime text-black" type="button" data-pick="${item.id}" data-next="join">เข้าร่วม / Join</button><button class="cut btn bg-white/5 p-3" type="button" data-pick="${item.id}" data-next="manage">จัดการ / Manage</button></div></div>`).join('') || '<div class="soft p-4">No events</div>';
+}
+function playerRow(player, controls = false) {
+  return `<div class="soft queue-card ${queueClass(player.status)} p-3 flex justify-between items-center gap-2"><div><div class="flex items-center gap-2"><b>${escapeHtml(player.nickname)}</b></div><div class="mini">Lv ${player.estimated_level.toFixed(1)} · ${player.matches_played || 0} games</div></div><span class="status-pill ${statusClass(player.status)}"><i></i><span>${statusLabel(player.status)}</span></span>${controls ? `<div class="flex gap-1 flex-wrap"><button class="cut btn bg-white/5 px-2 py-1 text-xs" type="button" data-status="ready" data-player="${player.id}">Ready</button><button class="cut btn bg-white/5 px-2 py-1 text-xs" type="button" data-status="resting" data-player="${player.id}">Rest</button><button class="cut btn bg-white/5 px-2 py-1 text-xs" type="button" data-status="left" data-player="${player.id}">Left</button></div>` : ''}</div>`;
+}
+function renderJoin() {
+  dom.joinEventName.textContent = event ? eventTitle(event) : '-';
+  dom.joinPlayers.innerHTML = players.map((player) => playerRow(player, false)).join('') || '<div class="soft p-3 mini">No players yet</div>';
+}
+function renderManage() {
+  dom.manageEventName.textContent = event ? eventTitle(event) : '-';
+  dom.eventSelect.innerHTML = events.map((item) => `<option value="${item.id}">${item.status === 'completed' ? '[ARCHIVED] ' : '[LIVE] '}${escapeHtml(eventTitle(item))}</option>`).join('');
+  if (event) dom.eventSelect.value = event.id;
+  dom.chipPlayers.textContent = players.length;
+  dom.chipReady.textContent = readyPlayers().length;
+  dom.chipLive.textContent = activeMatches().filter((match) => match.status === 'playing').length;
+  dom.chipPreview.textContent = previews.length + activeMatches().filter((match) => match.status !== 'playing').length;
+  dom.chipCourts.textContent = activeCourtCount();
+  dom.managePlayers.innerHTML = players.map((player) => playerRow(player, true)).join('') || '<div class="soft p-3 mini">No players</div>';
+  renderManualOptions();
+}
+function renderManualOptions() {
+  const selects = [$('manual0'), $('manual1'), $('manual2'), $('manual3')];
+  selects.forEach((select, index) => {
+    const old = select.value;
+    const picked = new Set(selects.filter((_, selectIndex) => selectIndex !== index).map((item) => item.value).filter(Boolean));
+    const options = readyPlayers().filter((player) => !picked.has(String(player.id)) || String(player.id) === old).map((player) => `<option value="${player.id}">${escapeHtml(player.nickname)} · Lv ${player.estimated_level.toFixed(1)}</option>`).join('');
+    select.innerHTML = `<option value="">- เลือกผู้เล่น / Select player -</option>${options}`;
+    select.value = [...select.options].some((option) => option.value === old) ? old : '';
+  });
+}
+function previewCard(preview) {
+  return `<div class="cut card p-4 bg-[#1a2028]"><div class="flex justify-between mb-3"><b class="text-cyan-300">${preview.courtName}</b><span class="mini">${modeName(preview.matchMode)}</span></div><div class="grid grid-cols-2 gap-3"><div class="rounded-xl border border-orange-400/40 bg-orange-500/10 p-3"><b class="text-orange-300">ทีม A / TEAM A</b>${preview.teamA.map((item) => `<div>${escapeHtml(itemName(item))}</div>`).join('')}</div><div class="rounded-xl border border-lime-300/40 bg-lime-500/10 p-3"><b class="lime">ทีม B / TEAM B</b>${preview.teamB.map((item) => `<div>${escapeHtml(itemName(item))}</div>`).join('')}</div></div><div class="grid grid-cols-2 gap-2 mt-3"><button class="cut bg-red-500 p-3 text-xs font-black" type="button" data-cancel-preview="${preview.uid}">ยกเลิก / CANCEL</button><button class="cut bg-orange-400 text-black p-3 text-xs font-black" type="button" data-start-preview="${preview.uid}">เริ่ม / START</button></div></div>`;
+}
+function liveCard(match) {
+  const draft = getScoreDraft(match.id) || {};
+  return `<div class="cut card p-4 bg-[#1a2028]"><div class="flex justify-between mb-3"><h3 class="text-xl font-black">${escapeHtml(match.courtName)}</h3><span class="lime">${match.status === 'playing' ? 'PLAYING' : 'PREVIEW'}</span></div><div class="grid grid-cols-2 gap-3"><div class="rounded-xl border border-orange-400/40 bg-orange-500/10 p-3"><b class="text-orange-300">ทีม A / TEAM A</b><div>${escapeHtml(teamNames(match,'A'))}</div></div><div class="rounded-xl border border-lime-300/40 bg-lime-500/10 p-3"><b class="lime">ทีม B / TEAM B</b><div>${escapeHtml(teamNames(match,'B'))}</div></div></div><div class="grid grid-cols-2 gap-2 mt-3"><input class="rounded-lg border p-3 text-center text-xl font-black" type="number" data-score-a="${match.id}" value="${draft.teamAScore ?? match.teamAScore ?? 11}" placeholder="A"><input class="rounded-lg border p-3 text-center text-xl font-black" type="number" data-score-b="${match.id}" value="${draft.teamBScore ?? match.teamBScore ?? 8}" placeholder="B"></div><div class="grid grid-cols-3 gap-2 mt-2"><button class="cut bg-orange-400 text-black p-3 font-black" type="button" ${match.status === 'playing' ? 'disabled' : ''} data-start-match="${match.id}">START</button><button class="cut bg-red-500 p-3 font-black" type="button" data-cancel-match="${match.id}">CANCEL</button><button class="cut bg-lime p-3 font-black text-black" type="button" data-confirm-score="${match.id}">CONFIRM</button></div></div>`;
+}
+function renderMatches() {
+  const active = activeMatches();
+  dom.matchPanels.innerHTML = `<div class="cut card p-4 border-cyan-300/40"><h3 class="text-xl font-black text-cyan-300">พรีวิวแมตช์ / MATCH PREVIEW</h3><div class="grid md:grid-cols-2 gap-3 mt-3">${previews.map(previewCard).join('') || '<div class="soft p-4 text-slate-400">ยังไม่มีพรีวิว / No preview yet</div>'}</div></div><div class="cut card p-4"><h3 class="text-xl font-black lime">คอร์ทกำลังเล่น / LIVE COURTS</h3><div class="grid md:grid-cols-2 gap-3 mt-3">${active.map(liveCard).join('') || '<div class="soft p-4 text-slate-400">No live courts</div>'}</div></div>`;
+}
+function renderStats() {
+  const ranking = rankPlayers();
+  dom.statPlayers.textContent = players.length;
+  dom.statCompleted.textContent = completedMatches().length;
+  dom.statGames.textContent = players.reduce((sum, player) => sum + (player.matches_played || 0), 0);
+  dom.statLevel.textContent = (players.reduce((sum, player) => sum + player.estimated_level, 0) / (players.length || 1)).toFixed(2);
+  dom.topScore.innerHTML = ranking.slice(0,5).map((player, index) => `<div class="soft p-3 mt-2 flex justify-between"><div><b>${index + 1}. ${escapeHtml(player.nickname)}</b><div class="mini">W/L ${player.wins || 0}/${player.losses || 0} · ${winRate(player)}%</div></div><b class="lime">${player.score}</b></div>`).join('') || '<div class="mini mt-3">No data</div>';
+  dom.mostPlayed.innerHTML = [...players].sort((a,b) => (b.matches_played || 0) - (a.matches_played || 0)).slice(0,5).map((player) => `<div class="soft p-3 mt-2 flex justify-between"><b>${escapeHtml(player.nickname)}</b><b>${player.matches_played || 0} games</b></div>`).join('') || '<div class="mini mt-3">No data</div>';
+  dom.bestDiff.innerHTML = [...players].sort((a,b) => diff(b) - diff(a)).slice(0,5).map((player) => `<div class="soft p-3 mt-2 flex justify-between"><b>${escapeHtml(player.nickname)}</b><b class="${diff(player) >= 0 ? 'lime' : 'text-red-400'}">${diff(player)}</b></div>`).join('') || '<div class="mini mt-3">No data</div>';
+  dom.rankingTable.innerHTML = `<table class="mt-3 w-full min-w-[760px] text-sm text-left"><thead class="text-slate-400 text-xs"><tr><th>#</th><th>Player</th><th>Score</th><th>Win%</th><th>W</th><th>L</th><th>Diff</th><th>Games</th><th>Status</th></tr></thead><tbody>${ranking.map((player, index) => `<tr class="border-t border-white/10"><td class="py-3">${index + 1}</td><td class="font-bold">${escapeHtml(player.nickname)}</td><td class="lime font-black">${player.score}</td><td>${winRate(player)}%</td><td>${player.wins || 0}</td><td>${player.losses || 0}</td><td class="${diff(player) >= 0 ? 'lime' : 'text-red-400'}">${diff(player)}</td><td>${player.matches_played || 0}</td><td>${statusLabel(player.status)}</td></tr>`).join('')}</tbody></table>`;
+  dom.matchHistory.innerHTML = `<table class="mt-3 w-full min-w-[760px] text-sm text-left"><thead class="text-slate-400 text-xs"><tr><th>Court</th><th>Team A</th><th>Score</th><th>Team B</th><th>Mode</th></tr></thead><tbody>${completedMatches().map((match) => `<tr class="border-t border-white/10"><td class="py-3">${escapeHtml(match.courtName)}</td><td>${escapeHtml(teamNames(match,'A'))}</td><td><b>${match.teamAScore ?? '-'}-${match.teamBScore ?? '-'}</b></td><td>${escapeHtml(teamNames(match,'B'))}</td><td>${modeName(match.match_type)}</td></tr>`).join('')}</tbody></table>`;
+}
+function renderAll() {
+  renderEvents();
+  renderJoin();
+  renderManage();
+  renderMatches();
+  renderStats();
+}
+
+async function pickEvent(id, nextTab = currentTab) {
+  await services.selectEvent(id);
+  event = await services.getCurrentEvent();
+  previews = [];
+  await loadCurrent();
+  setTab(nextTab);
+}
+async function savePlayer() {
+  if (!event) return showMessage('ยังไม่มี event');
+  const name = dom.joinName.value.trim();
+  if (!name) return showMessage('ใส่ชื่อเล่นก่อน');
+  await services.checkInPlayer({ eventId: event.id, displayName: name, level: Number(dom.joinLevel.value) });
+  dom.joinName.value = '';
+  showMessage('เข้าคิวแล้ว / Ready');
+  await loadCurrent();
+}
+async function setPlayerStatus(id, status) {
+  await services.setPlayerStatus(event.id, id, status);
+  await loadCurrent();
+}
+async function forceAllReady() {
+  await services.forceAllPlayersReady(event.id);
+  await loadCurrent();
+}
+function generateAutoPreviews() {
+  if (!event) return showMessage('ยังไม่มี event');
+  const rules = dom.autoMode.value === 'beginner' ? { lowGamesWeight: 260, candidateLimit: 8 } : dom.autoMode.value === 'competitive' ? { candidateLimit: 16, lowGamesWeight: 60 } : { candidateLimit: 10, lowGamesWeight: 120 };
+  const result = generateMatches({ players: readyPlayers(), courts: courtList(), history: matches, rules });
+  previews = result.previews.map((preview, index) => ({ ...preview, uid: `pr-${Date.now()}-${index}`, matchMode: dom.autoMode.value, courtName: preview.courtName || `COURT ${index + 1}` }));
+  if (!previews.length) showMessage(result.reason || 'ผู้เล่นพร้อมไม่พอ');
+  renderAll();
+}
+async function startAllPreviews() {
+  for (const preview of [...previews]) await startPreview(preview.uid);
+  previews = [];
+  await loadCurrent();
+}
+function clearPreviews() { previews = []; renderAll(); }
+function generateManualPreview() {
+  const selected = ['manual0','manual1','manual2','manual3'].map((id) => $(id).value).filter(Boolean);
+  if (selected.length !== 4 || new Set(selected).size !== 4) return showMessage('เลือกผู้เล่นให้ครบ 4 คน ห้ามซ้ำ');
+  previews = [...previews, { uid: `manual-${Date.now()}`, courtId: 'court-1', courtName: 'COURT 1', teamA: selected.slice(0,2).map(byId), teamB: selected.slice(2).map(byId), matchMode: 'manual' }];
+  clearManual();
+  renderAll();
+}
+function clearManual() {
+  ['manual0','manual1','manual2','manual3'].forEach((id) => { $(id).value = ''; });
+  renderManualOptions();
+}
+function cancelPreview(uid) { previews = previews.filter((preview) => preview.uid !== uid); renderAll(); }
+async function startPreview(uid) {
+  const preview = previews.find((item) => item.uid === uid);
+  if (!preview) return;
+  const created = await services.createMatchPreview({ eventId: event.id, courtId: preview.courtId, courtName: preview.courtName, teamA: preview.teamA, teamB: preview.teamB, matchMode: preview.matchMode });
+  await services.startMatch(created.id, { eventId: event.id });
+  previews = previews.filter((item) => item.uid !== uid);
+  await loadCurrent();
+}
+async function startMatch(id) {
+  await services.startMatch(id, { eventId: event.id });
+  await loadCurrent();
+}
+function scoreFor(id) {
+  return { teamAScore: document.querySelector(`[data-score-a="${id}"]`)?.value, teamBScore: document.querySelector(`[data-score-b="${id}"]`)?.value };
+}
+async function cancelMatch(id) {
+  const score = scoreFor(id);
+  saveScoreDraft(id, { ...score, cancelled: true });
+  await services.cancelMatch(id, { eventId: event.id, reason: 'cancelled', ...score, keepScoreDraft: true });
+  await loadCurrent();
+}
+async function confirmScore(id) {
+  const score = scoreFor(id);
+  await services.confirmScore(id, { eventId: event.id, ...score });
+  clearScoreDraft(id);
+  await loadCurrent();
+}
+async function endEvent() {
+  if (!event) return;
+  await services.updateEventStatus(event.id, 'completed');
+  await loadAll();
+  setTab('stats');
+}
+async function loadCurrent() {
+  event = await services.getCurrentEvent();
+  if (!event) { renderAll(); return; }
+  const [rawPlayers, rawMatches] = await Promise.all([services.listEventPlayers(event.id), services.listEventMatches(event.id)]);
+  players = rawPlayers.map(normalizePlayer);
+  matches = rawMatches.map(normalizeMatch);
+  renderAll();
+}
+async function loadAll() {
+  events = await services.listEvents();
+  event = await services.getCurrentEvent();
+  await loadCurrent();
+}
+
+document.querySelector('nav').addEventListener('click', (eventClick) => {
+  const button = eventClick.target.closest('[data-tab]');
+  if (button) setTab(button.dataset.tab);
+});
+dom.eventList.addEventListener('click', (eventClick) => {
+  const button = eventClick.target.closest('[data-pick]');
+  if (button) pickEvent(button.dataset.pick, button.dataset.next || 'join');
+});
+dom.managePlayers.addEventListener('click', (eventClick) => {
+  const button = eventClick.target.closest('[data-player]');
+  if (button) setPlayerStatus(button.dataset.player, button.dataset.status);
+});
+dom.matchPanels.addEventListener('click', (eventClick) => {
+  const cancelPreviewBtn = eventClick.target.closest('[data-cancel-preview]');
+  const startPreviewBtn = eventClick.target.closest('[data-start-preview]');
+  const startMatchBtn = eventClick.target.closest('[data-start-match]');
+  const cancelMatchBtn = eventClick.target.closest('[data-cancel-match]');
+  const confirmScoreBtn = eventClick.target.closest('[data-confirm-score]');
+  if (cancelPreviewBtn) cancelPreview(cancelPreviewBtn.dataset.cancelPreview);
+  if (startPreviewBtn) startPreview(startPreviewBtn.dataset.startPreview);
+  if (startMatchBtn) startMatch(startMatchBtn.dataset.startMatch);
+  if (cancelMatchBtn) cancelMatch(cancelMatchBtn.dataset.cancelMatch);
+  if (confirmScoreBtn) confirmScore(confirmScoreBtn.dataset.confirmScore);
+});
+['manual0','manual1','manual2','manual3'].forEach((id) => $(id).addEventListener('change', renderManualOptions));
+dom.eventSelect.addEventListener('change', () => pickEvent(dom.eventSelect.value, 'manage'));
+dom.courtsInput.addEventListener('change', renderAll);
+$('refreshEventsBtn').addEventListener('click', loadAll);
+$('refreshManageBtn').addEventListener('click', loadCurrent);
+$('refreshStatsBtn').addEventListener('click', loadCurrent);
+$('savePlayerBtn').addEventListener('click', savePlayer);
+$('endEventBtn').addEventListener('click', endEvent);
+$('generateAutoBtn').addEventListener('click', generateAutoPreviews);
+$('startAllBtn').addEventListener('click', startAllPreviews);
+$('clearPreviewBtn').addEventListener('click', clearPreviews);
+$('manualPreviewBtn').addEventListener('click', generateManualPreview);
+$('manualClearBtn').addEventListener('click', clearManual);
+$('forceAllReadyBtn')?.addEventListener('click', forceAllReady);
 loadAll();
 </script>
 </body>
