@@ -112,6 +112,17 @@ export function updateEventStatus(eventId, status) {
   return next.find((event) => event.id === eventId) || null;
 }
 
+export function deleteEvent(eventId) {
+  const events = listEvents();
+  const next = events.filter((event) => event.id !== eventId);
+  localStorage.setItem(EVENTS_KEY, JSON.stringify(next));
+  if (localStorage.getItem(SELECTED_EVENT_KEY) === eventId) {
+    if (next[0]) localStorage.setItem(SELECTED_EVENT_KEY, next[0].id);
+    else localStorage.removeItem(SELECTED_EVENT_KEY);
+  }
+  return { deletedId: eventId, events: next };
+}
+
 export function resetEvents() {
   localStorage.setItem(EVENTS_KEY, JSON.stringify(seedEvents));
   localStorage.setItem(SELECTED_EVENT_KEY, seedEvents[0].id);
