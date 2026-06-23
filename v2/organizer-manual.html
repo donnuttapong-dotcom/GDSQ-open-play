@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GDSQ v2 Organizer Manual Pair</title>
+<link rel="stylesheet" href="./styles.css" />
+<style>
+.manualDock{position:sticky;top:58px;z-index:25;background:rgba(13,18,23,.95);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.1);padding:10px 14px}.manualInner{max-width:1120px;margin:0 auto}.manualPanel{border:1px solid rgba(199,255,46,.25);background:linear-gradient(135deg,rgba(199,255,46,.10),rgba(255,255,255,.045));border-radius:24px;padding:14px}.manualGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}.teamPick{display:grid;grid-template-columns:1fr 1fr;gap:8px}.iframeShell{height:calc(100svh - 258px);min-height:620px}.iframeShell iframe{width:100%;height:100%;border:0;display:block}.linkMini{font-size:11px;color:#cbd5e1;word-break:break-all;background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:8px;margin-top:8px}.mobileHint{display:none}@media(max-width:840px){.manualDock{position:relative;top:auto}.manualGrid,.teamPick{grid-template-columns:1fr}.iframeShell{height:calc(100svh - 96px);min-height:680px}.mobileHint{display:block}.desktopHint{display:none}}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner"><div><div class="brand">ORGANIZER v2</div><div class="small muted">Manual Pair Builder · Auto flow ยังอยู่ครบ</div></div><div class="row wrap"><span id="modeBadge" class="tag">MODE</span><a id="appLink" class="tag" style="text-decoration:none" href="./app.html?v=v2-assembled-01">APP</a></div></div></header>
+<section class="manualDock">
+  <div class="manualInner">
+    <div class="manualPanel">
+      <div class="between mobile-stack"><div><div class="micro lime">MANUAL PAIR</div><b id="eventTitle">Loading event...</b><div id="eventMeta" class="small muted">เลือกคู่เองแล้ว Save + Start ลง Court Board</div></div><div class="row wrap"><button class="btn secondary" onclick="window.refreshManual()">Refresh Players</button><button class="btn orange" onclick="window.saveManualMatch()">Save + Start Match</button></div></div>
+      <div class="manualGrid" style="margin-top:12px">
+        <div><label class="label">Court</label><select id="courtSelect" class="input"></select></div>
+        <div><label class="label">Team A</label><div class="teamPick"><select id="a1" class="input playerSelect"></select><select id="a2" class="input playerSelect"></select></div></div>
+        <div><label class="label">Team B</label><div class="teamPick"><select id="b1" class="input playerSelect"></select><select id="b2" class="input playerSelect"></select></div></div>
+      </div>
+      <div class="grid grid-2" style="margin-top:10px"><div id="manualState" class="notice">กำลังโหลด Manual Pair Builder...</div><button class="btn secondary" onclick="window.clearManualPick()">Clear Pick</button></div>
+      <div class="linkMini" id="manualLink">-</div>
+      <div class="small muted mobileHint" style="margin-top:8px">มือถือ: แผง Manual อยู่ด้านบน แล้วเลื่อนลงไปดู Court Board ด้านล่าง</div>
+    </div>
+  </div>
+</section>
+<div class="iframeShell"><iframe id="orgFrame" src="about:blank" title="Organizer v2 core"></iframe></div>
+<script type="module">
+import { createV2Services } from './src/services/index.js';
+import { modeLabel } from './src/services/serviceMode.js';
+import { writeAuditLog } from './src/services/mockAuditService.js';
+
+const VERSION='v2-manual-pair-01';
+const services=createV2Services();
+let currentEvent=null;
+let players=[];
+let courts=[];
+modeBadge.textContent=modeLabel();
+function q(){return new URLSearchParams(location.search)}
+function eventId(){return q().get('event')||q().get('eventId')||q().get('id')||localStorage.getItem('gdsq_v2_selected_event_id')||''}
+function pageLink(page,id=eventId()){const p=new URLSearchParams();if(id)p.set('event',id);p.set('v',VERSION);return `./${page}?${p.toString()}`}
+function playerName(p){return p?.displayName||p?.display_name||p?.name||'Player'}
+function eventName(e){return e?.name||'Untitled Event'}
+function venueName(e){return e?.venueName||e?.venue?.name||e?.venue_name||'Venue'}
+function courtCount(e){return Number(e?.courtCount||e?.court_count||1)}
+function setState(text,type='notice'){manualState.className=type;manualState.innerHTML=text}
+function selectedPlayers(){return [a1.value,a2.value,b1.value,b2.value].filter(Boolean)}
+function unique(arr){return new Set(arr).size===arr.length}
+function optionHtml(list){return '<option value="">เลือกผู้เล่น</option>'+list.map(p=>`<option value="${p.id}">${playerName(p)} · Lv ${p.level||p.estimatedLevel||'-'} · ${p.status||'ready'}</option>`).join('')}
+function selectedObject(id){return players.find(p=>String(p.id)===String(id))}
+function render(){
+  eventTitle.textContent=eventName(currentEvent);
+  eventMeta.textContent=`${venueName(currentEvent)} · ${courtCount(currentEvent)} Courts · Manual Pair Builder`;
+  appLink.href=pageLink('app.html');
+  orgFrame.src=pageLink('organizer.html');
+  manualLink.textContent=`Manual Organizer: ${new URL(location.href).toString()}\nCore Organizer: ${new URL(pageLink('organizer.html'),location.href).toString()}`;
+  const ready=players.filter(p=>['ready','checked_in'].includes(String(p.status||'ready')));
+  const options=optionHtml(ready);
+  [a1,a2,b1,b2].forEach(sel=>{const old=sel.value;sel.innerHTML=options;if([...sel.options].some(o=>o.value===old))sel.value=old});
+  courts=Array.from({length:courtCount(currentEvent)},(_,i)=>({id:`court-${i+1}`,name:`Court ${i+1}`}));
+  courtSelect.innerHTML=courts.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  setState(`Ready players: <b>${ready.length}</b> · เลือก 4 คนไม่ซ้ำ แล้วกด Save + Start`,ready.length>=4?'ok':'notice');
+}
+async function load(){try{currentEvent=await services.getCurrentEvent();if(!currentEvent)throw new Error('No selected event');players=(await services.listEventPlayers(currentEvent.id));render()}catch(e){setState(e.message,'danger');eventTitle.textContent='Manual Pair Error'}}
+window.refreshManual=load;
+window.clearManualPick=function(){[a1,a2,b1,b2].forEach(s=>s.value='');setState('Cleared manual pick','notice')}
+window.saveManualMatch=async function(){
+  try{
+    const ids=selectedPlayers();
+    if(ids.length!==4)throw new Error('เลือกผู้เล่นให้ครบ 4 คน');
+    if(!unique(ids))throw new Error('ผู้เล่นซ้ำกัน เลือกใหม่อีกครั้ง');
+    const court=courts.find(c=>c.id===courtSelect.value)||courts[0];
+    const [pa1,pa2,pb1,pb2]=ids.map(selectedObject);
+    if([pa1,pa2,pb1,pb2].some(x=>!x))throw new Error('มีผู้เล่นที่หาไม่เจอ กรุณา Refresh');
+    setState('Saving manual match...','notice');
+    const created=await services.createMatchPreview({eventId:currentEvent.id,courtId:court.id,courtName:court.name,teamA:[pa1,pa2],teamB:[pb1,pb2],fairnessScore:0,matchMode:'manual'});
+    const started=await services.startMatch(created.id,{eventId:currentEvent.id});
+    await writeAuditLog('manual_match_started',{eventId:currentEvent.id,matchId:started.id,courtId:court.id,teamA:ids.slice(0,2),teamB:ids.slice(2)});
+    setState(`<b>Saved + Started</b> ${court.name}: ${playerName(pa1)} / ${playerName(pa2)} vs ${playerName(pb1)} / ${playerName(pb2)}`,'ok');
+    [a1,a2,b1,b2].forEach(s=>s.value='');
+    await load();
+    orgFrame.contentWindow?.location.reload();
+  }catch(e){setState(e.message,'danger')}
+}
+load();
+</script>
+</body>
+</html>
