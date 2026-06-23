@@ -145,7 +145,12 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
 
     async cancelMatch(matchId, payload = {}) {
       if (isSupabase) throw new Error('cancelMatch for Supabase mode is not implemented yet.');
-      const match = cancelLocalMatch(payload.eventId, matchId, payload.reason || 'cancelled_by_organizer');
+      const match = cancelLocalMatch(payload.eventId, matchId, {
+        reason: payload.reason || 'cancelled_by_organizer',
+        teamAScore: payload.teamAScore,
+        teamBScore: payload.teamBScore,
+        keepScoreDraft: true
+      });
       setLocalPlayerStatus(payload.eventId, matchPlayerIds(match), 'ready');
       return match;
     },
