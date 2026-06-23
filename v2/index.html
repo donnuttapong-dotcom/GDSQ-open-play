@@ -3,50 +3,28 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>GDSQ OpenPlay v2 Prototype</title>
-<link rel="stylesheet" href="./styles.css" />
+<title>GDSQ Play System Hub v2</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{background:#11161b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif}.cut{clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px)}.card{background:#222931;border:1px solid #39434d}.lime{color:#c7ff2e}.bg-lime{background:#c7ff2e;color:#111}.soft{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.1);border-radius:18px}.btn{border:1px solid rgba(255,255,255,.14);font-weight:900}.mini{font-size:12px;color:#94a3b8}.glow{box-shadow:0 0 32px rgba(199,255,46,.12)}
+</style>
 </head>
 <body>
-<header class="topbar"><div class="topbar-inner"><div><div class="brand">GDSQ OPENPLAY v2</div><div class="small muted">Operating system prototype · ไม่แตะระบบเก่า</div></div><span class="tag">V2 MAIN</span></div></header>
-<main class="app grid">
-<section class="card cut hero">
-<div class="micro lime">PLATFORM V2</div>
-<h1 style="font-size:38px;line-height:1.05;margin:8px 0 10px">Pickleball Event & Club Operating System</h1>
-<p class="muted">ต้นแบบระบบใหม่สำหรับสนาม / ผู้จัด / club / coach แยกจากระบบเก่า 100% และจัด flow ให้พร้อมทดสอบหน้างานจริง</p>
-<div class="notice" style="margin-top:14px">ทางเข้าหลัก: เปิด App Flow ก่อน แล้วเดินงานตามลำดับ Setup Event → Check-in → Queue → Court Board → Score/Cancel → Summary</div>
-<div class="row wrap" style="margin-top:14px"><a class="btn" href="./app.html?v=v2-flow-best-01">Open V2 App Flow</a><a class="btn secondary" href="./events.html?v=v2-flow-best-01">Step 01 Event Setup</a><a class="btn secondary" href="./organizer.html?v=v2-cancel-safe-01">Open Organizer</a></div>
+<header class="sticky top-0 z-50 bg-[#0d1217]/95 border-b border-white/10 p-4">
+  <div class="max-w-6xl mx-auto flex justify-between items-center gap-3"><div><div class="text-[10px] tracking-[.28em] lime">GDSQ PICKLEBALL</div><b class="text-lg">PLAY SYSTEM HUB v2</b></div><a class="cut bg-white/5 px-4 py-2 font-black btn" href="../">V1</a></div>
+</header>
+<main class="max-w-6xl mx-auto p-4">
+<section class="cut card p-6 md:p-8 glow">
+  <div class="grid lg:grid-cols-[1.1fr_.9fr] gap-6 items-end"><div><div class="text-[11px] tracking-[.25em] lime mb-2">เลือกโหมดการใช้งาน</div><h1 class="text-4xl md:text-6xl font-black leading-tight">เลือกโหมด<br>การเล่นของคุณ</h1><p class="text-slate-300 mt-4 max-w-2xl">V2 หน้าตาและ flow กลับมาเหมือน V1 ก่อน แต่หลังบ้านเตรียมไว้ให้เสถียรกว่าเดิม</p></div><div class="grid grid-cols-3 gap-2 text-center"><div class="soft p-4"><b class="text-2xl lime">01</b><div class="mini mt-1">Open Play</div></div><div class="soft p-4"><b class="text-2xl lime">02</b><div class="mini mt-1">Tournament</div></div><div class="soft p-4"><b class="text-2xl lime">03</b><div class="mini mt-1">Team Battle</div></div></div></div>
 </section>
-<section class="grid grid-4">
-<a class="card" href="./app.html?v=v2-flow-best-01" style="text-decoration:none;color:white"><div class="micro lime">00</div><h2>App Flow</h2><p class="muted small">ทางเข้ากลางตามลำดับใช้งานจริง</p></a>
-<a class="card" href="./events.html?v=v2-flow-best-01" style="text-decoration:none;color:white"><div class="micro lime">01</div><h2>Setup Event</h2><p class="muted small">สร้าง / เลือก event และลิงก์ตรง</p></a>
-<a class="card" href="./checkin.html?v=v2-flow-best-01" style="text-decoration:none;color:white"><div class="micro lime">02</div><h2>Check-in</h2><p class="muted small">ผู้เล่นลงชื่อและเลือก level</p></a>
-<a class="card" href="./organizer.html?v=v2-cancel-safe-01" style="text-decoration:none;color:white"><div class="micro lime">03</div><h2>Organizer</h2><p class="muted small">Queue / Court Board / Auto / Manual / Score</p></a>
-<a class="card" href="./summary.html?v=v2-flow-best-01" style="text-decoration:none;color:white"><div class="micro lime">04</div><h2>Summary</h2><p class="muted small">Ranking + Match History หลังจบงาน</p></a>
-<a class="card" href="./stats.html?v=v2-stats-v1style-01" style="text-decoration:none;color:white"><div class="micro lime">05</div><h2>Stats</h2><p class="muted small">Shortcut ไปหน้าสถิติแบบ V1</p></a>
-<a class="card" href="./player.html?v=v2-flow-best-01" style="text-decoration:none;color:white"><div class="micro lime">06</div><h2>Player</h2><p class="muted small">ผู้เล่นดูสถานะ / court / stats</p></a>
-<a class="card" href="./flow.html?v=v2-flow-best-01" style="text-decoration:none;color:white"><div class="micro lime">07</div><h2>Runbook</h2><p class="muted small">คู่มือ flow สำหรับใช้งานจริงและขายงาน</p></a>
+<section class="grid md:grid-cols-3 gap-4 mt-5">
+  <a href="./openplay.html?v=v2-v1-like-01" class="cut card p-5 hover:ring-2 hover:ring-lime-300 transition block text-white no-underline"><div class="text-[10px] tracking-[.25em] lime">MODE 01</div><h2 class="text-3xl font-black mt-2">OPEN PLAY</h2><p class="text-slate-300 mt-3">เล่นทั่วไป จับคู่ให้แฟร์ ให้ทุกคนได้เล่นใกล้เคียงกัน เหมาะกับกิจกรรมประจำวัน</p><div class="grid gap-2 mt-5 text-sm"><div class="soft p-3">จับคู่ Auto / Manual</div><div class="soft p-3">เก็บคะแนนและสถิติ</div><div class="soft p-3">ดูย้อนหลังหลังจบ Event</div></div><div class="cut bg-lime p-4 mt-5 text-center font-black">เข้า Open Play</div></a>
+  <a href="../tournament.html" class="cut card p-5 hover:ring-2 hover:ring-lime-300 transition block text-white no-underline"><div class="text-[10px] tracking-[.25em] lime">MODE 02</div><h2 class="text-3xl font-black mt-2">TOURNAMENT</h2><p class="text-slate-300 mt-3">แข่งจริง มีสาย มีตาราง มีแชมป์ เหมาะกับการแข่งขันแบบเป็นรายการ</p><div class="grid gap-2 mt-5 text-sm"><div class="soft p-3">Single Elimination</div><div class="soft p-3">Round Robin</div><div class="soft p-3">บันทึกออนไลน์ / ลิงก์ดูผล</div></div><div class="cut bg-lime p-4 mt-5 text-center font-black">เข้า Tournament</div></a>
+  <a href="../team-battle.html" class="cut card p-5 hover:ring-2 hover:ring-lime-300 transition block text-white no-underline"><div class="text-[10px] tracking-[.25em] lime">MODE 03</div><h2 class="text-3xl font-black mt-2">TEAM BATTLE</h2><p class="text-slate-300 mt-3">แบ่งทีมสี รวมคะแนนทีม เหมาะกับอีเวนท์สนุกในคลับ</p><div class="grid gap-2 mt-5 text-sm"><div class="soft p-3">แบ่งทีมตาม Rating</div><div class="soft p-3">รวมคะแนนทีม</div><div class="soft p-3">สรุป Champion Team</div></div><div class="cut bg-lime p-4 mt-5 text-center font-black">เข้า Team Battle</div></a>
 </section>
-<section class="card">
-<div class="between mobile-stack"><div><h2 class="section-title lime">Best Operating Flow</h2><p class="muted">จัดระบบให้ staff หน้างานเดินตามได้ง่ายที่สุด</p></div><a class="btn secondary" href="./flow.html?v=v2-flow-best-01">Open Runbook</a></div>
-<div class="grid" style="margin-top:12px"><div class="ok">Setup Event → Check-in → Queue → Court Board → Score/Cancel → Summary</div><div class="notice">Manual Pair รวมอยู่ใน Organizer เดียวแล้ว ไม่ใช้ organizer-manual เป็นทางหลัก</div></div>
-</section>
-<section class="card">
-<div class="between mobile-stack"><div><h2 class="section-title lime">Build Rules</h2><p class="muted">กติกาการพัฒนาระบบใหม่</p></div><span class="pill status-online">OLD SYSTEM SAFE</span></div>
-<div class="grid" style="margin-top:12px">
-<div class="ok">ทำงานเฉพาะใน <b>v2/</b> และเอกสาร <b>docs/v2-*</b></div>
-<div class="danger">ห้ามแก้ไฟล์เก่าที่ใช้งานจริงจนกว่า v2 ผ่าน dry run</div>
-<div class="notice">ปิด bug flow หลักก่อน แล้วค่อยไป Supabase production / Admin role</div>
-</div>
-</section>
-<section class="card">
-<h2 class="section-title">Docs</h2>
-<div class="list" style="margin-top:10px">
-<a class="btn secondary" href="../docs/v2-ux-alignment.md">UX Alignment With Original Flow</a>
-<a class="btn secondary" href="../docs/v2-product-requirements.md">Product Requirements</a>
-<a class="btn secondary" href="../docs/v2-technical-architecture.md">Technical Architecture</a>
-<a class="btn secondary" href="../docs/v2-data-model.md">Data Model</a>
-<a class="btn secondary" href="../docs/v2-build-plan-for-codex.md">Build Plan for Codex</a>
-</div>
+<section class="grid lg:grid-cols-[1fr_.8fr] gap-4 mt-5">
+  <div class="cut card p-5"><h3 class="text-2xl font-black lime">ใช้โหมดไหนดี?</h3><div class="grid gap-3 mt-4"><div class="soft p-4"><b>ถ้าวันนี้มีคนมาเล่นหลายคน และอยากจับคู่ให้แฟร์</b><p class="mini mt-1">Open Play</p></div><div class="soft p-4"><b>ถ้าต้องการแข่งจริง มีแชมป์ มีสายแข่ง</b><p class="mini mt-1">Tournament</p></div><div class="soft p-4"><b>ถ้าต้องการกิจกรรมทีมสี เล่นสนุก รวมคะแนนทีม</b><p class="mini mt-1">Team Battle</p></div></div></div>
+  <div class="cut card p-5"><h3 class="text-2xl font-black lime">V2 Direction</h3><p class="text-slate-300 mt-3">หน้าหลักต้องใช้ง่ายเหมือน V1 ก่อน ส่วน V2 logic เช่น draft score, event deep link, local adapter จะอยู่ด้านหลัง ไม่เพิ่มขั้นตอนให้คนใช้งานงง</p><a class="cut btn bg-white/5 p-4 mt-4 block text-center" href="./openplay.html?v=v2-v1-like-01">เปิด Open Play v2</a></div>
 </section>
 </main>
 </body>
