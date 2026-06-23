@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GDSQ Open Play v2 · Live Timer Stable</title>
+<style>
+html,body{margin:0;height:100%;background:#11161b;overflow:hidden}#app{width:100%;height:100%;border:0;display:block}.boot{position:fixed;left:12px;right:12px;bottom:12px;z-index:10;padding:10px 12px;border-radius:14px;background:rgba(17,22,27,.94);color:#c7ff2e;font:700 12px system-ui,'Noto Sans Thai',sans-serif;border:1px solid rgba(199,255,46,.35)}
+</style>
+</head>
+<body>
+<iframe id="app" src="./openplay.html?v=v2-live-timer-wrapper-01"></iframe>
+<div id="boot" class="boot">LIVE TIMER PATCH: กำลังโหลดตัว Stable และเติมเวลาใน Live Court...</div>
+<script>
+const frame = document.getElementById('app');
+const boot = document.getElementById('boot');
+const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
+const MATCH_KEY_PREFIX = 'gdsq_v2_matches:';
+function safeJson(value, fallback) { try { return JSON.parse(value); } catch { return fallback; } }
+function selectedEventId() { return localStorage.getItem(SELECTED_EVENT_KEY) || ''; }
+function matchesForEvent() { const id = selectedEventId(); return id ? safeJson(localStorage.getItem(MATCH_KEY_PREFIX + id) || '[]', []) : []; }
+function matchById(id) { return matchesForEvent().find((match) => String(match.id) === String(id)); }
+function pad(value) { return String(value).padStart(2, '0'); }
+function elapsedSeconds(startedAt) { const time = new Date(startedAt || '').getTime(); if (!Number.isFinite(time)) return 0; return Math.max(0, Math.floor((Date.now() - time) / 1000)); }
+function formatTime(seconds) { const minutes = Math.floor(seconds / 60); const secs = seconds % 60; return `${pad(minutes)}:${pad(secs)}`; }
+function startTime(startedAt) { if (!startedAt) return '-'; return new Date(startedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }); }
+function timerColor(seconds) { if (seconds >= 720) return '#ef4444'; if (seconds >= 540) return '#fb923c'; return '#c7ff2e'; }
+function timerLabel(seconds) { if (seconds >= 720) return 'เกินเวลา / OVER TIME'; if (seconds >= 540) return 'ใกล้ครบเวลา / NEAR LIMIT'; return 'กำลังเล่น / LIVE'; }
+function injectTimerStyle(doc) {
+  if (doc.getElementById('live-timer-style')) return;
+  const style = doc.createElement('style');
+  style.id = 'live-timer-style';
+  style.textContent = `.live-time-box{border:1px solid rgba(199,255,46,.35);background:rgba(0,0,0,.22);border-radius:16px;padding:12px;margin:0 0 12px 0}.live-time-row{display:flex;justify-content:space-between;gap:12px;align-items:center}.live-time-main{font-size:42px;line-height:1;font-weight:1000;font-variant-numeric:tabular-nums}.live-time-meta{font-size:12px;color:#94a3b8}.live-time-label{font-size:12px;font-weight:900}`;
+  doc.head.appendChild(style);
+}
+function paintTimers() {
+  const doc = frame.contentDocument;
+  if (!doc) return;
+  injectTimerStyle(doc);
+  const confirmButtons = Array.from(doc.querySelectorAll('[data-confirm-score]'));
+  confirmButtons.forEach((button) => {
+    const matchId = button.getAttribute('data-confirm-score');
+    const match = matchById(matchId);
+    const card = button.closest('.cut.card');
+    if (!card) return;
+    let box = card.querySelector('[data-live-time-box]');
+    const isLive = String(match?.status || '').toLowerCase() === 'playing';
+    const startedAt = match?.startedAt || match?.started_at;
+    if (!isLive || !startedAt) { if (box) box.remove(); return; }
+    const seconds = elapsedSeconds(startedAt);
+    const color = timerColor(seconds);
+    if (!box) {
+      box = doc.createElement('div');
+      box.setAttribute('data-live-time-box', matchId);
+      box.className = 'live-time-box';
+      const firstRow = card.querySelector('.flex.justify-between.mb-3');
+      if (firstRow && firstRow.nextSibling) card.insertBefore(box, firstRow.nextSibling); else card.prepend(box);
+    }
+    box.style.borderColor = color;
+    box.innerHTML = `<div class="live-time-row"><div><div class="live-time-meta">Started: ${startTime(startedAt)}</div><div class="live-time-label" style="color:${color}">${timerLabel(seconds)}</div></div><div class="live-time-main" style="color:${color}">${formatTime(seconds)}</div></div>`;
+  });
+  boot.textContent = 'LIVE TIMER PATCH: เปิดใช้งานแล้ว · เวลา Live Court จะเดินทุก 1 วิ';
+  setTimeout(() => boot.style.display = 'none', 2500);
+}
+frame.addEventListener('load', () => {
+  const doc = frame.contentDocument;
+  if (!doc) return;
+  paintTimers();
+  const observer = new MutationObserver(() => paintTimers());
+  observer.observe(doc.body, { childList: true, subtree: true });
+  setInterval(paintTimers, 1000);
+});
+</script>
+</body>
+</html>
