@@ -4,7 +4,8 @@ import {
   getSelectedEvent,
   selectEvent as selectLocalEvent,
   createEvent as createLocalEvent,
-  updateEventStatus as updateLocalEventStatus
+  updateEventStatus as updateLocalEventStatus,
+  deleteEvent as deleteLocalEvent
 } from './localEventStore.js';
 import { getCourts as getMockCourts } from './mockEventService.js';
 import { getEventPlayers as getMockEventPlayers } from './mockPlayerService.js';
@@ -80,6 +81,11 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
     async updateEventStatus(eventId, status) {
       if (isSupabase) return updateSupabaseEventStatus(requireSupabase(supabase), eventId, status);
       return updateLocalEventStatus(eventId, status);
+    },
+
+    async deleteEvent(eventId) {
+      if (isSupabase) throw new Error('deleteEvent for Supabase mode is not implemented yet.');
+      return deleteLocalEvent(eventId);
     },
 
     async getCourts() {
