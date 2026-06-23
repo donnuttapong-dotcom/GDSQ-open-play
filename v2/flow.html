@@ -3,37 +3,54 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>GDSQ v2 Simple Flow</title>
+<title>GDSQ v2 Operating Flow</title>
 <link rel="stylesheet" href="./styles.css" />
+<style>.flowList{display:grid;gap:12px}.flowItem{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:14px}.num{width:42px;height:42px;border-radius:999px;background:var(--lime);color:#111;display:grid;place-items:center;font-weight:1000}.seller{border:1px solid rgba(251,146,60,.28);background:rgba(251,146,60,.07)}@media(max-width:760px){.flowItem{grid-template-columns:1fr}.flowItem .btn{width:100%}}</style>
 </head>
 <body>
-<header class="topbar"><div class="topbar-inner"><div><div class="brand">V2 SIMPLE FLOW</div><div class="small muted">Keep the original GDSQ flow, make it safer</div></div><a class="tag" href="./index.html" style="text-decoration:none">HOME</a></div></header>
+<header class="topbar"><div class="topbar-inner"><div><div class="brand">V2 OPERATING FLOW</div><div class="small muted">Runbook สำหรับใช้งานจริง + ใช้พรีเซนต์ขาย</div></div><a class="tag" href="./app.html?v=v2-flow-best-01" style="text-decoration:none">APP FLOW</a></div></header>
 <main class="app grid">
 <section class="card cut hero">
-<div class="micro lime">UX DIRECTION</div>
-<h1 style="font-size:36px;line-height:1.05;margin:8px 0 10px">ง่ายเหมือนชุดแรก แต่เสถียรกว่า</h1>
-<p class="muted">v2 จะไม่ทำให้คนใช้งานรู้สึกเหมือนเปลี่ยนระบบใหม่ทั้งหมด แต่จะเก็บ flow เดิม แล้วเพิ่มความปลอดภัยของปุ่ม / save / retry / internet warning</p>
-</section>
-<section class="grid">
-<div class="card"><div class="between mobile-stack"><div><div class="micro lime">STEP 01</div><h2 class="section-title">Event</h2><p class="muted">สร้างหรือเลือกอีเว้นท์ เหมือนการเริ่ม session เดิม</p></div><a class="btn secondary" href="./organizer.html">Open Organizer</a></div></div>
-<div class="card"><div class="between mobile-stack"><div><div class="micro lime">STEP 02</div><h2 class="section-title">Players / Check-in</h2><p class="muted">ผู้เล่นเข้า QR, เลือก level, Organizer เห็นรายชื่อทันที</p></div><a class="btn secondary" href="./checkin.html">Open Check-in</a></div></div>
-<div class="card"><div class="between mobile-stack"><div><div class="micro lime">STEP 03</div><h2 class="section-title">Courts</h2><p class="muted">Generate match, ดู court board, start match, confirm score</p></div><a class="btn secondary" href="./organizer.html">Go to Courts</a></div></div>
-<div class="card"><div class="between mobile-stack"><div><div class="micro lime">STEP 04</div><h2 class="section-title">Results</h2><p class="muted">Ranking, Match History, Copy Summary Link หลังจบงาน</p></div><a class="btn secondary" href="./summary.html">Open Summary</a></div></div>
+<div class="micro lime">BEST VERSION FLOW</div>
+<h1 style="font-size:36px;line-height:1.05;margin:8px 0 10px">ง่ายเหมือน V1 แต่คุมหน้างานได้ปลอดภัยกว่า</h1>
+<p class="muted">V2 ต้องขายด้วยภาพจำนี้: สนาม/คลับเปิด event ได้เร็ว, ผู้เล่น check-in เอง, staff คุม court board, คะแนน/ยกเลิกไม่ทำข้อมูลพัง, จบงานส่ง ranking ได้ทันที</p>
 </section>
 <section class="card">
-<h2 class="section-title lime">One-primary-action rule</h2>
-<p class="muted">แต่ละหน้าควรมีปุ่มหลักชัดเจนเพียง 1 อย่าง เพื่อให้ staff หน้างานไม่งง</p>
-<div class="grid grid-2" style="margin-top:12px"><div class="ok"><b>Good</b><br>Generate Next Matches</div><div class="danger"><b>Avoid</b><br>ปุ่มเยอะเกินไปใน card เดียว</div></div>
-</section>
-<section class="card">
-<h2 class="section-title">Live Event Screen</h2>
-<div class="list" style="margin-top:12px">
-<div class="player"><div class="avatar">1</div><div><b>เห็น event ปัจจุบัน</b><div class="small muted">ไม่ต้องเลือกซับซ้อนตอนหน้างาน</div></div></div>
-<div class="player"><div class="avatar">2</div><div><b>เห็น court board ก่อน</b><div class="small muted">รู้ทันทีว่าคอร์ทไหนว่าง/กำลังเล่น</div></div></div>
-<div class="player"><div class="avatar">3</div><div><b>ปุ่มสำคัญต้องมี saving state</b><div class="small muted">กดแล้วต้องรู้ว่าระบบกำลังทำงาน</div></div></div>
-<div class="player"><div class="avatar">4</div><div><b>ถ้าเน็ตหลุดต้องไม่เสียคะแนน</b><div class="small muted">เก็บ draft และ retry ได้</div></div></div>
+<h2 class="section-title lime">ลำดับใช้งานจริง</h2>
+<div class="flowList" style="margin-top:12px">
+  <div class="flowItem"><div class="num">1</div><div><b>Setup Event</b><div class="small muted">สร้าง/เลือก event, สนาม, วันเวลา, จำนวนคอร์ท</div></div><a id="eventsLink" class="btn secondary" href="./events.html?v=v2-flow-best-01">Open Event Setup</a></div>
+  <div class="flowItem"><div class="num">2</div><div><b>Player Check-in</b><div class="small muted">ส่ง QR/link ให้ผู้เล่นลงชื่อและเลือก level</div></div><a id="checkinLink" class="btn secondary" href="./checkin.html?v=v2-flow-best-01">Open Check-in</a></div>
+  <div class="flowItem"><div class="num">3</div><div><b>Queue Control</b><div class="small muted">Organizer ตรวจ Ready / Rest / Left ก่อนจับคู่</div></div><a id="queueLink" class="btn secondary" href="./organizer.html?v=v2-flow-best-01">Open Queue</a></div>
+  <div class="flowItem"><div class="num">4</div><div><b>Court Board</b><div class="small muted">เลือก Auto Generate หรือ Manual Pair ในหน้าเดียว</div></div><a id="courtLink" class="btn secondary" href="./organizer.html?v=v2-flow-best-01">Open Court Board</a></div>
+  <div class="flowItem"><div class="num">5</div><div><b>Start / Cancel / Confirm</b><div class="small muted">Start match, Cancel แบบเก็บ score draft, หรือ Confirm score เพื่อบวกสถิติ</div></div><a id="scoreLink" class="btn secondary" href="./organizer.html?v=v2-flow-best-01">Open Match Control</a></div>
+  <div class="flowItem"><div class="num">6</div><div><b>Summary & Ranking</b><div class="small muted">หลังจบงาน copy message ส่ง ranking + match history เข้ากลุ่ม</div></div><a id="summaryLink" class="btn secondary" href="./summary.html?v=v2-flow-best-01">Open Summary</a></div>
 </div>
 </section>
+<section class="card seller">
+<h2 class="section-title orange">จุดขายที่ควรใช้คุยกับสนาม</h2>
+<div class="grid grid-2" style="margin-top:12px"><div class="ok"><b>ลดงาน staff</b><br>ผู้เล่น check-in เองผ่าน QR</div><div class="ok"><b>จัดคู่เร็ว</b><br>มีทั้ง Auto และ Manual ใน Court Board เดียว</div><div class="ok"><b>ลดความผิดพลาด</b><br>คนที่เล่นอยู่/ถูกเลือกแล้วจะไม่ถูกเลือกซ้ำ</div><div class="ok"><b>จบงานมี Content</b><br>Ranking + Match History ส่งเข้ากลุ่มได้ทันที</div></div>
+</section>
+<section class="card">
+<h2 class="section-title lime">Dry Run Checklist ก่อนเอาไปใช้จริง</h2>
+<div class="list" style="margin-top:12px">
+<div class="notice">ใช้มือถือ 2–3 เครื่อง: เครื่องหนึ่ง Check-in, เครื่องหนึ่ง Organizer, เครื่องหนึ่ง Summary</div>
+<div class="notice">Check-in ผู้เล่นอย่างน้อย 8 คน</div>
+<div class="notice">ทดสอบ Auto Generate 2 คอร์ท</div>
+<div class="notice">ทดสอบ Manual Pair โดยเลือกคนซ้ำ — ต้องเลือกไม่ได้</div>
+<div class="notice">Start match แล้วผู้เล่นต้องหายจาก dropdown</div>
+<div class="notice">Cancel match แล้วผู้เล่นต้องกลับ Ready และ score draft ยังอยู่</div>
+<div class="notice">Confirm score แล้ว ranking ต้องเปลี่ยน</div>
+<div class="notice">Summary link ต้องเปิด event เดิมเสมอ</div>
+</div>
+</section>
+<section class="card">
+<h2 class="section-title">สิ่งที่ยังต้องทำก่อนขายจริง</h2>
+<div class="list" style="margin-top:12px"><div class="danger">Supabase production + transaction lock</div><div class="danger">Admin PIN / Role permission</div><div class="danger">Multi-event isolation และ backup</div><div class="danger">หน้า pricing / onboarding / support</div></div>
+</section>
 </main>
+<script>
+const q=new URLSearchParams(location.search);const eventId=q.get('event')||q.get('eventId')||q.get('id')||localStorage.getItem('gdsq_v2_selected_event_id')||'';function link(page){const p=new URLSearchParams();if(eventId)p.set('event',eventId);p.set('v','v2-flow-best-01');return `./${page}?${p.toString()}`}
+if(eventId){eventsLink.href=link('events.html');checkinLink.href=link('checkin.html');queueLink.href=link('organizer.html');courtLink.href=link('organizer.html');scoreLink.href=link('organizer.html');summaryLink.href=link('summary.html')}
+</script>
 </body>
 </html>
