@@ -26,6 +26,22 @@ function save(eventId, matches) {
   return matches;
 }
 
+function normalizeCancelPayload(reasonOrPayload = 'cancelled_by_organizer') {
+  if (typeof reasonOrPayload === 'string') {
+    return { reason: reasonOrPayload };
+  }
+  return {
+    reason: reasonOrPayload.reason || 'cancelled_by_organizer',
+    teamAScore: reasonOrPayload.teamAScore,
+    teamBScore: reasonOrPayload.teamBScore,
+    keepScoreDraft: Boolean(reasonOrPayload.keepScoreDraft)
+  };
+}
+
+function hasScore(value) {
+  return value !== null && value !== undefined && String(value).trim() !== '' && Number.isFinite(Number(value));
+}
+
 export function listLocalEventMatches(eventId) {
   return list(eventId).sort((a, b) => new Date(b.createdAt || b.startedAt || 0) - new Date(a.createdAt || a.startedAt || 0));
 }
@@ -43,6 +59,7 @@ export function createLocalMatchPreview(payload) {
     teamA: (payload.teamA || []).map(playerId).filter(Boolean),
     teamB: (payload.teamB || []).map(playerId).filter(Boolean),
     fairnessScore: payload.fairnessScore || null,
+    matchMode: payload.matchMode || 'auto',
     teamAScore: null,
     teamBScore: null,
     createdAt: new Date().toISOString(),
@@ -68,16 +85,29 @@ export function startLocalMatch(eventId, matchId) {
   return matches[index];
 }
 
-export function cancelLocalMatch(eventId, matchId, reason = 'cancelled_by_organizer') {
+export function cancelLocalMatch(eventId, matchId, reasonOrPayload = 'cancelled_by_organizer') {
   const matches = list(eventId);
   const index = matches.findIndex((match) => match.id === matchId);
   if (index < 0) throw new Error('Match not found');
   if (matches[index].status === 'confirmed') throw new Error('Confirmed match cannot be cancelled');
+
+  const payload = normalizeCancelPayload(reasonOrPayload);
+  const scoreSnapshot = {
+    teamAScore: hasScore(payload.teamAScore) ? Number(payload.teamAScore) : matches[index].teamAScore,
+    teamBScore: hasScore(payload.teamBScore) ? Number(payload.teamBScore) : matches[index].teamBScore,
+    savedAt: new Date().toISOString(),
+    source: 'cancel_match'
+  };
+
   matches[index] = {
     ...matches[index],
     status: 'cancelled',
-    cancelReason: reason,
+    cancelReason: payload.reason,
     cancelledAt: new Date().toISOString(),
+    cancelledFromStatus: matches[index].status,
+    cancelledScoreDraft: scoreSnapshot,
+    teamAScore: scoreSnapshot.teamAScore,
+    teamBScore: scoreSnapshot.teamBScore,
     updatedAt: new Date().toISOString()
   };
   save(eventId, matches);
