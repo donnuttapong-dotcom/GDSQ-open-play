@@ -10,13 +10,13 @@
 </style>
 </head>
 <body>
-<header class="topbar"><div class="topbar-inner"><div><div class="brand">GDSQ OPENPLAY v2</div><div class="small muted">App Shell · ประกอบร่างระบบหลัก</div></div><div class="row wrap"><span id="modeBadge" class="tag">MODE</span><a class="tag" href="./index.html?v=v2-assembled-01" style="text-decoration:none">HOME</a></div></div></header>
+<header class="topbar"><div class="topbar-inner"><div><div class="brand">GDSQ OPENPLAY v2</div><div class="small muted">App Shell · ประกอบร่างระบบหลัก</div></div><div class="row wrap"><span id="modeBadge" class="tag">MODE</span><a class="tag" href="./index.html?v=v2-manual-pair-01" style="text-decoration:none">HOME</a></div></div></header>
 <main class="app grid">
 <section class="card cut hero shellHero">
   <div class="micro lime">V2 ASSEMBLED FLOW</div>
   <h1 id="eventTitle" style="font-size:38px;line-height:1.05;margin:8px 0 10px">Loading Event...</h1>
   <p id="eventMeta" class="muted">กำลังประกอบ flow ของ event</p>
-  <div class="row wrap" style="margin-top:14px"><select id="eventSelect" class="input" style="max-width:420px"></select><button class="btn secondary" onclick="window.refreshAll()">Refresh</button><a id="eventsLink" class="btn secondary" href="./events.html?v=v2-deeplink-01">Events</a></div>
+  <div class="row wrap" style="margin-top:14px"><select id="eventSelect" class="input" style="max-width:420px"></select><button class="btn secondary" onclick="window.refreshAll()">Refresh</button><a id="eventsLink" class="btn secondary" href="./events.html?v=v2-manual-pair-01">Events</a></div>
   <div id="eventState" class="notice" style="margin-top:14px">Loading service adapter...</div>
 </section>
 <section class="statusLine">
@@ -28,7 +28,7 @@
 </section>
 <section class="card">
   <div class="between mobile-stack"><div><h2 class="section-title lime">Event Direct Links</h2><p class="muted small">ลิงก์ทั้งหมดผูก event id ตรง ไม่หลุดไป event อื่น</p></div><span id="selectedPill" class="pill status-online">SELECTED EVENT</span></div>
-  <div class="eventActions" style="margin-top:12px"><a id="organizerLink" class="btn" href="#">Organizer</a><a id="checkinLink" class="btn secondary" href="#">Check-in QR</a><a id="summaryLink" class="btn orange" href="#">Event Stats</a><a id="playerLink" class="btn secondary" href="#">Player</a></div>
+  <div class="eventActions" style="margin-top:12px"><a id="organizerLink" class="btn" href="#">Organizer Manual</a><a id="checkinLink" class="btn secondary" href="#">Check-in QR</a><a id="summaryLink" class="btn orange" href="#">Event Stats</a><a id="playerLink" class="btn secondary" href="#">Player</a></div>
   <div class="grid grid-2" style="margin-top:12px"><button class="btn secondary" onclick="copyCheckinLink()">Copy Check-in Link</button><button class="btn orange" onclick="copySummaryMessage()">Copy Summary Message</button></div>
   <div id="linkText" class="linkBox" style="margin-top:12px">-</div>
   <div id="copyState" class="tiny muted" style="margin-top:8px">Ready</div>
@@ -38,7 +38,7 @@
   <div class="flowGrid" style="margin-top:12px">
     <div class="stepCard"><div class="stepNo">1</div><b>Setup Event</b><p class="muted small">สร้าง/เลือก event ให้ถูกก่อน</p><a id="stepEvents" class="btn secondary" href="#">Open Events</a></div>
     <div class="stepCard"><div class="stepNo">2</div><b>Player Check-in</b><p class="muted small">ส่ง QR ให้ผู้เล่นเข้า</p><a id="stepCheckin" class="btn secondary" href="#">Open Check-in</a></div>
-    <div class="stepCard"><div class="stepNo">3</div><b>Run Courts</b><p class="muted small">Generate → Start → Confirm</p><a id="stepOrganizer" class="btn secondary" href="#">Open Organizer</a></div>
+    <div class="stepCard"><div class="stepNo">3</div><b>Run Courts</b><p class="muted small">Auto Generate หรือ Manual เลือกคู่เอง</p><a id="stepOrganizer" class="btn secondary" href="#">Open Organizer</a></div>
     <div class="stepCard"><div class="stepNo">4</div><b>Share Stats</b><p class="muted small">ส่ง ranking + match history</p><a id="stepSummary" class="btn secondary" href="#">Open Stats</a></div>
   </div>
 </section>
@@ -48,7 +48,7 @@
 </section>
 <section class="card">
   <h2 class="section-title lime">Assembly Notes</h2>
-  <div class="list" style="margin-top:12px"><div class="ok"><b>V2 หลัก:</b> ใช้หน้า app นี้เป็นทางเข้ากลาง แล้วแยกไป Organizer / Check-in / Event Stats จาก event เดียวกัน</div><div class="notice"><b>V1 reference:</b> เก็บ flow เดิมไว้เป็นต้นแบบ ไม่เอาลิงก์ V1 มาปนใน V2</div><div class="danger"><b>ก่อน Pilot:</b> ต้อง dry run ด้วยมือถือจริง 2–3 เครื่อง และ confirm score อย่างน้อย 2 match</div></div>
+  <div class="list" style="margin-top:12px"><div class="ok"><b>V2 หลัก:</b> ใช้หน้า app นี้เป็นทางเข้ากลาง แล้วแยกไป Organizer Manual / Check-in / Event Stats จาก event เดียวกัน</div><div class="notice"><b>Manual Pair:</b> เลือกคอร์ทและเลือกผู้เล่น 4 คนเองได้ แล้วเซฟเป็น match ที่กำลังเล่น</div><div class="danger"><b>ก่อน Pilot:</b> ต้อง dry run ด้วยมือถือจริง 2–3 เครื่อง และ confirm score อย่างน้อย 2 match</div></div>
 </section>
 </main>
 <script type="module">
@@ -56,7 +56,7 @@ import { createV2Services } from './src/services/index.js';
 import { modeLabel } from './src/services/serviceMode.js';
 import { calculatePlayerRanking, summarizeEvent } from './src/logic/ranking/calculatePlayerRanking.js';
 
-const VERSION='v2-assembled-01';
+const VERSION='v2-manual-pair-01';
 const services=createV2Services();
 let events=[];
 let currentEvent=null;
@@ -85,7 +85,7 @@ window.copyCheckinLink=()=>copyText(absLink('checkin.html'),'Copied check-in lin
 window.copySummaryMessage=()=>copyText(summaryMessage(),'Copied summary message');
 window.refreshAll=()=>loadAll();
 eventSelect.onchange=async()=>{await services.selectEvent(eventSelect.value);history.replaceState(null,'',pageLink('app.html',eventSelect.value));await loadAll()};
-function renderLinks(){const id=currentEvent?.id;organizerLink.href=pageLink('organizer.html',id);checkinLink.href=pageLink('checkin.html',id);summaryLink.href=pageLink('summary.html',id);playerLink.href=pageLink('player.html',id);stepEvents.href=pageLink('events.html',id);stepCheckin.href=pageLink('checkin.html',id);stepOrganizer.href=pageLink('organizer.html',id);stepSummary.href=pageLink('summary.html',id);linkText.textContent=`Organizer: ${absLink('organizer.html',id)}\nCheck-in: ${absLink('checkin.html',id)}\nStats: ${absLink('summary.html',id)}`}
+function renderLinks(){const id=currentEvent?.id;organizerLink.href=pageLink('organizer-manual.html',id);checkinLink.href=pageLink('checkin.html',id);summaryLink.href=pageLink('summary.html',id);playerLink.href=pageLink('player.html',id);stepEvents.href=pageLink('events.html',id);stepCheckin.href=pageLink('checkin.html',id);stepOrganizer.href=pageLink('organizer-manual.html',id);stepSummary.href=pageLink('summary.html',id);linkText.textContent=`Organizer Manual: ${absLink('organizer-manual.html',id)}\nCheck-in: ${absLink('checkin.html',id)}\nStats: ${absLink('summary.html',id)}`}
 function renderEvent(){eventSelect.innerHTML=events.map(e=>`<option value="${e.id}">${esc(eventName(e))}</option>`).join('');if(currentEvent)eventSelect.value=currentEvent.id;eventTitle.textContent=eventName(currentEvent);eventMeta.textContent=`${venueName(currentEvent)} · ${eventDate(currentEvent)} · ${courtCount(currentEvent)} courts`;sumPlayers.textContent=players.length;sumReady.textContent=readyCount();sumMatches.textContent=matches.length;sumStatus.textContent=String(eventStatus(currentEvent)).toUpperCase();eventState.className='ok';eventState.innerHTML=`ประกอบร่าง event แล้ว: <b>${esc(eventName(currentEvent))}</b> · ใช้ลิงก์ตรงได้ครบทุกหน้า`;selectedPill.textContent=currentEvent?.id||'NO EVENT'}
 function renderRanking(){rankCount.textContent=ranking.length;sumTop.textContent=ranking[0]?.displayName||'-';rankList.innerHTML=ranking.slice(0,5).map(p=>`<div class="rank"><div class="rank-no">${p.rank}</div><div><b>${esc(p.displayName)}</b><div class="small muted">${p.matchesPlayed} games · ${p.wins}W ${p.losses}L · ${Math.round((p.winRate||0)*100)}% win</div></div><div class="score">${p.score}</div></div>`).join('')||'<div class="notice">No ranking yet</div>'}
 function renderMatches(){matchCount.textContent=matches.length;matchList.innerHTML=matches.slice(0,5).map(m=>`<div class="court"><div class="between"><b>${esc(m.courtName)}</b><span class="pill">${esc(String(m.status).toUpperCase())}</span></div><div class="small muted" style="margin-top:8px">${esc(teamNames(m.teamA))} vs ${esc(teamNames(m.teamB))} · ${m.teamAScore??'-'}-${m.teamBScore??'-'}</div></div>`).join('')||'<div class="notice">No matches yet</div>'}
