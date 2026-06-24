@@ -10,8 +10,8 @@ import {
 import { getCourts as getMockCourts } from './mockEventService.js';
 import { getEventPlayers as getMockEventPlayers } from './mockPlayerService.js';
 import { getMatchHistory as getMockMatchHistory } from './mockMatchService.js';
-import { listLocalEventPlayers, checkInLocalPlayer } from './localPlayerStore.js';
-import { mergeLocalPlayerStats, setLocalPlayerStatus, forceAllLocalPlayersReady, applyLocalMatchResult } from './localPlayerStatsStore.js';
+import { listLocalEventPlayers, checkInLocalPlayer, updateLocalEventPlayerLevel } from './localPlayerStore.js';
+import { mergeLocalPlayerStats, setLocalPlayerStatus, setLocalPlayerLevel, forceAllLocalPlayersReady, applyLocalMatchResult } from './localPlayerStatsStore.js';
 import { listLocalEventMatches, createLocalMatchPreview, startLocalMatch, cancelLocalMatch, confirmLocalScore } from './localMatchStore.js';
 import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus } from './supabaseEventService.js';
 import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer } from './supabasePlayerService.js';
@@ -121,6 +121,13 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
     async setPlayerStatus(eventId, playerId, status) {
       if (isSupabase) throw new Error('setPlayerStatus for Supabase mode is not implemented yet.');
       setLocalPlayerStatus(eventId, [playerId], status);
+      return this.listEventPlayers(eventId);
+    },
+
+    async updatePlayerLevel(eventId, playerId, level) {
+      if (isSupabase) throw new Error('updatePlayerLevel for Supabase mode is not implemented yet.');
+      updateLocalEventPlayerLevel(eventId, playerId, level);
+      setLocalPlayerLevel(eventId, playerId, level);
       return this.listEventPlayers(eventId);
     },
 
