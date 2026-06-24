@@ -24,6 +24,10 @@ function requireSupabase(supabase) {
   return supabase;
 }
 
+function isDemoEvent(eventId) {
+  return String(eventId || '').startsWith('demo-event-');
+}
+
 function requestedEventId() {
   const params = typeof location !== 'undefined' ? new URLSearchParams(location.search) : new URLSearchParams();
   const fromUrl = params.get('event') || params.get('eventId') || params.get('id');
@@ -100,6 +104,9 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
     async listEventPlayers(eventId) {
       if (isSupabase) return listSupabaseEventPlayers(requireSupabase(supabase), eventId);
       const checkedInPlayers = listLocalEventPlayers(eventId);
+      if (!isDemoEvent(eventId)) {
+        return mergeLocalPlayerStats(eventId, checkedInPlayers).filter((player) => player.status !== 'removed');
+      }
       const seedPlayers = await getMockEventPlayers();
       const existingNames = new Set(seedPlayers.map((player) => String(player.displayName || player.name).toLowerCase()));
       const uniqueCheckedIn = checkedInPlayers.filter((player) => !existingNames.has(String(player.displayName || player.name).toLowerCase()));
@@ -133,6 +140,7 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
     async listEventMatches(eventId) {
       if (isSupabase) return listSupabaseEventMatches(requireSupabase(supabase), eventId);
       const localMatches = listLocalEventMatches(eventId);
+      if (!isDemoEvent(eventId)) return localMatches;
       const seedHistory = await getMockMatchHistory();
       return [...localMatches, ...seedHistory];
     },
