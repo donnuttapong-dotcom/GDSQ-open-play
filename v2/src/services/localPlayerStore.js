@@ -61,6 +61,26 @@ export function checkInLocalPlayer(payload) {
   return player;
 }
 
+export function updateLocalEventPlayerLevel(eventId, playerId, level) {
+  if (!eventId || !playerId) return null;
+  const normalizedLevel = normalizeLevel(level);
+  const players = listLocalEventPlayers(eventId);
+  let updated = null;
+  const next = players.map((player) => {
+    if (String(player.id) !== String(playerId)) return player;
+    updated = {
+      ...player,
+      estimatedLevel: normalizedLevel,
+      estimated_level: normalizedLevel,
+      level: normalizedLevel,
+      updatedAt: new Date().toISOString()
+    };
+    return updated;
+  });
+  localStorage.setItem(key(eventId), JSON.stringify(next));
+  return updated;
+}
+
 export function clearLocalEventPlayers(eventId) {
   if (!eventId) return;
   localStorage.removeItem(key(eventId));
