@@ -30,11 +30,13 @@ const $=(id)=>document.getElementById(id);
 const dom={modeBadge:$('modeBadge'),msg:$('msg'),eventList:$('eventList'),joinName:$('joinName'),joinLevel:$('joinLevel'),joinEventName:$('joinEventName'),joinPlayers:$('joinPlayers'),manageEventName:$('manageEventName'),eventSelect:$('eventSelect'),autoMode:$('autoMode'),courtsInput:$('courtsInput'),matchLimitInput:$('matchLimitInput'),chipPlayers:$('chipPlayers'),chipReady:$('chipReady'),chipLive:$('chipLive'),chipPreview:$('chipPreview'),chipCourts:$('chipCourts'),managePlayers:$('managePlayers'),matchPanels:$('matchPanels'),statPlayers:$('statPlayers'),statCompleted:$('statCompleted'),statGames:$('statGames'),statLevel:$('statLevel'),topScore:$('topScore'),mostPlayed:$('mostPlayed'),bestDiff:$('bestDiff'),rankingTable:$('rankingTable'),matchHistory:$('matchHistory'),playerModal:$('playerModal'),modalPlayerName:$('modalPlayerName'),modalPlayerBody:$('modalPlayerBody')};
 const services=createV2Services();
 const levels=Array.from({length:25},(_,i)=>2+i*.25);
-let currentTab='events',events=[],event=null,players=[],matches=[],previews=[],refreshing=false;
+let currentTab='events',events=[],event=null,players=[],matches=[],previews=[],refreshing=false,scoreEditingUntil=0;
 dom.modeBadge.textContent=modeLabel();
 dom.joinLevel.innerHTML=levels.map(l=>`<option value="${l}">${l.toFixed(2)}</option>`).join('');
 function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 function showMessage(text){dom.msg.textContent=text;dom.msg.classList.remove('hidden');setTimeout(()=>dom.msg.classList.add('hidden'),2400);}
+function isScoreInputFocused(){const a=document.activeElement;return !!(a&&a.matches&&a.matches('[data-score-a],[data-score-b]'));}
+function isScoreEditing(){return currentTab==='manage'&&(isScoreInputFocused()||Date.now()<scoreEditingUntil);}
 function setTab(next){currentTab=next;['events','join','manage','stats'].forEach(n=>{$(`tab-${n}`).classList.toggle('hidden',n!==next);$(`tabBtn-${n}`).className=`cut btn py-3 ${n===next?'tab-active':'tab-idle'}`});renderAll();if(next==='stats'||next==='manage')refreshCurrentSilently();}
 function eventTitle(e){return e?.name||e?.name_th||e?.name_en||'Untitled Event';}
 function venueTitle(e){return e?.venueName||e?.venue_name||e?.venue||'Venue';}
@@ -113,16 +115,21 @@ function cancelPreview(uid){previews=previews.filter(p=>p.uid!==uid);renderAll()
 async function startPreview(uid){const p=previews.find(x=>x.uid===uid);if(!p)return;const created=await services.createMatchPreview({eventId:event.id,courtId:p.courtId,courtName:p.courtName,teamA:p.teamA,teamB:p.teamB,matchMode:p.matchMode});await services.startMatch(created.id,{eventId:event.id});previews=previews.filter(x=>x.uid!==uid);await loadCurrent();}
 async function startMatch(id){await services.startMatch(id,{eventId:event.id});await loadCurrent();}
 function scoreFor(id){return{teamAScore:document.querySelector(`[data-score-a="${id}"]`)?.value,teamBScore:document.querySelector(`[data-score-b="${id}"]`)?.value};}
+function markScoreEditing(){scoreEditingUntil=Date.now()+8000;}
+function saveInlineScoreDraft(id){if(!id)return;markScoreEditing();saveScoreDraft(id,{...scoreFor(id),editing:true,updatedAt:new Date().toISOString()});}
 async function cancelMatch(id){const score=scoreFor(id);saveScoreDraft(id,{...score,cancelled:true});await services.cancelMatch(id,{eventId:event.id,reason:'cancelled',...score,keepScoreDraft:true});await loadCurrent();}
-async function confirmScore(id){const score=scoreFor(id);const valid=validateScore(score);if(!valid.ok)return showMessage(valid.message);await services.confirmScore(id,{eventId:event.id,teamAScore:valid.teamAScore,teamBScore:valid.teamBScore});clearScoreDraft(id);await loadCurrent();if(currentTab==='manage')showMessage('บันทึกคะแนนแล้ว สถิติอัปเดตเรียบร้อย');}
+async function confirmScore(id){const score=scoreFor(id);const valid=validateScore(score);if(!valid.ok)return showMessage(valid.message);await services.confirmScore(id,{eventId:event.id,teamAScore:valid.teamAScore,teamBScore:valid.teamBScore});clearScoreDraft(id);scoreEditingUntil=0;await loadCurrent();if(currentTab==='manage')showMessage('บันทึกคะแนนแล้ว สถิติอัปเดตเรียบร้อย');}
 async function endEvent(){if(!event)return;await updateCardEventStatus(event.id,'completed');setTab('stats');}
-async function refreshCurrentSilently(){if(refreshing||!event)return;refreshing=true;try{const [rawPlayers,rawMatches]=await Promise.all([services.listEventPlayers(event.id),services.listEventMatches(event.id)]);players=rawPlayers.map(normalizePlayer);matches=rawMatches.map(normalizeMatch);renderAll();}finally{refreshing=false;}}
+async function refreshCurrentSilently(){if(refreshing||!event||isScoreEditing())return;refreshing=true;try{const [rawPlayers,rawMatches]=await Promise.all([services.listEventPlayers(event.id),services.listEventMatches(event.id)]);players=rawPlayers.map(normalizePlayer);matches=rawMatches.map(normalizeMatch);renderAll();}finally{refreshing=false;}}
 async function loadCurrent(){event=await services.getCurrentEvent();if(!event){renderAll();return;}const [rawPlayers,rawMatches]=await Promise.all([services.listEventPlayers(event.id),services.listEventMatches(event.id)]);players=rawPlayers.map(normalizePlayer);matches=rawMatches.map(normalizeMatch);renderAll();}
 async function loadAll(){events=await services.listEvents();event=await services.getCurrentEvent();await loadCurrent();}
 document.querySelector('nav').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)setTab(b.dataset.tab);});
 dom.eventList.addEventListener('click',e=>{const pick=e.target.closest('[data-pick]'),status=e.target.closest('[data-event-status]'),del=e.target.closest('[data-delete-event]');if(pick)pickEvent(pick.dataset.pick,pick.dataset.next||'join');if(status)updateCardEventStatus(status.dataset.eventStatus,status.dataset.statusNext);if(del)deleteEventCard(del.dataset.deleteEvent,del.dataset.eventName||'Event');});
 dom.managePlayers.addEventListener('click',e=>{const b=e.target.closest('[data-player]');if(b)setPlayerStatus(b.dataset.player,b.dataset.status);});
 dom.matchPanels.addEventListener('click',e=>{const a=e.target.closest('[data-cancel-preview]'),b=e.target.closest('[data-start-preview]'),c=e.target.closest('[data-start-match]'),d=e.target.closest('[data-cancel-match]'),f=e.target.closest('[data-confirm-score]');if(a)cancelPreview(a.dataset.cancelPreview);if(b)startPreview(b.dataset.startPreview);if(c)startMatch(c.dataset.startMatch);if(d)cancelMatch(d.dataset.cancelMatch);if(f)confirmScore(f.dataset.confirmScore);});
+dom.matchPanels.addEventListener('input',e=>{const el=e.target.closest('[data-score-a],[data-score-b]');if(!el)return;saveInlineScoreDraft(el.dataset.scoreA||el.dataset.scoreB);});
+dom.matchPanels.addEventListener('focusin',e=>{if(e.target.matches?.('[data-score-a],[data-score-b]'))markScoreEditing();});
+dom.matchPanels.addEventListener('focusout',e=>{if(e.target.matches?.('[data-score-a],[data-score-b]'))scoreEditingUntil=Date.now()+1800;});
 document.body.addEventListener('click',e=>{const p=e.target.closest('[data-open-player]');if(p)openPlayer(p.dataset.openPlayer);});
 $('closePlayerModal').addEventListener('click',closePlayer);dom.playerModal.addEventListener('click',e=>{if(e.target===dom.playerModal)closePlayer();});
 ['manual0','manual1','manual2','manual3'].forEach(id=>$(id).addEventListener('change',renderManualOptions));
