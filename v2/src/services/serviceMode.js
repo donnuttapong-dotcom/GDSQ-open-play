@@ -2,6 +2,9 @@
 // Default is mock so v2 remains safe and does not touch real Supabase data.
 
 const MODE_KEY = 'gdsq_v2_service_mode';
+const EVENTS_KEY = 'gdsq_v2_events';
+const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
+const STATS_TAB_KEY = 'gdsq_v2_open_tab';
 
 export const SERVICE_MODES = {
   MOCK: 'mock',
@@ -32,3 +35,110 @@ export function isSupabaseMode() {
 export function modeLabel() {
   return isSupabaseMode() ? 'SUPABASE MODE' : 'MOCK MODE';
 }
+
+function safeJsonParse(value, fallback) {
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function eventTitle(event) {
+  return event?.name || event?.name_th || event?.name_en || 'Untitled Event';
+}
+
+function eventStatusInfo(event) {
+  const status = String(event?.status || 'draft').toLowerCase();
+  if (['completed', 'ended', 'closed'].includes(status)) {
+    return { label: 'ENDED · จบแล้ว', cls: 'pill-ended' };
+  }
+  if (['live', 'open', 'active'].includes(status)) {
+    return { label: 'LIVE · เปิดอยู่', cls: 'pill-live' };
+  }
+  return { label: 'DRAFT · ยังไม่เปิด', cls: 'pill-draft' };
+}
+
+function readEvents() {
+  return safeJsonParse(localStorage.getItem(EVENTS_KEY) || '[]', []);
+}
+
+function updateStatsStatus(select, badge, events) {
+  const selected = events.find((event) => String(event.id) === String(select.value));
+  const info = eventStatusInfo(selected);
+  badge.className = `pill ${info.cls}`;
+  badge.textContent = info.label;
+}
+
+function openStatsTabIfRequested() {
+  if (sessionStorage.getItem(STATS_TAB_KEY) !== 'stats') return;
+  const button = document.getElementById('tabBtn-stats');
+  if (!button) return;
+  sessionStorage.removeItem(STATS_TAB_KEY);
+  setTimeout(() => button.click(), 150);
+}
+
+function injectStatsEventSelector() {
+  if (document.getElementById('statsEventSelect')) return true;
+  const statsSection = document.getElementById('tab-stats');
+  const firstCard = statsSection?.querySelector('.card');
+  if (!firstCard) return false;
+  const events = readEvents();
+  if (!events.length) return false;
+
+  const selectedId = localStorage.getItem(SELECTED_EVENT_KEY) || events[0]?.id || '';
+  const wrapper = document.createElement('div');
+  wrapper.id = 'statsEventPicker';
+  wrapper.className = 'soft p-3 mt-4';
+  wrapper.innerHTML = `
+    <div class="grid md:grid-cols-[1fr_auto] gap-2 items-end">
+      <label class="text-xs text-slate-400">เลือกอีเว้นท์ที่ต้องการดูสถิติ
+        <select id="statsEventSelect" class="w-full rounded-lg border p-3 mt-1"></select>
+      </label>
+      <div class="flex md:justify-end"><span id="statsEventStatus" class="pill pill-draft">STATUS</span></div>
+    </div>
+  `;
+
+  const header = firstCard.firstElementChild;
+  if (header?.nextSibling) firstCard.insertBefore(wrapper, header.nextSibling);
+  else firstCard.appendChild(wrapper);
+
+  const select = wrapper.querySelector('#statsEventSelect');
+  const badge = wrapper.querySelector('#statsEventStatus');
+  select.innerHTML = events
+    .map((event) => `<option value="${event.id}">${eventStatusInfo(event).label.split(' · ')[0]} — ${eventTitle(event)}</option>`)
+    .join('');
+  select.value = events.some((event) => String(event.id) === String(selectedId)) ? selectedId : events[0].id;
+  updateStatsStatus(select, badge, events);
+
+  select.addEventListener('change', () => {
+    localStorage.setItem(SELECTED_EVENT_KEY, select.value);
+    sessionStorage.setItem(STATS_TAB_KEY, 'stats');
+    const params = new URLSearchParams(location.search);
+    params.set('event', select.value);
+    params.set('v', 'v2-stats-event-selector-01');
+    location.href = `${location.pathname}?${params.toString()}`;
+  });
+  return true;
+}
+
+function bootStatsEventSelector() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  const tryInject = () => {
+    openStatsTabIfRequested();
+    injectStatsEventSelector();
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryInject);
+  } else {
+    tryInject();
+  }
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries += 1;
+    openStatsTabIfRequested();
+    if (injectStatsEventSelector() || tries > 20) clearInterval(timer);
+  }, 250);
+}
+
+bootStatsEventSelector();
