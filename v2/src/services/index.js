@@ -1,4 +1,5 @@
 import './bilingualUi.js';
+import './shareLinksUi.js';
 import { getServiceMode, SERVICE_MODES } from './serviceMode.js';
 import {
   listEvents as listLocalEvents,
