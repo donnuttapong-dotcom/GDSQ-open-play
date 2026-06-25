@@ -37,7 +37,7 @@ function ensureLangToggle() {
   button.style.cssText = [
     'position:fixed',
     'right:12px',
-    'bottom:12px',
+    'top:72px',
     'z-index:9999',
     'border:1px solid rgba(255,255,255,.22)',
     'background:#c7ff2e',
