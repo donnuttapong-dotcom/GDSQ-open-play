@@ -6,157 +6,28 @@
 <title>GDSQ Join Open Play</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-body{background:#10151b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif}.cut{clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}.card{background:#222931;border:1px solid #39434d}.soft{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.1);border-radius:16px}.lime{color:#c7ff2e}.bg-lime{background:#c7ff2e;color:#10151b}.btn{border:1px solid rgba(255,255,255,.15);font-weight:900}input,select{background:#10151b!important;color:#fff!important;border-color:#3a424a!important}.mini{font-size:12px;color:#94a3b8}.pill{display:inline-flex;gap:6px;align-items:center;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:1000;border:1px solid rgba(255,255,255,.14);white-space:nowrap}.pill-live{background:rgba(199,255,46,.14);border-color:rgba(199,255,46,.5);color:#c7ff2e}.pill-draft{background:rgba(56,189,248,.13);border-color:rgba(56,189,248,.4);color:#7dd3fc}.pill-ended{background:rgba(148,163,184,.14);border-color:rgba(148,163,184,.35);color:#cbd5e1}
+body{background:#10151b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif}.cut{clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}.card{background:#222931;border:1px solid #39434d}.soft{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.1);border-radius:16px}.lime{color:#c7ff2e}.bg-lime{background:#c7ff2e;color:#10151b}.btn{border:1px solid rgba(255,255,255,.15);font-weight:900}input,select{background:#10151b!important;color:#fff!important;border-color:#3a424a!important}.mini{font-size:12px;color:#94a3b8}.pill{display:inline-flex;gap:6px;align-items:center;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:1000;border:1px solid rgba(255,255,255,.14);white-space:nowrap}.pill-live{background:rgba(199,255,46,.14);border-color:rgba(199,255,46,.5);color:#c7ff2e}.pill-ended{background:rgba(148,163,184,.14);border-color:rgba(148,163,184,.35);color:#cbd5e1}
 </style>
 </head>
 <body>
-<header class="sticky top-0 z-50 bg-[#0d1217]/95 border-b border-white/10 p-3">
-  <div class="max-w-xl mx-auto flex justify-between items-center gap-2">
-    <div>
-      <div class="text-[10px] tracking-[.25em] lime">GDSQ PICKLEBALL</div>
-      <b>JOIN OPEN PLAY</b>
-    </div>
-    <a class="cut btn bg-white/5 px-3 py-2 text-xs" href="./openplay.html">Organizer</a>
-  </div>
-</header>
-
-<main class="max-w-xl mx-auto p-4">
-  <section class="cut card p-5 mt-4">
-    <div class="flex justify-between items-start gap-3">
-      <div>
-        <h1 class="text-3xl font-black">เข้าร่วมเล่น</h1>
-        <p class="mini mt-1">เลือกอีเว้นท์ ใส่ชื่อเล่น และเลือกระดับความสามารถของตัวเอง</p>
-      </div>
-      <span id="eventStatusBadge" class="pill pill-live">LIVE</span>
-    </div>
-
-    <div id="msg" class="hidden mt-4 p-3 rounded-xl border border-lime-300/40 bg-lime-300/10 text-lime-100 whitespace-pre-wrap"></div>
-
-    <div class="grid gap-4 mt-5">
-      <label class="text-xs text-slate-400 font-black">Event / อีเว้นท์
-        <select id="eventSelect" class="w-full rounded-lg border p-4 mt-1"></select>
-      </label>
-
-      <label class="text-xs text-slate-400 font-black">Nickname / ชื่อเล่น
-        <input id="playerName" class="w-full rounded-lg border p-4 mt-1" placeholder="ใส่ชื่อเล่น เช่น Don" autocomplete="name" />
-      </label>
-
-      <label class="text-xs text-slate-400 font-black">Level / ระดับความสามารถ
-        <select id="playerLevel" class="w-full rounded-lg border p-4 mt-1"></select>
-      </label>
-
-      <button id="joinBtn" class="cut bg-lime text-black p-5 font-black text-lg">JOIN / เข้าร่วม</button>
-    </div>
-  </section>
-
-  <section class="soft p-4 mt-4">
-    <h2 class="font-black lime">วิธีเลือก Level</h2>
-    <p class="mini mt-2">2.00-3.00 = เริ่มเล่น / 3.25-4.00 = เล่นได้ต่อเนื่อง / 4.25+ = แข่งขันจริงจัง</p>
-  </section>
-</main>
-
+<header class="sticky top-0 z-50 bg-[#0d1217]/95 border-b border-white/10 p-3"><div class="max-w-xl mx-auto flex justify-between items-center gap-2"><div><div class="text-[10px] tracking-[.25em] lime">GDSQ PICKLEBALL</div><b>JOIN OPEN PLAY</b></div><a class="cut btn bg-white/5 px-3 py-2 text-xs" href="./openplay.html">Organizer</a></div></header>
+<main class="max-w-xl mx-auto p-4"><section class="cut card p-5 mt-4"><div class="flex justify-between items-start gap-3"><div><h1 class="text-3xl font-black">เข้าร่วมเล่น</h1><p class="mini mt-1">เลือกอีเว้นท์ Live ใส่ชื่อเล่น และเลือกระดับความสามารถของตัวเอง</p></div><span id="eventStatusBadge" class="pill pill-live">LIVE</span></div><div id="msg" class="hidden mt-4 p-3 rounded-xl border border-lime-300/40 bg-lime-300/10 text-lime-100 whitespace-pre-wrap"></div><div class="grid gap-4 mt-5"><label class="text-xs text-slate-400 font-black">Live Event / อีเว้นท์ที่เปิดอยู่<select id="eventSelect" class="w-full rounded-lg border p-4 mt-1"></select></label><label class="text-xs text-slate-400 font-black">Nickname / ชื่อเล่น<input id="playerName" class="w-full rounded-lg border p-4 mt-1" placeholder="ใส่ชื่อเล่น เช่น Don" autocomplete="name" /></label><label class="text-xs text-slate-400 font-black">Level / ระดับความสามารถ<select id="playerLevel" class="w-full rounded-lg border p-4 mt-1"></select></label><button id="joinBtn" class="cut bg-lime text-black p-5 font-black text-lg">JOIN / เข้าร่วม</button></div></section><section class="soft p-4 mt-4"><h2 class="font-black lime">วิธีเลือก Level</h2><p class="mini mt-2">2.00-3.00 = เริ่มเล่น / 3.25-4.00 = เล่นได้ต่อเนื่อง / 4.25+ = แข่งขันจริงจัง</p></section></main>
 <script type="module">
-import { createV2Services } from './src/services/index.js?v=v2-join-page-01';
-
-const $ = (id) => document.getElementById(id);
-const services = createV2Services();
-const levels = Array.from({ length: 25 }, (_, i) => 2 + i * 0.25);
-let events = [];
-
-function params() {
-  return new URLSearchParams(location.search);
-}
-
-function eventTitle(event) {
-  return event?.name || event?.name_th || event?.name_en || 'Untitled Event';
-}
-
-function eventStatus(event) {
-  return String(event?.status || 'draft').toLowerCase();
-}
-
-function statusLabel(event) {
-  const status = eventStatus(event);
-  if (['completed', 'ended', 'closed'].includes(status)) return { text: 'ENDED', cls: 'pill-ended' };
-  if (status === 'live') return { text: 'LIVE', cls: 'pill-live' };
-  return { text: 'DRAFT', cls: 'pill-draft' };
-}
-
-function showMessage(text, good = true) {
-  const msg = $('msg');
-  msg.textContent = text;
-  msg.className = `mt-4 p-3 rounded-xl border whitespace-pre-wrap ${good ? 'border-lime-300/40 bg-lime-300/10 text-lime-100' : 'border-red-300/40 bg-red-300/10 text-red-100'}`;
-}
-
-function selectedEvent() {
-  return events.find((event) => String(event.id) === String($('eventSelect').value)) || null;
-}
-
-function renderLevels() {
-  $('playerLevel').innerHTML = levels.map((level) => `<option value="${level}">${level.toFixed(2)}</option>`).join('');
-  $('playerLevel').value = '3';
-}
-
-function renderEvents() {
-  const requestedId = params().get('event') || params().get('eventId') || params().get('id');
-  const sorted = [...events].sort((a, b) => {
-    const liveA = eventStatus(a) === 'live' ? 0 : 1;
-    const liveB = eventStatus(b) === 'live' ? 0 : 1;
-    return liveA - liveB || String(eventTitle(a)).localeCompare(String(eventTitle(b)));
-  });
-  $('eventSelect').innerHTML = sorted.map((event) => {
-    const status = statusLabel(event).text;
-    return `<option value="${event.id}">[${status}] ${eventTitle(event)}</option>`;
-  }).join('');
-  if (requestedId && sorted.some((event) => String(event.id) === String(requestedId))) $('eventSelect').value = requestedId;
-  else if (sorted[0]) $('eventSelect').value = sorted[0].id;
-  updateStatusBadge();
-}
-
-function updateStatusBadge() {
-  const event = selectedEvent();
-  const badge = $('eventStatusBadge');
-  const info = statusLabel(event || {});
-  badge.textContent = info.text;
-  badge.className = `pill ${info.cls}`;
-}
-
-function updateUrlForEvent() {
-  const eventId = $('eventSelect').value;
-  const url = new URL(location.href);
-  url.searchParams.set('event', eventId);
-  url.searchParams.set('v', 'v2-join-page-01');
-  history.replaceState(null, '', url.toString());
-}
-
-async function submitJoin() {
-  const event = selectedEvent();
-  const name = $('playerName').value.trim();
-  const level = Number($('playerLevel').value || 3);
-  if (!event) return showMessage('ยังไม่มีอีเว้นท์ให้เข้าร่วม', false);
-  if (['completed', 'ended', 'closed'].includes(eventStatus(event))) return showMessage('อีเว้นท์นี้จบแล้ว กรุณาเลือกอีเว้นท์อื่น', false);
-  if (!name) return showMessage('กรุณาใส่ชื่อเล่นก่อน', false);
-  await services.selectEvent(event.id);
-  await services.checkInPlayer({ eventId: event.id, displayName: name, level });
-  showMessage(`เข้าร่วมแล้ว: ${name}\nEvent: ${eventTitle(event)}\nLevel: ${level.toFixed(2)}`);
-  $('playerName').value = '';
-}
-
-async function boot() {
-  renderLevels();
-  events = await services.listEvents();
-  renderEvents();
-  $('eventSelect').addEventListener('change', () => {
-    updateStatusBadge();
-    updateUrlForEvent();
-  });
-  $('joinBtn').addEventListener('click', submitJoin);
-  $('playerName').addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') submitJoin();
-  });
-}
-
-boot().catch((error) => showMessage(error.message || 'โหลดข้อมูลไม่สำเร็จ', false));
+import { createV2Services } from './src/services/index.js?v=v2-join-live-only-01';
+const $=(id)=>document.getElementById(id);const services=createV2Services();const levels=Array.from({length:25},(_,i)=>2+i*.25);let events=[];
+function params(){return new URLSearchParams(location.search)}
+function eventTitle(e){return e?.name||e?.name_th||e?.name_en||'Untitled Event'}
+function eventStatus(e){return String(e?.status||'draft').toLowerCase()}
+function isLiveEvent(e){return eventStatus(e)==='live'}
+function showMessage(text,good=true){const msg=$('msg');msg.textContent=text;msg.className=`mt-4 p-3 rounded-xl border whitespace-pre-wrap ${good?'border-lime-300/40 bg-lime-300/10 text-lime-100':'border-red-300/40 bg-red-300/10 text-red-100'}`}
+function selectedEvent(){return events.find(e=>String(e.id)===String($('eventSelect').value))||null}
+function renderLevels(){$('playerLevel').innerHTML=levels.map(l=>`<option value="${l}">${l.toFixed(2)}</option>`).join('');$('playerLevel').value='3'}
+function renderEvents(){const requestedId=params().get('event')||params().get('eventId')||params().get('id');const liveEvents=events.filter(isLiveEvent).sort((a,b)=>String(eventTitle(a)).localeCompare(String(eventTitle(b))));$('eventSelect').innerHTML=liveEvents.map(e=>`<option value="${e.id}">[LIVE] ${eventTitle(e)}</option>`).join('');if(requestedId&&liveEvents.some(e=>String(e.id)===String(requestedId)))$('eventSelect').value=requestedId;else if(liveEvents[0])$('eventSelect').value=liveEvents[0].id;if(!liveEvents.length)showMessage('ยังไม่มีอีเว้นท์ Live ให้เข้าร่วม',false);updateStatusBadge()}
+function updateStatusBadge(){const badge=$('eventStatusBadge');const live=!!selectedEvent();badge.textContent=live?'LIVE':'NO LIVE';badge.className=`pill ${live?'pill-live':'pill-ended'}`}
+function updateUrlForEvent(){const eventId=$('eventSelect').value;const url=new URL(location.href);if(eventId)url.searchParams.set('event',eventId);url.searchParams.set('v','v2-join-live-only-01');history.replaceState(null,'',url.toString())}
+async function submitJoin(){const event=selectedEvent();const name=$('playerName').value.trim();const level=Number($('playerLevel').value||3);if(!event)return showMessage('ยังไม่มีอีเว้นท์ Live ให้เข้าร่วม',false);if(!name)return showMessage('กรุณาใส่ชื่อเล่นก่อน',false);await services.selectEvent(event.id);await services.checkInPlayer({eventId:event.id,displayName:name,level});showMessage(`เข้าร่วมแล้ว: ${name}\nEvent: ${eventTitle(event)}\nLevel: ${level.toFixed(2)}`);$('playerName').value=''}
+async function boot(){renderLevels();events=await services.listEvents();renderEvents();$('eventSelect').addEventListener('change',()=>{updateStatusBadge();updateUrlForEvent()});$('joinBtn').addEventListener('click',submitJoin);$('playerName').addEventListener('keydown',e=>{if(e.key==='Enter')submitJoin()})}
+boot().catch(error=>showMessage(error.message||'โหลดข้อมูลไม่สำเร็จ',false));
 </script>
 </body>
 </html>
