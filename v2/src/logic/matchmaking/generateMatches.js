@@ -1,14 +1,21 @@
 export const DEFAULT_MATCHMAKING_RULES = {
   maxConsecutiveGames: 999,
-  candidateLimit: 10,
-  lowGamesWeight: 120,
-  waitMinuteBonus: 2,
-  consecutivePenalty: 55,
-  partnerRepeatPenalty: 90,
-  opponentRepeatPenalty: 24,
+  rotationConsecutiveGameLimit: 2,
+  rotationConsecutiveRestLimit: 2,
+  rotationHardPenalty: 9000,
+  rotationHardBonus: 9000,
+  candidateLimit: 16,
+  lowGamesWeight: 150,
+  waitMinuteBonus: 10,
+  neverPlayedBonus: 360,
+  freshPlayerBonus: 220,
+  justPlayedPenalty: 260,
+  consecutivePenalty: 120,
+  partnerRepeatPenalty: 110,
+  opponentRepeatPenalty: 36,
   levelGapPenalty: 80,
   teamGameGapPenalty: 12,
-  groupGameSpreadPenalty: 38
+  groupGameSpreadPenalty: 42
 };
 
 function toTime(value) {
@@ -30,16 +37,21 @@ function addPair(map, a, b, count = 1) {
   map.set(key, (map.get(key) || 0) + count);
 }
 
-function getMatchesPlayed(player) {
-  return Number(player?.matchesPlayed ?? player?.matches_played ?? 0) || 0;
+function getMatchesPlayed(player, historyStats) {
+  const id = playerId(player);
+  return Number(player?.matchesPlayed ?? player?.matches_played ?? player?.played ?? historyStats?.playedCount?.get(id) ?? 0) || 0;
 }
 
 function getLevel(player) {
-  return Number(player?.level ?? player?.estimated_level ?? 2.5) || 2.5;
+  return Number(player?.level ?? player?.estimated_level ?? player?.estimatedLevel ?? 2.5) || 2.5;
 }
 
 function getQueueJoinedAt(player) {
-  return toTime(player?.queueJoinedAt || player?.queue_joined_at || player?.created_at);
+  return toTime(player?.queueJoinedAt || player?.queue_joined_at || player?.createdAt || player?.created_at);
+}
+
+function normalizeStatus(player) {
+  return String(player?.status || 'ready').toLowerCase();
 }
 
 function normalizeTeamIds(team) {
@@ -49,6 +61,8 @@ function normalizeTeamIds(team) {
 export function buildMatchHistoryStats(history = []) {
   const partnerRepeats = new Map();
   const opponentRepeats = new Map();
+  const lastPlayedAt = new Map();
+  const playedCount = new Map();
   const waves = [];
 
   const sorted = [...history].sort((a, b) => toTime(b.completedAt || b.completed_at || b.startedAt || b.createdAt) - toTime(a.completedAt || a.completed_at || a.startedAt || a.createdAt));
@@ -66,6 +80,12 @@ export function buildMatchHistoryStats(history = []) {
     }
     for (const a of teamA) for (const b of teamB) addPair(opponentRepeats, a, b);
 
+    [...teamA, ...teamB].forEach((id) => {
+      const sid = String(id);
+      playedCount.set(sid, (playedCount.get(sid) || 0) + 1);
+      if (!lastPlayedAt.has(sid) || time > lastPlayedAt.get(sid)) lastPlayedAt.set(sid, time);
+    });
+
     let wave = waves[waves.length - 1];
     if (!wave || Math.abs(wave.time - time) > 180000) {
       wave = { time, playerIds: new Set() };
@@ -74,7 +94,7 @@ export function buildMatchHistoryStats(history = []) {
     [...teamA, ...teamB].forEach((id) => wave.playerIds.add(String(id)));
   }
 
-  return { partnerRepeats, opponentRepeats, waves };
+  return { partnerRepeats, opponentRepeats, waves, lastPlayedAt, playedCount };
 }
 
 export function countConsecutiveGames(player, historyStats) {
@@ -87,20 +107,51 @@ export function countConsecutiveGames(player, historyStats) {
   return count;
 }
 
+function countConsecutiveRests(player, historyStats) {
+  const id = playerId(player);
+  const joinedAt = getQueueJoinedAt(player);
+  let count = 0;
+  for (const wave of historyStats.waves || []) {
+    if (joinedAt && joinedAt > wave.time + 60000) continue;
+    if (wave.playerIds.has(id)) break;
+    count += 1;
+  }
+  return count;
+}
+
 export function shouldRest() {
   return false;
 }
 
+function minutesSinceLastPlayed(player, historyStats, nowMs) {
+  const last = historyStats.lastPlayedAt?.get(playerId(player));
+  if (!last) return Infinity;
+  return Math.max(0, (nowMs - last) / 60000);
+}
+
 function playerPriorityScore(player, historyStats, rules, nowMs) {
-  const games = getMatchesPlayed(player);
+  const id = playerId(player);
+  const games = getMatchesPlayed(player, historyStats);
   const waitMinutes = Math.max(0, (nowMs - getQueueJoinedAt(player)) / 60000);
   const consecutive = countConsecutiveGames(player, historyStats);
-  const readyBonus = player?.status === 'ready' ? -10 : 0;
+  const consecutiveRests = countConsecutiveRests(player, historyStats);
+  const status = normalizeStatus(player);
+  const readyBonus = status === 'ready' || status === 'checked_in' ? -20 : 0;
+  const neverPlayedBonus = games === 0 ? rules.neverPlayedBonus : 0;
+  const freshPlayerBonus = !historyStats.lastPlayedAt?.has(id) ? rules.freshPlayerBonus : 0;
+  const justPlayedPenalty = minutesSinceLastPlayed(player, historyStats, nowMs) < 12 ? rules.justPlayedPenalty : 0;
+  const mustRestPenalty = consecutive >= rules.rotationConsecutiveGameLimit ? rules.rotationHardPenalty : 0;
+  const mustPlayBonus = consecutiveRests >= rules.rotationConsecutiveRestLimit ? rules.rotationHardBonus : 0;
 
   return (
     games * rules.lowGamesWeight +
     consecutive * rules.consecutivePenalty +
+    justPlayedPenalty +
+    mustRestPenalty +
     readyBonus -
+    mustPlayBonus -
+    neverPlayedBonus -
+    freshPlayerBonus -
     waitMinutes * rules.waitMinuteBonus
   );
 }
@@ -127,12 +178,12 @@ function groupScore(group, historyStats, rules, nowMs) {
   for (let i = 0; i < group.length; i += 1) {
     for (let j = i + 1; j < group.length; j += 1) {
       const key = pairKey(playerId(group[i]), playerId(group[j]));
-      repeatScore += (historyStats.partnerRepeats.get(key) || 0) * 12;
-      repeatScore += (historyStats.opponentRepeats.get(key) || 0) * 3;
+      repeatScore += (historyStats.partnerRepeats.get(key) || 0) * 14;
+      repeatScore += (historyStats.opponentRepeats.get(key) || 0) * 5;
     }
   }
 
-  const games = group.map(getMatchesPlayed);
+  const games = group.map((player) => getMatchesPlayed(player, historyStats));
   const gameSpread = Math.max(...games) - Math.min(...games);
 
   return (
@@ -156,8 +207,8 @@ function pairingScore(teamA, teamB, historyStats, rules) {
     for (const b of teamB) opponentRepeat += historyStats.opponentRepeats.get(pairKey(playerId(a), playerId(b))) || 0;
   }
   const teamGameGap = Math.abs(
-    teamA.reduce((sum, player) => sum + getMatchesPlayed(player), 0) -
-      teamB.reduce((sum, player) => sum + getMatchesPlayed(player), 0)
+    teamA.reduce((sum, player) => sum + getMatchesPlayed(player, historyStats), 0) -
+      teamB.reduce((sum, player) => sum + getMatchesPlayed(player, historyStats), 0)
   );
 
   return (
@@ -184,11 +235,15 @@ function bestTeamSplit(group, historyStats, rules) {
   return best;
 }
 
+function canApplyTwoGameRest(availablePlayers, historyStats, rules) {
+  return availablePlayers.filter((player) => countConsecutiveGames(player, historyStats) < rules.rotationConsecutiveGameLimit).length >= 4;
+}
+
 export function generateMatches({ players = [], courts = [], history = [], rules = {}, now = Date.now() } = {}) {
   const mergedRules = { ...DEFAULT_MATCHMAKING_RULES, ...rules };
   const historyStats = buildMatchHistoryStats(history);
   const courtList = courts.length ? courts : [{ id: 'court-1', name: 'Court 1' }];
-  const eligiblePlayers = players.filter((player) => player && player.status !== 'playing' && player.status !== 'left' && player.status !== 'removed');
+  const eligiblePlayers = players.filter((player) => player && !['playing', 'left', 'removed'].includes(normalizeStatus(player)));
   const restingPlayers = [];
   const availablePlayers = eligiblePlayers;
 
@@ -208,7 +263,12 @@ export function generateMatches({ players = [], courts = [], history = [], rules
     const availableForCourt = availablePlayers.filter((player) => !used.has(playerId(player)));
     if (availableForCourt.length < 4) break;
 
-    const shortlist = [...availableForCourt]
+    const enforceTwoGameRest = canApplyTwoGameRest(availableForCourt, historyStats, mergedRules);
+    const rotationPool = enforceTwoGameRest
+      ? availableForCourt.filter((player) => countConsecutiveGames(player, historyStats) < mergedRules.rotationConsecutiveGameLimit)
+      : availableForCourt;
+
+    const shortlist = [...rotationPool]
       .sort((a, b) => playerPriorityScore(a, historyStats, mergedRules, now) - playerPriorityScore(b, historyStats, mergedRules, now))
       .slice(0, mergedRules.candidateLimit);
 
