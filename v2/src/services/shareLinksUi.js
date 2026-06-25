@@ -11,7 +11,8 @@ function standaloneJoinUrl() {
   const url = new URL(location.href);
   url.pathname = url.pathname.replace(/[^/]*$/, 'join.html');
   if (eventId) url.searchParams.set('event', eventId);
-  url.searchParams.set('v', 'v2-join-standalone-only-01');
+  url.searchParams.set('mode', new URLSearchParams(location.search).get('mode') || 'supabase');
+  url.searchParams.set('v', 'v2-performance-safe-01');
   return url.toString();
 }
 
@@ -30,10 +31,10 @@ function bootShareLinksUi() {
   const run = () => {
     removeOrganizerShareBox();
     redirectLegacyJoinLink();
-    const observer = new MutationObserver(removeOrganizerShareBox);
-    observer.observe(document.body, { childList: true, subtree: true });
+    // One delayed cleanup is enough for old cached Organizer QR blocks; avoid observing the whole app forever.
+    setTimeout(removeOrganizerShareBox, 800);
   };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run, { once: true });
   else run();
 }
 
