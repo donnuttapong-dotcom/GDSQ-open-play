@@ -18,7 +18,7 @@ import { mergeLocalPlayerStats, setLocalPlayerStatus, setLocalPlayerLevel, force
 import { listLocalEventMatches, createLocalMatchPreview, startLocalMatch, cancelLocalMatch, confirmLocalScore } from './localMatchStore.js';
 import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus, deleteEvent as deleteSupabaseEvent } from './supabaseEventService.js';
 import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer, updateEventPlayerStatus as updateSupabaseEventPlayerStatus, updateEventPlayerLevel as updateSupabaseEventPlayerLevel } from './supabasePlayerService.js';
-import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, startMatch as startSupabaseMatch, confirmScore as confirmSupabaseScore } from './supabaseMatchService.js';
+import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, startMatch as startSupabaseMatch, cancelMatch as cancelSupabaseMatch, confirmScore as confirmSupabaseScore } from './supabaseMatchService.js';
 
 const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
 
@@ -45,6 +45,10 @@ function matchPlayerIds(match) {
   return [...(match.teamA || match.team_a || []), ...(match.teamB || match.team_b || [])]
     .map((item) => (typeof item === 'string' ? item : item?.id || item?.playerId || item?.eventPlayerId))
     .filter(Boolean);
+}
+
+async function setSupabasePlayersStatus(supabase, players, status) {
+  await Promise.all(matchPlayerIds({ teamA: players, teamB: [] }).map((id) => updateSupabaseEventPlayerStatus(supabase, id, status)));
 }
 
 export function createV2Services({ supabase = getSupabaseClient(), organizationId = '00000000-0000-4000-8000-000000000001', mode = getServiceMode() } = {}) {
@@ -179,14 +183,22 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async startMatch(matchId, payload = {}) {
-      if (isSupabase) return startSupabaseMatch(requireSupabase(supabase), matchId);
+      if (isSupabase) {
+        const match = await startSupabaseMatch(requireSupabase(supabase), matchId);
+        await setSupabasePlayersStatus(requireSupabase(supabase), matchPlayerIds(match), 'playing');
+        return match;
+      }
       const match = startLocalMatch(payload.eventId, matchId);
       setLocalPlayerStatus(payload.eventId, matchPlayerIds(match), 'playing');
       return match;
     },
 
     async cancelMatch(matchId, payload = {}) {
-      if (isSupabase) throw new Error('cancelMatch for Supabase mode is not implemented yet.');
+      if (isSupabase) {
+        const match = await cancelSupabaseMatch(requireSupabase(supabase), matchId, payload);
+        await setSupabasePlayersStatus(requireSupabase(supabase), matchPlayerIds(match), 'ready');
+        return match;
+      }
       const match = cancelLocalMatch(payload.eventId, matchId, {
         reason: payload.reason || 'cancelled_by_organizer',
         teamAScore: payload.teamAScore,
@@ -198,7 +210,11 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async confirmScore(matchId, payload) {
-      if (isSupabase) return confirmSupabaseScore(requireSupabase(supabase), matchId, payload);
+      if (isSupabase) {
+        const match = await confirmSupabaseScore(requireSupabase(supabase), matchId, payload);
+        await setSupabasePlayersStatus(requireSupabase(supabase), matchPlayerIds(match), 'ready');
+        return match;
+      }
       const match = confirmLocalScore(payload.eventId, matchId, payload);
       applyLocalMatchResult(payload.eventId, match);
       return match;
