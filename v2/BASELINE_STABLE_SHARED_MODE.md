@@ -1,7 +1,7 @@
 # GDSQ Open Play v2 — Stable Shared Mode Baseline
 
-Version: `v2-performance-safe-01`
-Saved after Supabase Shared Mode + low-risk performance cleanup.
+Version: `v2-player-self-info-01`
+Saved after Supabase Shared Mode + performance cleanup + player self info on mobile Join page.
 
 ## Stable links
 
@@ -14,13 +14,13 @@ https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/openplay.html?mode=supab
 ### JOIN QR / QR display page
 
 ```text
-https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/join-qr.html?mode=supabase&v=v2-performance-safe-01
+https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/join-qr.html?mode=supabase&v=v2-supabase-shared-mode-01
 ```
 
-### JOIN / Player join page
+### JOIN / Player join page with MY INFO
 
 ```text
-https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/join.html?mode=supabase&v=v2-performance-safe-01
+https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/join.html?mode=supabase&v=v2-player-self-info-01
 ```
 
 ## Current stable behavior
@@ -29,6 +29,10 @@ https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/join.html?mode=supabase&
 - Join QR uses Supabase Shared Mode and creates QR links to `join.html?mode=supabase&event=<eventId>`.
 - Join page lists only `LIVE` events.
 - Player join from another device writes to Supabase `v2_event_players`.
+- Join page saves the joined player ID on that device.
+- Player can see `MY INFO` on their own mobile after joining.
+- MY INFO shows player name, level, status, queue position, played count, W/L, active match/court/team, and latest update time.
+- MY INFO auto-refreshes every 7 seconds and has a manual refresh button.
 - Event create/update/delete uses Supabase `v2_events` in shared mode.
 - Player status and level update use Supabase `v2_event_players` in shared mode.
 - Match preview/start/cancel/confirm routes are wired to Supabase v2 services.
