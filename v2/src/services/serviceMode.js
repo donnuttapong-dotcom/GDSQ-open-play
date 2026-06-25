@@ -63,15 +63,29 @@ function readEvents() {
   return safeJsonParse(localStorage.getItem(EVENTS_KEY) || '[]', []);
 }
 
-function updateStatsStatus(select, badge, events) {
+function statsLinkForEvent(eventId) {
+  const url = new URL(location.href);
+  url.searchParams.set('event', eventId);
+  url.searchParams.set('tab', 'stats');
+  url.searchParams.set('v', 'v2-stats-share-link-01');
+  return url.toString();
+}
+
+function updateStatsStatus(select, badge, linkInput, events) {
   const selected = events.find((event) => String(event.id) === String(select.value));
   const info = eventStatusInfo(selected);
   badge.className = `pill ${info.cls}`;
   badge.textContent = info.label;
+  if (linkInput) linkInput.value = statsLinkForEvent(select.value);
+}
+
+function shouldOpenStatsTab() {
+  const params = new URLSearchParams(location.search);
+  return sessionStorage.getItem(STATS_TAB_KEY) === 'stats' || params.get('tab') === 'stats' || params.get('view') === 'stats';
 }
 
 function openStatsTabIfRequested() {
-  if (sessionStorage.getItem(STATS_TAB_KEY) !== 'stats') return;
+  if (!shouldOpenStatsTab()) return;
   const button = document.getElementById('tabBtn-stats');
   if (!button) return;
   sessionStorage.removeItem(STATS_TAB_KEY);
@@ -86,7 +100,9 @@ function injectStatsEventSelector() {
   const events = readEvents();
   if (!events.length) return false;
 
-  const selectedId = localStorage.getItem(SELECTED_EVENT_KEY) || events[0]?.id || '';
+  const params = new URLSearchParams(location.search);
+  const urlEventId = params.get('event') || params.get('eventId') || params.get('id');
+  const selectedId = urlEventId || localStorage.getItem(SELECTED_EVENT_KEY) || events[0]?.id || '';
   const wrapper = document.createElement('div');
   wrapper.id = 'statsEventPicker';
   wrapper.className = 'soft p-3 mt-4';
@@ -97,6 +113,12 @@ function injectStatsEventSelector() {
       </label>
       <div class="flex md:justify-end"><span id="statsEventStatus" class="pill pill-draft">STATUS</span></div>
     </div>
+    <div class="grid md:grid-cols-[1fr_auto] gap-2 mt-3 items-end">
+      <label class="text-xs text-slate-400">ลิงก์หน้าสถิติของอีเว้นท์นี้
+        <input id="statsShareLink" class="w-full rounded-lg border p-3 mt-1 text-xs" readonly />
+      </label>
+      <button id="copyStatsLinkBtn" class="cut bg-lime text-black p-3 font-black">COPY STATS LINK</button>
+    </div>
   `;
 
   const header = firstCard.firstElementChild;
@@ -105,19 +127,36 @@ function injectStatsEventSelector() {
 
   const select = wrapper.querySelector('#statsEventSelect');
   const badge = wrapper.querySelector('#statsEventStatus');
+  const linkInput = wrapper.querySelector('#statsShareLink');
+  const copyButton = wrapper.querySelector('#copyStatsLinkBtn');
   select.innerHTML = events
     .map((event) => `<option value="${event.id}">${eventStatusInfo(event).label.split(' · ')[0]} — ${eventTitle(event)}</option>`)
     .join('');
   select.value = events.some((event) => String(event.id) === String(selectedId)) ? selectedId : events[0].id;
-  updateStatsStatus(select, badge, events);
+  localStorage.setItem(SELECTED_EVENT_KEY, select.value);
+  updateStatsStatus(select, badge, linkInput, events);
 
   select.addEventListener('change', () => {
     localStorage.setItem(SELECTED_EVENT_KEY, select.value);
     sessionStorage.setItem(STATS_TAB_KEY, 'stats');
     const params = new URLSearchParams(location.search);
     params.set('event', select.value);
-    params.set('v', 'v2-stats-event-selector-01');
+    params.set('tab', 'stats');
+    params.set('v', 'v2-stats-share-link-01');
     location.href = `${location.pathname}?${params.toString()}`;
+  });
+
+  copyButton.addEventListener('click', async () => {
+    const link = statsLinkForEvent(select.value);
+    linkInput.value = link;
+    linkInput.select();
+    try {
+      await navigator.clipboard.writeText(link);
+      copyButton.textContent = 'COPIED';
+      setTimeout(() => { copyButton.textContent = 'COPY STATS LINK'; }, 1200);
+    } catch (error) {
+      prompt('Copy Stats Link', link);
+    }
   });
   return true;
 }
