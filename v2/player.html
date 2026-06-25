@@ -3,28 +3,49 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>GDSQ v2 Player Prototype</title>
-<link rel="stylesheet" href="./styles.css" />
+<title>GDSQ Player Info</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{background:#10151b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif}.cut{clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}.card{background:#222931;border:1px solid #39434d}.soft{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.1);border-radius:16px}.lime{color:#c7ff2e}.btn{border:1px solid rgba(255,255,255,.15);font-weight:900}.mini{font-size:12px;color:#94a3b8}.pill{display:inline-flex;gap:6px;align-items:center;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:1000;border:1px solid rgba(255,255,255,.14);white-space:nowrap}.pill-live,.pill-ready,.pill-win{background:rgba(199,255,46,.14);border-color:rgba(199,255,46,.5);color:#c7ff2e}.pill-playing{background:rgba(251,146,60,.16);border-color:rgba(251,146,60,.5);color:#fb923c}.pill-rest{background:rgba(56,189,248,.13);border-color:rgba(56,189,248,.4);color:#7dd3fc}.pill-ended,.pill-left{background:rgba(148,163,184,.14);border-color:rgba(148,163,184,.35);color:#cbd5e1}.pill-lose{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.45);color:#fca5a5}
+</style>
 </head>
 <body>
-<header class="topbar"><div class="topbar-inner"><div><div class="brand">PLAYER v2</div><div class="small muted">Personal event view</div></div><a class="tag" href="./index.html" style="text-decoration:none">HOME</a></div></header>
-<main class="app grid">
-<section class="card cut hero">
-<div class="between mobile-stack"><div><div class="micro lime">PLAYER STATUS</div><h1 style="font-size:34px;line-height:1.05;margin:8px 0">Nattapong</h1><p class="muted">GDSQ Open Play · Club46</p></div><div class="avatar" style="width:72px;height:72px;font-size:32px">N</div></div>
-</section>
-<section class="grid grid-4"><div class="stat"><small>Status</small><b class="lime" style="font-size:20px">Ready</b></div><div class="stat"><small>Games</small><b>3</b></div><div class="stat"><small>Wins</small><b>2</b></div><div class="stat"><small>Level</small><b>2.75</b></div></section>
-<section class="card">
-<h2 class="section-title lime">Next action</h2>
-<div class="ok" style="margin-top:12px"><b>You are ready.</b><br>รอระบบเรียกลงคอร์ท ถ้ามี match ใหม่จะแสดงที่นี่</div>
-</section>
-<section class="card">
-<h2 class="section-title">Current / Next court</h2>
-<div class="court live" style="margin-top:12px"><div class="between"><b>Court 2</b><span class="pill status-slow">Preview</span></div><div class="teamBox" style="margin-top:12px"><div class="team"><div class="small muted">Your team</div><b>Nattapong / Ann</b></div><div class="vs">VS</div><div class="team"><div class="small muted">Opponent</div><b>Tom / Pat</b></div></div></div>
-</section>
-<section class="card">
-<h2 class="section-title orange">Match history</h2>
-<div class="list" style="margin-top:12px"><div class="player"><div class="avatar">W</div><div><b>Win 11–8</b><div class="small muted">with May vs Art / Beam</div></div><span class="score right">+3</span></div><div class="player"><div class="avatar">L</div><div><b>Loss 7–11</b><div class="small muted">with Ken vs Ploy / Gun</div></div><span class="score right">-4</span></div></div>
-</section>
-</main>
+<header class="sticky top-0 z-50 bg-[#0d1217]/95 border-b border-white/10 p-3"><div class="max-w-2xl mx-auto flex justify-between items-center gap-2"><div><div class="text-[10px] tracking-[.25em] lime">GDSQ PICKLEBALL</div><b>PLAYER INFO</b></div><a id="joinBack" class="cut btn bg-white/5 px-3 py-2 text-xs" href="./join.html?mode=supabase">JOIN</a></div></header>
+<main class="max-w-2xl mx-auto p-4"><section class="cut card p-5 mt-4"><div class="flex justify-between gap-3 items-start"><div><h1 id="playerName" class="text-3xl font-black">Player</h1><p id="eventName" class="mini mt-1">-</p></div><span id="statusPill" class="pill pill-ready">READY</span></div><div id="summaryGrid" class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-5"></div><div class="grid grid-cols-2 gap-3 mt-4"><button id="copyMyLinkBtn" class="cut btn bg-white/5 p-3">COPY MY LINK</button><button id="refreshBtn" class="cut bg-lime text-black p-3 font-black">REFRESH</button></div><div id="msg" class="hidden mt-4 p-3 rounded-xl border border-red-300/40 bg-red-300/10 text-red-100 whitespace-pre-wrap"></div></section><section class="cut card p-5 mt-4"><h2 class="text-2xl font-black lime">CURRENT MATCH</h2><div id="currentMatch" class="grid gap-3 mt-4"></div></section><section class="cut card p-5 mt-4"><h2 class="text-2xl font-black lime">MATCH HISTORY</h2><p class="mini">ชนะใคร แพ้ใคร คะแนนเท่าไหร่</p><div id="historyList" class="grid gap-3 mt-4"></div></section></main>
+<script type="module">
+import { createV2Services } from './src/services/index.js?v=v2-player-page-01';
+const $=(id)=>document.getElementById(id);const services=createV2Services();const MY_PREFIX='gdsq_v2_my_player:';let event=null,players=[],matches=[],me=null;
+function params(){return new URLSearchParams(location.search)}
+function esc(s){return String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function nameOf(p){return p?.displayName||p?.name||p?.nickname||'-'}
+function levelOf(p){return Number(p?.estimatedLevel||p?.estimated_level||p?.level||0)}
+function statusOf(p){return String(p?.status||'ready').toLowerCase()}
+function eventTitle(e){return e?.name||e?.name_th||e?.name_en||'Untitled Event'}
+function eventId(){return params().get('event')||localStorage.getItem('gdsq_v2_selected_event_id')||''}
+function myKey(id){return `${MY_PREFIX}${id}`}
+function playerId(){return params().get('player')||params().get('playerId')||localStorage.getItem(myKey(eventId()))||''}
+function statusPill(status){const cls=status==='playing'?'pill-playing':status==='rest'?'pill-rest':status==='left'?'pill-left':'pill-ready';const label=status==='playing'?'PLAYING':status==='rest'?'REST':status==='left'?'LEFT':'READY';return{cls,label}}
+function ids(m){return[...(m.teamA||[]),...(m.teamB||[])].map(String)}
+function teamOf(m,id){const a=(m.teamA||[]).map(String),b=(m.teamB||[]).map(String);return a.includes(String(id))?'A':b.includes(String(id))?'B':'-'}
+function scoreA(m){return Number(m.teamAScore??m.team_a_score??0)}
+function scoreB(m){return Number(m.teamBScore??m.team_b_score??0)}
+function playerById(id){return players.find(p=>String(p.id)===String(id))||{displayName:id}}
+function names(list){return(list||[]).map(id=>nameOf(playerById(id))).join(' / ')}
+function confirmed(){return matches.filter(m=>['confirmed','completed'].includes(String(m.status||'').toLowerCase()))}
+function activeMatch(id){return matches.find(m=>['preview','playing','assigned','pending_score'].includes(String(m.status||'').toLowerCase())&&ids(m).includes(String(id)))}
+function queuePosition(id){const waiting=players.filter(p=>['ready','checked_in'].includes(statusOf(p))).sort((a,b)=>new Date(a.queueJoinedAt||a.queue_joined_at||a.createdAt||0)-new Date(b.queueJoinedAt||b.queue_joined_at||b.createdAt||0));const i=waiting.findIndex(p=>String(p.id)===String(id));return i>=0?i+1:null}
+function statMap(){const map=new Map(players.map(p=>[String(p.id),{player:p,played:0,wins:0,losses:0,pf:0,pa:0,diff:0}]));confirmed().forEach(m=>{['A','B'].forEach(team=>{const teamIds=(team==='A'?m.teamA:m.teamB)||[];const won=String(m.winner||'').toUpperCase()===team;const pf=team==='A'?scoreA(m):scoreB(m);const pa=team==='A'?scoreB(m):scoreA(m);teamIds.forEach(id=>{const rec=map.get(String(id));if(!rec)return;rec.played+=1;if(won)rec.wins+=1;else rec.losses+=1;rec.pf+=pf;rec.pa+=pa;rec.diff=rec.pf-rec.pa})})});return map}
+function ranking(){return[...statMap().values()].sort((a,b)=>b.wins-a.wins||b.diff-a.diff||b.pf-a.pf||nameOf(a.player).localeCompare(nameOf(b.player)))}
+function myRank(){const rank=ranking();const i=rank.findIndex(r=>String(r.player.id)===String(me.id));return i>=0?i+1:'-'}
+function myStats(){return statMap().get(String(me.id))||{played:0,wins:0,losses:0,pf:0,pa:0,diff:0}}
+function myHistory(){return confirmed().filter(m=>ids(m).includes(String(me.id))).sort((a,b)=>new Date(b.completedAt||b.completed_at||b.updatedAt||0)-new Date(a.completedAt||a.completed_at||a.updatedAt||0))}
+function renderSummary(){const s=myStats(),pos=queuePosition(me.id),pill=statusPill(statusOf(me));$('statusPill').className=`pill ${pill.cls}`;$('statusPill').textContent=pill.label;$('summaryGrid').innerHTML=`<div class="soft p-3 text-center mini">Rank<br><b class="text-2xl lime">#${myRank()}</b></div><div class="soft p-3 text-center mini">Queue<br><b class="text-2xl">${pos||'-'}</b></div><div class="soft p-3 text-center mini">W/L<br><b class="text-2xl">${s.wins}/${s.losses}</b></div><div class="soft p-3 text-center mini">Diff<br><b class="text-2xl">${s.diff}</b></div><div class="soft p-3 text-center mini">Level<br><b class="text-xl">${levelOf(me).toFixed(2)}</b></div><div class="soft p-3 text-center mini">Played<br><b class="text-xl">${s.played}</b></div><div class="soft p-3 text-center mini">PF<br><b class="text-xl">${s.pf}</b></div><div class="soft p-3 text-center mini">PA<br><b class="text-xl">${s.pa}</b></div>`}
+function renderCurrent(){const m=activeMatch(me.id);if(!m){$('currentMatch').innerHTML='<div class="soft p-4 mini">ยังไม่ได้ถูกจัดลงแมตช์</div>';return}const team=teamOf(m,me.id);$('currentMatch').innerHTML=`<div class="soft p-4"><div class="flex justify-between"><b>${String(m.status||'').toUpperCase()} · Court ${m.courtNumber||m.court_number||'-'}</b><span class="pill pill-playing">TEAM ${team}</span></div><div class="mini mt-2">A: ${esc(names(m.teamA))}</div><div class="mini">B: ${esc(names(m.teamB))}</div></div>`}
+function renderHistory(){const history=myHistory();if(!history.length){$('historyList').innerHTML='<div class="soft p-4 mini">ยังไม่มีประวัติแมตช์ที่ Confirm แล้ว</div>';return}$('historyList').innerHTML=history.map(m=>{const team=teamOf(m,me.id);const won=String(m.winner||'').toUpperCase()===team;const oppIds=team==='A'?m.teamB:m.teamA;const myScore=team==='A'?scoreA(m):scoreB(m);const oppScore=team==='A'?scoreB(m):scoreA(m);return`<div class="soft p-4"><div class="flex justify-between gap-2"><b>${won?'ชนะ':'แพ้'} ${esc(names(oppIds))}</b><span class="pill ${won?'pill-win':'pill-lose'}">${myScore}-${oppScore}</span></div><div class="mini mt-2">Team ${team} · Court ${m.courtNumber||m.court_number||'-'}</div><div class="mini">คู่ทีมเรา: ${esc(names(team==='A'?m.teamA:m.teamB))}</div></div>`}).join('')}
+function playerLink(){const url=new URL(location.href);url.pathname=url.pathname.replace(/[^/]*$/,'player.html');url.searchParams.set('mode','supabase');url.searchParams.set('event',event.id);url.searchParams.set('player',me.id);url.searchParams.set('v','v2-player-page-01');return url.toString()}
+function showError(text){const msg=$('msg');msg.textContent=text;msg.classList.remove('hidden')}
+async function refresh(){const eId=eventId();const pId=playerId();if(!eId||!pId){showError('ไม่พบข้อมูลผู้เล่น กรุณา Join ก่อน');return}await services.selectEvent(eId);event=await services.getCurrentEvent();[players,matches]=await Promise.all([services.listEventPlayers(eId),services.listEventMatches(eId)]);me=players.find(p=>String(p.id)===String(pId));if(!me){showError('ไม่พบผู้เล่นนี้ในอีเว้นท์');return}localStorage.setItem(myKey(eId),String(me.id));$('playerName').textContent=nameOf(me);$('eventName').textContent=eventTitle(event);$('joinBack').href=`./join.html?mode=supabase&event=${encodeURIComponent(eId)}&v=v2-player-page-01`;renderSummary();renderCurrent();renderHistory()}
+$('refreshBtn').addEventListener('click',refresh);$('copyMyLinkBtn').addEventListener('click',async()=>{const link=playerLink();try{await navigator.clipboard.writeText(link);$('copyMyLinkBtn').textContent='COPIED';setTimeout(()=>$('copyMyLinkBtn').textContent='COPY MY LINK',1200)}catch(e){prompt('Copy My Link',link)}});refresh().catch(e=>showError(e.message||'โหลดข้อมูลไม่สำเร็จ'));setInterval(()=>refresh().catch(()=>{}),7000);
+</script>
 </body>
 </html>
