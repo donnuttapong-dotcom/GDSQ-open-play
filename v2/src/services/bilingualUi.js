@@ -36,15 +36,16 @@ function ensureLangToggle() {
   button.type = 'button';
   button.style.cssText = [
     'position:fixed',
-    'right:12px',
-    'top:72px',
+    'right:0px',
+    'top:10px',
     'z-index:9999',
     'border:1px solid rgba(255,255,255,.22)',
+    'border-right:0',
     'background:#c7ff2e',
     'color:#10151b',
     'font-weight:1000',
     'font-size:12px',
-    'border-radius:999px',
+    'border-radius:999px 0 0 999px',
     'padding:10px 14px',
     'box-shadow:0 12px 30px rgba(0,0,0,.35)'
   ].join(';');
@@ -80,6 +81,12 @@ function translateButtons() {
     { th: 'พรีวิว Manual', en: 'Manual Preview', variants: ['สร้างพรีวิว Manual', 'Manual Preview', 'Manual Preview / พรีวิว Manual'] },
     { th: 'ล้างรายชื่อ', en: 'Clear Players', variants: ['ล้างรายชื่อ', 'Clear Players', 'Clear Players / ล้างรายชื่อ'] },
     { th: 'เพิ่ม', en: 'Add', variants: ['ADD', 'เพิ่ม', 'Add', 'Add / เพิ่ม'] },
+    { th: 'เริ่ม', en: 'Start', variants: ['START', 'Start', 'เริ่ม'] },
+    { th: 'ยกเลิก', en: 'Cancel', variants: ['CANCEL', 'Cancel', 'ยกเลิก'] },
+    { th: 'ยืนยันคะแนน', en: 'Confirm', variants: ['CONFIRM', 'Confirm', 'ยืนยันคะแนน'] },
+    { th: 'พร้อม', en: 'Ready', variants: ['READY', 'Ready', 'พร้อม'] },
+    { th: 'พัก', en: 'Rest', variants: ['REST', 'Rest', 'พัก'] },
+    { th: 'ออก', en: 'Left', variants: ['LEFT', 'Left', 'ออก'] },
     { th: 'คัดลอกลิงก์สถิติ', en: 'Copy Stats Link', variants: ['COPY STATS LINK', 'Copy Stats Link', 'Copy Stats Link / คัดลอกลิงก์สถิติ', 'คัดลอกลิงก์สถิติ'] },
     { th: 'คัดลอกแล้ว', en: 'Copied', variants: ['COPIED', 'Copied', 'คัดลอกแล้ว'] }
   ];
