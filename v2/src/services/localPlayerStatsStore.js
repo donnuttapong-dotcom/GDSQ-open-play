@@ -114,6 +114,33 @@ export function forceAllLocalPlayersReady(eventId, players = []) {
   return stats;
 }
 
+export function releaseInactivePlayingPlayers(eventId, players = [], matches = []) {
+  if (!eventId) return null;
+  const activeIds = new Set(
+    matches
+      .filter((match) => String(match.status || '').toLowerCase() === 'playing')
+      .flatMap((match) => [...(match.teamA || match.team_a || []), ...(match.teamB || match.team_b || [])])
+      .map(playerId)
+      .filter(Boolean)
+      .map(String)
+  );
+  const stats = readStats(eventId);
+  let changed = false;
+  const now = new Date().toISOString();
+  for (const player of players) {
+    const id = playerId(player);
+    if (!id || activeIds.has(String(id))) continue;
+    const record = stats[String(id)];
+    if (record?.status === 'playing') {
+      record.status = 'ready';
+      record.queueJoinedAt = now;
+      changed = true;
+    }
+  }
+  if (changed) writeStats(eventId, stats);
+  return changed ? stats : null;
+}
+
 export function applyLocalMatchResult(eventId, match) {
   const stats = readStats(eventId);
   const teamA = (match.teamA || match.team_a || []).map(playerId).filter(Boolean).map(String);
@@ -126,14 +153,14 @@ export function applyLocalMatchResult(eventId, match) {
 
   function apply(id, isTeamA) {
     const record = ensurePlayer(stats, id);
+    record.status = 'ready';
+    record.queueJoinedAt = now;
     if (record.appliedMatchIds?.includes(matchId)) return;
     record.delta.matchesPlayed += 1;
     record.delta.wins += isTeamA === teamAWon ? 1 : 0;
     record.delta.losses += isTeamA === teamAWon ? 0 : 1;
     record.delta.pointsFor += isTeamA ? teamAScore : teamBScore;
     record.delta.pointsAgainst += isTeamA ? teamBScore : teamAScore;
-    record.status = 'ready';
-    record.queueJoinedAt = now;
     record.appliedMatchIds = [...(record.appliedMatchIds || []), matchId];
   }
 
