@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GDSQ Join QR</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{background:#10151b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif}.cut{clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}.card{background:#222931;border:1px solid #39434d}.soft{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.1);border-radius:16px}.lime{color:#c7ff2e}.bg-lime{background:#c7ff2e;color:#10151b}.btn{border:1px solid rgba(255,255,255,.15);font-weight:900}input,select{background:#10151b!important;color:#fff!important;border-color:#3a424a!important}.mini{font-size:12px;color:#94a3b8}.pill{display:inline-flex;gap:6px;align-items:center;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:1000;border:1px solid rgba(255,255,255,.14);white-space:nowrap}.pill-live{background:rgba(199,255,46,.14);border-color:rgba(199,255,46,.5);color:#c7ff2e}.pill-draft{background:rgba(56,189,248,.13);border-color:rgba(56,189,248,.4);color:#7dd3fc}.pill-ended{background:rgba(148,163,184,.14);border-color:rgba(148,163,184,.35);color:#cbd5e1}
+</style>
+</head>
+<body>
+<header class="sticky top-0 z-50 bg-[#0d1217]/95 border-b border-white/10 p-3">
+  <div class="max-w-xl mx-auto flex justify-between items-center gap-2">
+    <div>
+      <div class="text-[10px] tracking-[.25em] lime">GDSQ PICKLEBALL</div>
+      <b>JOIN QR</b>
+    </div>
+    <a class="cut btn bg-white/5 px-3 py-2 text-xs" href="./openplay.html">Organizer</a>
+  </div>
+</header>
+
+<main class="max-w-xl mx-auto p-4">
+  <section class="cut card p-5 mt-4">
+    <div class="flex justify-between items-start gap-3">
+      <div>
+        <h1 class="text-3xl font-black">JOIN QR</h1>
+        <p class="mini mt-1">เลือกอีเว้นท์ แล้วใช้ QR นี้ให้ผู้เล่นสแกนเข้าหน้า Join แยก</p>
+      </div>
+      <span id="eventStatusBadge" class="pill pill-live">LIVE</span>
+    </div>
+
+    <div id="msg" class="hidden mt-4 p-3 rounded-xl border border-lime-300/40 bg-lime-300/10 text-lime-100 whitespace-pre-wrap"></div>
+
+    <div class="grid gap-4 mt-5">
+      <label class="text-xs text-slate-400 font-black">Event / อีเว้นท์
+        <select id="eventSelect" class="w-full rounded-lg border p-4 mt-1"></select>
+      </label>
+
+      <div class="soft p-4 text-center">
+        <img id="qrImage" alt="Join QR" class="mx-auto rounded-xl bg-white p-3 w-[240px] h-[240px]" />
+        <p class="mini mt-3">ผู้เล่นสแกนแล้วจะไปหน้า Join แยกทันที</p>
+      </div>
+
+      <label class="text-xs text-slate-400 font-black">Join Page Link / ลิงก์หน้าเข้าร่วม
+        <input id="joinLink" class="w-full rounded-lg border p-4 mt-1 text-xs" readonly />
+      </label>
+
+      <div class="grid grid-cols-2 gap-3">
+        <button id="copyBtn" class="cut bg-lime text-black p-4 font-black">COPY LINK</button>
+        <a id="openJoinBtn" class="cut btn bg-white/5 p-4 font-black text-center" href="#">OPEN JOIN</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="soft p-4 mt-4">
+    <h2 class="font-black lime">สำหรับผู้จัด</h2>
+    <p class="mini mt-2">หน้านี้ใช้โชว์ QR เท่านั้น ไม่ใช่หน้า Organizer และไม่แสดงระบบจับคู่/คะแนน</p>
+  </section>
+</main>
+
+<script type="module">
+const EVENTS_KEY = 'gdsq_v2_events';
+const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
+
+const $ = (id) => document.getElementById(id);
+
+function safeParse(value, fallback) {
+  try { return JSON.parse(value); } catch (error) { return fallback; }
+}
+
+function params() {
+  return new URLSearchParams(location.search);
+}
+
+function eventTitle(event) {
+  return event?.name || event?.name_th || event?.name_en || 'Untitled Event';
+}
+
+function eventStatus(event) {
+  return String(event?.status || 'draft').toLowerCase();
+}
+
+function statusLabel(event) {
+  const status = eventStatus(event);
+  if (['completed', 'ended', 'closed'].includes(status)) return { text: 'ENDED', cls: 'pill-ended' };
+  if (status === 'live') return { text: 'LIVE', cls: 'pill-live' };
+  return { text: 'DRAFT', cls: 'pill-draft' };
+}
+
+function listEvents() {
+  return safeParse(localStorage.getItem(EVENTS_KEY) || '[]', [])
+    .filter((event) => event?.id)
+    .sort((a, b) => {
+      const liveA = eventStatus(a) === 'live' ? 0 : 1;
+      const liveB = eventStatus(b) === 'live' ? 0 : 1;
+      return liveA - liveB || String(eventTitle(a)).localeCompare(String(eventTitle(b)));
+    });
+}
+
+function selectedEvent() {
+  return listEvents().find((event) => String(event.id) === String($('eventSelect').value)) || null;
+}
+
+function joinUrl(eventId) {
+  const url = new URL(location.href);
+  url.pathname = url.pathname.replace(/[^/]*$/, 'join.html');
+  url.searchParams.delete('tab');
+  if (eventId) url.searchParams.set('event', eventId);
+  url.searchParams.set('v', 'v2-join-qr-page-01');
+  return url.toString();
+}
+
+function qrSrc(value) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=10&data=${encodeURIComponent(value)}`;
+}
+
+function showMessage(text, good = true) {
+  const msg = $('msg');
+  msg.textContent = text;
+  msg.className = `mt-4 p-3 rounded-xl border whitespace-pre-wrap ${good ? 'border-lime-300/40 bg-lime-300/10 text-lime-100' : 'border-red-300/40 bg-red-300/10 text-red-100'}`;
+}
+
+function renderEvents() {
+  const events = listEvents();
+  const requestedId = params().get('event') || localStorage.getItem(SELECTED_EVENT_KEY) || '';
+  $('eventSelect').innerHTML = events.map((event) => {
+    const status = statusLabel(event).text;
+    return `<option value="${event.id}">[${status}] ${eventTitle(event)}</option>`;
+  }).join('');
+  if (requestedId && events.some((event) => String(event.id) === String(requestedId))) $('eventSelect').value = requestedId;
+  else if (events[0]) $('eventSelect').value = events[0].id;
+  if (!events.length) showMessage('ยังไม่มีอีเว้นท์ในเครื่องนี้ กรุณาสร้างอีเว้นท์ใน Organizer ก่อน', false);
+  refreshQr();
+}
+
+function updateStatusBadge() {
+  const event = selectedEvent();
+  const badge = $('eventStatusBadge');
+  const info = statusLabel(event || {});
+  badge.textContent = info.text;
+  badge.className = `pill ${info.cls}`;
+}
+
+function refreshQr() {
+  const eventId = $('eventSelect').value || '';
+  if (eventId) localStorage.setItem(SELECTED_EVENT_KEY, eventId);
+  const url = joinUrl(eventId);
+  $('joinLink').value = url;
+  $('qrImage').src = qrSrc(url);
+  $('openJoinBtn').href = url;
+  updateStatusBadge();
+  const pageUrl = new URL(location.href);
+  if (eventId) pageUrl.searchParams.set('event', eventId);
+  pageUrl.searchParams.set('v', 'v2-join-qr-page-01');
+  history.replaceState(null, '', pageUrl.toString());
+}
+
+function copyJoinLink() {
+  const value = $('joinLink').value;
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(value).then(() => showMessage('คัดลอก Join Link แล้ว'));
+    return;
+  }
+  const input = document.createElement('textarea');
+  input.value = value;
+  input.style.position = 'fixed';
+  input.style.opacity = '0';
+  document.body.appendChild(input);
+  input.select();
+  document.execCommand('copy');
+  input.remove();
+  showMessage('คัดลอก Join Link แล้ว');
+}
+
+$('eventSelect').addEventListener('change', refreshQr);
+$('copyBtn').addEventListener('click', copyJoinLink);
+renderEvents();
+</script>
+</body>
+</html>
