@@ -1,5 +1,7 @@
-// Text-only language toggle plus organizer button unlock. No match, score, stats, or event data changes.
+// Language toggle and emergency organizer unlock. No score/stat calculation changes.
 const LANG_KEY = 'gdsq_v2_ui_lang';
+const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
+const PLAYER_STATS_KEY_PREFIX = 'gdsq_v2_player_stats:';
 
 function currentLang() {
   return localStorage.getItem(LANG_KEY) || 'th';
@@ -7,6 +9,10 @@ function currentLang() {
 
 function setLang(lang) {
   localStorage.setItem(LANG_KEY, lang === 'en' ? 'en' : 'th');
+}
+
+function safeParse(value, fallback) {
+  try { return JSON.parse(value); } catch (error) { return fallback; }
 }
 
 function text(id, th, en) {
@@ -31,14 +37,37 @@ function replaceTextVariants(selector, variants, th, en) {
   });
 }
 
+function forceReleasePlayingStats() {
+  const eventId = localStorage.getItem(SELECTED_EVENT_KEY);
+  if (!eventId) return;
+  const key = `${PLAYER_STATS_KEY_PREFIX}${eventId}`;
+  const stats = safeParse(localStorage.getItem(key) || '{}', {});
+  let changed = false;
+  const now = new Date().toISOString();
+  Object.values(stats).forEach((record) => {
+    if (record && record.status === 'playing') {
+      record.status = 'ready';
+      record.queueJoinedAt = now;
+      changed = true;
+    }
+  });
+  if (changed) localStorage.setItem(key, JSON.stringify(stats));
+}
+
 function unlockOrganizerPlayerButtons() {
+  forceReleasePlayingStats();
   const panel = document.getElementById('managePlayers');
   if (!panel) return;
   panel.querySelectorAll('button[data-player][disabled], button[data-remove-player][disabled]').forEach((button) => {
     button.removeAttribute('disabled');
     button.disabled = false;
-    button.style.opacity = '';
-    button.style.cursor = '';
+    button.style.opacity = '1';
+    button.style.cursor = 'pointer';
+  });
+  panel.querySelectorAll('.pill-auto').forEach((badge) => {
+    badge.classList.remove('pill-auto');
+    badge.classList.add('pill-ready');
+    badge.textContent = currentLang() === 'en' ? 'READY' : 'พร้อม';
   });
 }
 
