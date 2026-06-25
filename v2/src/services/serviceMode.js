@@ -1,5 +1,5 @@
 // v2 service mode switch
-// Supabase is now auto-enabled when public project config exists.
+// Supabase is auto-enabled when public project config exists.
 
 import { hasSupabaseConfig } from './supabaseClient.js';
 
@@ -55,12 +55,8 @@ function eventTitle(event) {
 
 function eventStatusInfo(event) {
   const status = String(event?.status || 'draft').toLowerCase();
-  if (['completed', 'ended', 'closed'].includes(status)) {
-    return { label: 'ENDED · จบแล้ว', cls: 'pill-ended' };
-  }
-  if (['live', 'open', 'active'].includes(status)) {
-    return { label: 'LIVE · เปิดอยู่', cls: 'pill-live' };
-  }
+  if (['completed', 'ended', 'closed'].includes(status)) return { label: 'ENDED · จบแล้ว', cls: 'pill-ended' };
+  if (['live', 'open', 'active'].includes(status)) return { label: 'LIVE · เปิดอยู่', cls: 'pill-live' };
   return { label: 'DRAFT · ยังไม่เปิด', cls: 'pill-draft' };
 }
 
@@ -96,7 +92,8 @@ function openStatsTabIfRequested() {
   if (!button) return;
   sessionStorage.removeItem(STATS_TAB_KEY);
   setTimeout(() => button.click(), 150);
-}\n
+}
+
 function injectStatsEventSelector() {
   if (document.getElementById('statsEventSelect')) return true;
   const statsSection = document.getElementById('tab-stats');
@@ -134,9 +131,7 @@ function injectStatsEventSelector() {
   const badge = wrapper.querySelector('#statsEventStatus');
   const linkInput = wrapper.querySelector('#statsShareLink');
   const copyButton = wrapper.querySelector('#copyStatsLinkBtn');
-  select.innerHTML = events
-    .map((event) => `<option value="${event.id}">${eventStatusInfo(event).label.split(' · ')[0]} — ${eventTitle(event)}</option>`)
-    .join('');
+  select.innerHTML = events.map((event) => `<option value="${event.id}">${eventStatusInfo(event).label.split(' · ')[0]} — ${eventTitle(event)}</option>`).join('');
   select.value = events.some((event) => String(event.id) === String(selectedId)) ? selectedId : events[0].id;
   localStorage.setItem(SELECTED_EVENT_KEY, select.value);
   updateStatsStatus(select, badge, linkInput, events);
@@ -173,11 +168,8 @@ function bootStatsEventSelector() {
     openStatsTabIfRequested();
     injectStatsEventSelector();
   };
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', tryInject);
-  } else {
-    tryInject();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tryInject);
+  else tryInject();
   let tries = 0;
   const timer = setInterval(() => {
     tries += 1;
