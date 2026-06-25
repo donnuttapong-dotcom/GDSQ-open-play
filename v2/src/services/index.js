@@ -1,3 +1,4 @@
+import './bilingualUi.js';
 import { getServiceMode, SERVICE_MODES } from './serviceMode.js';
 import {
   listEvents as listLocalEvents,
