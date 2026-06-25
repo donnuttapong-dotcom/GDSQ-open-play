@@ -12,13 +12,15 @@ function setLang(lang) {
 function text(id, th, en) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.textContent = currentLang() === 'en' ? en : th;
+  const next = currentLang() === 'en' ? en : th;
+  if (el.textContent !== next) el.textContent = next;
 }
 
 function ph(id, th, en) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.placeholder = currentLang() === 'en' ? en : th;
+  const next = currentLang() === 'en' ? en : th;
+  if (el.placeholder !== next) el.placeholder = next;
 }
 
 function replaceTextVariants(selector, variants, th, en) {
@@ -94,7 +96,8 @@ function translateButtons() {
     const value = button.textContent.trim();
     const item = items.find((entry) => entry.variants.includes(value));
     if (!item) return;
-    button.textContent = currentLang() === 'en' ? item.en : item.th;
+    const next = currentLang() === 'en' ? item.en : item.th;
+    if (button.textContent !== next) button.textContent = next;
   });
 }
 
@@ -120,10 +123,10 @@ function translateHeadings() {
 export function applyBilingualUiLabels() {
   ensureLangToggle();
   updateToggleText();
-  text('tabBtn-events', currentLang() === 'en' ? 'Events' : 'อีเว้นท์', 'Events');
-  text('tabBtn-join', currentLang() === 'en' ? 'Join' : 'เข้าร่วม', 'Join');
-  text('tabBtn-manage', currentLang() === 'en' ? 'Organizer' : 'ผู้จัด', 'Organizer');
-  text('tabBtn-stats', currentLang() === 'en' ? 'Stats' : 'สถิติ', 'Stats');
+  text('tabBtn-events', 'อีเว้นท์', 'Events');
+  text('tabBtn-join', 'เข้าร่วม', 'Join');
+  text('tabBtn-manage', 'ผู้จัด', 'Organizer');
+  text('tabBtn-stats', 'สถิติ', 'Stats');
 
   ph('newEventName', 'ชื่องาน', 'Event name');
   ph('newEventVenue', 'สถานที่', 'Venue');
@@ -134,17 +137,31 @@ export function applyBilingualUiLabels() {
   translateHeadings();
 }
 
+let pendingApply = false;
+function scheduleApplyBilingualUiLabels() {
+  if (pendingApply) return;
+  pendingApply = true;
+  requestAnimationFrame(() => {
+    pendingApply = false;
+    applyBilingualUiLabels();
+  });
+}
+
 function bootBilingualUi() {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
-  const run = () => applyBilingualUiLabels();
+  const run = () => {
+    applyBilingualUiLabels();
+    const root = document.body;
+    if (!root || !window.MutationObserver) return;
+    const observer = new MutationObserver((mutations) => {
+      if (mutations.some((mutation) => mutation.addedNodes.length || mutation.removedNodes.length)) {
+        scheduleApplyBilingualUiLabels();
+      }
+    });
+    observer.observe(root, { childList: true, subtree: true });
+  };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
   else run();
-  let tries = 0;
-  const timer = setInterval(() => {
-    tries += 1;
-    applyBilingualUiLabels();
-    if (tries > 120) clearInterval(timer);
-  }, 500);
 }
 
 bootBilingualUi();
