@@ -1,4 +1,4 @@
-// Text-only language toggle. No app data, match, score, stats, or event logic changes.
+// Text-only language toggle plus organizer button unlock. No match, score, stats, or event data changes.
 const LANG_KEY = 'gdsq_v2_ui_lang';
 
 function currentLang() {
@@ -28,6 +28,17 @@ function replaceTextVariants(selector, variants, th, en) {
   document.querySelectorAll(selector).forEach((el) => {
     const value = el.textContent.trim();
     if (variants.includes(value) && value !== wanted) el.textContent = wanted;
+  });
+}
+
+function unlockOrganizerPlayerButtons() {
+  const panel = document.getElementById('managePlayers');
+  if (!panel) return;
+  panel.querySelectorAll('button[data-player][disabled], button[data-remove-player][disabled]').forEach((button) => {
+    button.removeAttribute('disabled');
+    button.disabled = false;
+    button.style.opacity = '';
+    button.style.cursor = '';
   });
 }
 
@@ -133,6 +144,7 @@ export function applyBilingualUiLabels() {
   ph('joinName', 'ชื่อเล่น', 'Nickname');
   ph('manageNewPlayerName', 'เพิ่มผู้เล่น', 'Add player');
 
+  unlockOrganizerPlayerButtons();
   translateButtons();
   translateHeadings();
 }
