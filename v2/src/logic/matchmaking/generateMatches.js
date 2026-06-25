@@ -1,5 +1,5 @@
 export const DEFAULT_MATCHMAKING_RULES = {
-  maxConsecutiveGames: 2,
+  maxConsecutiveGames: 999,
   candidateLimit: 10,
   lowGamesWeight: 120,
   waitMinuteBonus: 2,
@@ -87,8 +87,8 @@ export function countConsecutiveGames(player, historyStats) {
   return count;
 }
 
-export function shouldRest(player, historyStats, rules = DEFAULT_MATCHMAKING_RULES) {
-  return countConsecutiveGames(player, historyStats) >= rules.maxConsecutiveGames;
+export function shouldRest() {
+  return false;
 }
 
 function playerPriorityScore(player, historyStats, rules, nowMs) {
@@ -189,8 +189,8 @@ export function generateMatches({ players = [], courts = [], history = [], rules
   const historyStats = buildMatchHistoryStats(history);
   const courtList = courts.length ? courts : [{ id: 'court-1', name: 'Court 1' }];
   const eligiblePlayers = players.filter((player) => player && player.status !== 'playing' && player.status !== 'left' && player.status !== 'removed');
-  const restingPlayers = eligiblePlayers.filter((player) => shouldRest(player, historyStats, mergedRules));
-  const availablePlayers = eligiblePlayers.filter((player) => !shouldRest(player, historyStats, mergedRules));
+  const restingPlayers = [];
+  const availablePlayers = eligiblePlayers;
 
   if (availablePlayers.length < 4) {
     return {
@@ -219,7 +219,6 @@ export function generateMatches({ players = [], courts = [], history = [], rules
     }
 
     if (!bestGroup) break;
-
     const split = bestTeamSplit(bestGroup.group, historyStats, mergedRules);
     bestGroup.group.forEach((player) => used.add(playerId(player)));
 
@@ -229,7 +228,7 @@ export function generateMatches({ players = [], courts = [], history = [], rules
       teamA: split.teamA,
       teamB: split.teamB,
       fairnessScore: Math.round(bestGroup.score + split.score),
-      restBlockedCount: restingPlayers.length
+      restBlockedCount: 0
     });
   }
 
