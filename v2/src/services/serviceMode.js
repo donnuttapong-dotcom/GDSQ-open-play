@@ -1,5 +1,7 @@
 // v2 service mode switch
-// Default is mock so v2 remains safe and does not touch real Supabase data.
+// Supabase is now auto-enabled when public project config exists.
+
+import { hasSupabaseConfig } from './supabaseClient.js';
 
 const MODE_KEY = 'gdsq_v2_service_mode';
 const EVENTS_KEY = 'gdsq_v2_events';
@@ -12,12 +14,15 @@ export const SERVICE_MODES = {
 };
 
 export function getServiceMode() {
-  const urlMode = new URLSearchParams(location.search).get('mode');
+  const params = new URLSearchParams(location.search);
+  const urlMode = params.get('mode');
   if (urlMode === SERVICE_MODES.SUPABASE || urlMode === SERVICE_MODES.MOCK) {
     localStorage.setItem(MODE_KEY, urlMode);
     return urlMode;
   }
-  return localStorage.getItem(MODE_KEY) || SERVICE_MODES.MOCK;
+  const saved = localStorage.getItem(MODE_KEY);
+  if (saved === SERVICE_MODES.SUPABASE || saved === SERVICE_MODES.MOCK) return saved;
+  return hasSupabaseConfig() ? SERVICE_MODES.SUPABASE : SERVICE_MODES.MOCK;
 }
 
 export function setServiceMode(mode) {
@@ -33,7 +38,7 @@ export function isSupabaseMode() {
 }
 
 export function modeLabel() {
-  return isSupabaseMode() ? 'SUPABASE MODE' : 'MOCK MODE';
+  return isSupabaseMode() ? 'SUPABASE SHARED MODE' : 'MOCK / LOCAL MODE';
 }
 
 function safeJsonParse(value, fallback) {
@@ -67,7 +72,8 @@ function statsLinkForEvent(eventId) {
   const url = new URL(location.href);
   url.searchParams.set('event', eventId);
   url.searchParams.set('tab', 'stats');
-  url.searchParams.set('v', 'v2-stats-share-link-01');
+  url.searchParams.set('mode', getServiceMode());
+  url.searchParams.set('v', 'v2-supabase-shared-mode-01');
   return url.toString();
 }
 
@@ -90,8 +96,7 @@ function openStatsTabIfRequested() {
   if (!button) return;
   sessionStorage.removeItem(STATS_TAB_KEY);
   setTimeout(() => button.click(), 150);
-}
-
+}\n
 function injectStatsEventSelector() {
   if (document.getElementById('statsEventSelect')) return true;
   const statsSection = document.getElementById('tab-stats');
@@ -142,7 +147,8 @@ function injectStatsEventSelector() {
     const params = new URLSearchParams(location.search);
     params.set('event', select.value);
     params.set('tab', 'stats');
-    params.set('v', 'v2-stats-share-link-01');
+    params.set('mode', getServiceMode());
+    params.set('v', 'v2-supabase-shared-mode-01');
     location.href = `${location.pathname}?${params.toString()}`;
   });
 
