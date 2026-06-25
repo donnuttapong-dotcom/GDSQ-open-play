@@ -79,6 +79,15 @@ export async function startMatch(supabase, matchId) {
   return fetchMatch(supabase, matchId);
 }
 
+export async function cancelMatch(supabase, matchId, payload = {}) {
+  const patch = { status: 'cancelled', updated_at: new Date().toISOString() };
+  if (payload.teamAScore !== undefined) patch.team_a_score = Number(payload.teamAScore);
+  if (payload.teamBScore !== undefined) patch.team_b_score = Number(payload.teamBScore);
+  const { error } = await supabase.from('v2_matches').update(patch).eq('id', matchId).neq('status', 'confirmed');
+  if (error) throw error;
+  return fetchMatch(supabase, matchId);
+}
+
 export async function confirmScore(supabase, matchId, payload) {
   const { data: existing, error: readError } = await supabase.from('v2_matches').select('id,status').eq('id', matchId).single();
   if (readError) throw readError;
