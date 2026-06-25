@@ -119,8 +119,8 @@ function countConsecutiveRests(player, historyStats) {
   return count;
 }
 
-export function shouldRest(player, historyStats = {}, rules = DEFAULT_MATCHMAKING_RULES) {
-  return countConsecutiveGames(player, historyStats) >= (rules.rotationConsecutiveGameLimit || 2);
+export function shouldRest() {
+  return false;
 }
 
 function minutesSinceLastPlayed(player, historyStats, nowMs) {
