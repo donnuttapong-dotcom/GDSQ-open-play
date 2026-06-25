@@ -12,7 +12,7 @@ import { getCourts as getMockCourts } from './mockEventService.js';
 import { getEventPlayers as getMockEventPlayers } from './mockPlayerService.js';
 import { getMatchHistory as getMockMatchHistory } from './mockMatchService.js';
 import { listLocalEventPlayers, checkInLocalPlayer, updateLocalEventPlayerLevel } from './localPlayerStore.js';
-import { mergeLocalPlayerStats, setLocalPlayerStatus, setLocalPlayerLevel, forceAllLocalPlayersReady, applyLocalMatchResult } from './localPlayerStatsStore.js';
+import { mergeLocalPlayerStats, setLocalPlayerStatus, setLocalPlayerLevel, forceAllLocalPlayersReady, applyLocalMatchResult, releaseInactivePlayingPlayers } from './localPlayerStatsStore.js';
 import { listLocalEventMatches, createLocalMatchPreview, startLocalMatch, cancelLocalMatch, confirmLocalScore } from './localMatchStore.js';
 import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus } from './supabaseEventService.js';
 import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer } from './supabasePlayerService.js';
@@ -105,13 +105,17 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
     async listEventPlayers(eventId) {
       if (isSupabase) return listSupabaseEventPlayers(requireSupabase(supabase), eventId);
       const checkedInPlayers = listLocalEventPlayers(eventId);
+      const localMatches = listLocalEventMatches(eventId);
       if (!isDemoEvent(eventId)) {
+        releaseInactivePlayingPlayers(eventId, checkedInPlayers, localMatches);
         return mergeLocalPlayerStats(eventId, checkedInPlayers).filter((player) => player.status !== 'removed');
       }
       const seedPlayers = await getMockEventPlayers();
       const existingNames = new Set(seedPlayers.map((player) => String(player.displayName || player.name).toLowerCase()));
       const uniqueCheckedIn = checkedInPlayers.filter((player) => !existingNames.has(String(player.displayName || player.name).toLowerCase()));
-      return mergeLocalPlayerStats(eventId, [...seedPlayers, ...uniqueCheckedIn]).filter((player) => player.status !== 'removed');
+      const allPlayers = [...seedPlayers, ...uniqueCheckedIn];
+      releaseInactivePlayingPlayers(eventId, allPlayers, localMatches);
+      return mergeLocalPlayerStats(eventId, allPlayers).filter((player) => player.status !== 'removed');
     },
 
     async checkInPlayer(payload) {
