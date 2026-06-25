@@ -1,6 +1,7 @@
 import './bilingualUi.js';
 import './shareLinksUi.js';
 import { getServiceMode, SERVICE_MODES } from './serviceMode.js';
+import { getSupabaseClient } from './supabaseClient.js';
 import {
   listEvents as listLocalEvents,
   getSelectedEvent,
@@ -15,8 +16,8 @@ import { getMatchHistory as getMockMatchHistory } from './mockMatchService.js';
 import { listLocalEventPlayers, checkInLocalPlayer, updateLocalEventPlayerLevel } from './localPlayerStore.js';
 import { mergeLocalPlayerStats, setLocalPlayerStatus, setLocalPlayerLevel, forceAllLocalPlayersReady, applyLocalMatchResult, releaseInactivePlayingPlayers } from './localPlayerStatsStore.js';
 import { listLocalEventMatches, createLocalMatchPreview, startLocalMatch, cancelLocalMatch, confirmLocalScore } from './localMatchStore.js';
-import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus } from './supabaseEventService.js';
-import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer } from './supabasePlayerService.js';
+import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus, deleteEvent as deleteSupabaseEvent } from './supabaseEventService.js';
+import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer, updateEventPlayerStatus as updateSupabaseEventPlayerStatus, updateEventPlayerLevel as updateSupabaseEventPlayerLevel } from './supabasePlayerService.js';
 import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, startMatch as startSupabaseMatch, confirmScore as confirmSupabaseScore } from './supabaseMatchService.js';
 
 const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
@@ -46,7 +47,7 @@ function matchPlayerIds(match) {
     .filter(Boolean);
 }
 
-export function createV2Services({ supabase = null, organizationId = '00000000-0000-4000-8000-000000000001', mode = getServiceMode() } = {}) {
+export function createV2Services({ supabase = getSupabaseClient(), organizationId = '00000000-0000-4000-8000-000000000001', mode = getServiceMode() } = {}) {
   const isSupabase = mode === SERVICE_MODES.SUPABASE;
 
   return {
@@ -61,6 +62,7 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
       const eventId = requestedEventId();
       if (isSupabase) {
         const events = await listSupabaseEvents(requireSupabase(supabase), organizationId);
+        localStorage.setItem('gdsq_v2_events', JSON.stringify(events));
         const selected = eventId ? events.find((event) => String(event.id) === String(eventId)) : null;
         return selected || events.find((event) => event.status === 'live') || events[0] || null;
       }
@@ -90,7 +92,7 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
     },
 
     async deleteEvent(eventId) {
-      if (isSupabase) throw new Error('deleteEvent for Supabase mode is not implemented yet.');
+      if (isSupabase) return deleteSupabaseEvent(requireSupabase(supabase), eventId);
       return deleteLocalEvent(eventId);
     },
 
@@ -125,26 +127,39 @@ export function createV2Services({ supabase = null, organizationId = '00000000-0
     },
 
     async setPlayerStatus(eventId, playerId, status) {
-      if (isSupabase) throw new Error('setPlayerStatus for Supabase mode is not implemented yet.');
+      if (isSupabase) {
+        await updateSupabaseEventPlayerStatus(requireSupabase(supabase), playerId, status);
+        return this.listEventPlayers(eventId);
+      }
       setLocalPlayerStatus(eventId, [playerId], status);
       return this.listEventPlayers(eventId);
     },
 
     async updatePlayerLevel(eventId, playerId, level) {
-      if (isSupabase) throw new Error('updatePlayerLevel for Supabase mode is not implemented yet.');
+      if (isSupabase) {
+        await updateSupabaseEventPlayerLevel(requireSupabase(supabase), playerId, level);
+        return this.listEventPlayers(eventId);
+      }
       updateLocalEventPlayerLevel(eventId, playerId, level);
       setLocalPlayerLevel(eventId, playerId, level);
       return this.listEventPlayers(eventId);
     },
 
     async removePlayer(eventId, playerId) {
-      if (isSupabase) throw new Error('removePlayer for Supabase mode is not implemented yet.');
+      if (isSupabase) {
+        await updateSupabaseEventPlayerStatus(requireSupabase(supabase), playerId, 'removed');
+        return this.listEventPlayers(eventId);
+      }
       setLocalPlayerStatus(eventId, [playerId], 'removed');
       return this.listEventPlayers(eventId);
     },
 
     async forceAllPlayersReady(eventId) {
-      if (isSupabase) throw new Error('forceAllPlayersReady for Supabase mode is not implemented yet.');
+      if (isSupabase) {
+        const players = await this.listEventPlayers(eventId);
+        await Promise.all(players.map((player) => updateSupabaseEventPlayerStatus(requireSupabase(supabase), player.id, 'ready')));
+        return this.listEventPlayers(eventId);
+      }
       const players = await this.listEventPlayers(eventId);
       forceAllLocalPlayersReady(eventId, players);
       return this.listEventPlayers(eventId);
