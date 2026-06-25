@@ -25,13 +25,22 @@ function currentEventId() {
   return params.get('event') || params.get('eventId') || params.get('id') || localStorage.getItem(SELECTED_EVENT_KEY) || '';
 }
 
-function linkFor(tab) {
+function openplayLinkFor(tab) {
   const eventId = currentEventId();
   const url = new URL(location.href);
   url.pathname = url.pathname.replace(/[^/]*$/, 'openplay.html');
   url.searchParams.set('tab', tab);
   if (eventId) url.searchParams.set('event', eventId);
-  url.searchParams.set('v', 'v2-share-event-qr-join-01');
+  url.searchParams.set('v', 'v2-standalone-join-qr-01');
+  return url.toString();
+}
+
+function joinLinkForEvent() {
+  const eventId = currentEventId();
+  const url = new URL(location.href);
+  url.pathname = url.pathname.replace(/[^/]*$/, 'join.html');
+  if (eventId) url.searchParams.set('event', eventId);
+  url.searchParams.set('v', 'v2-standalone-join-qr-01');
   return url.toString();
 }
 
@@ -82,7 +91,7 @@ function goToEventTab(eventId, tab) {
   url.pathname = url.pathname.replace(/[^/]*$/, 'openplay.html');
   url.searchParams.set('event', eventId);
   url.searchParams.set('tab', tab);
-  url.searchParams.set('v', 'v2-share-event-qr-join-01');
+  url.searchParams.set('v', 'v2-standalone-join-qr-01');
   location.href = url.toString();
 }
 
@@ -132,17 +141,17 @@ function ensureShareBox() {
     <div class="flex flex-wrap justify-between items-start gap-3">
       <div>
         <h3 class="font-black lime">JOIN QR / SHARE EVENT</h3>
-        <p class="mini">ส่ง QR หรือ Join Link ให้ผู้เล่นสแกน แล้วเข้าหน้า Join ของอีเว้นท์นี้ได้ทันที</p>
+        <p class="mini">ส่ง QR หรือ Join Link ให้ผู้เล่นสแกน แล้วเข้าหน้า Join แยกของอีเว้นท์นี้ได้ทันที</p>
       </div>
       <span class="pill pill-live">QR</span>
     </div>
     <div class="grid lg:grid-cols-[240px_1fr] gap-4 mt-4 items-start">
       <div class="soft p-3 text-center">
         <img id="joinQrImage" alt="Join QR" class="mx-auto rounded-xl bg-white p-2 w-[220px] h-[220px]" />
-        <p class="mini mt-2">Scan to Join / สแกนเพื่อเข้าร่วม</p>
+        <p class="mini mt-2">Scan to Join Page / สแกนเข้าหน้า Join</p>
       </div>
       <div class="grid gap-3">
-        <label class="text-xs text-slate-400">Join Link / ลิงก์เข้าร่วม
+        <label class="text-xs text-slate-400">Join Page Link / ลิงก์หน้าเข้าร่วม
           <div class="grid sm:grid-cols-[1fr_auto] gap-2 mt-1">
             <input id="joinShareLink" class="w-full rounded-lg border p-3 text-xs" readonly />
             <button id="copyJoinLinkBtn" class="cut bg-lime text-black px-4 py-3 font-black">COPY JOIN</button>
@@ -165,22 +174,22 @@ function ensureShareBox() {
   `;
   firstCard.insertAdjacentElement('afterend', box);
 
-  document.getElementById('copyJoinLinkBtn')?.addEventListener('click', () => copyText(linkFor('join'), 'Join link'));
-  document.getElementById('copyEventLinkBtn')?.addEventListener('click', () => copyText(linkFor('events'), 'Event link'));
-  document.getElementById('copyQuickStatsLinkBtn')?.addEventListener('click', () => copyText(linkFor('stats'), 'Stats link'));
+  document.getElementById('copyJoinLinkBtn')?.addEventListener('click', () => copyText(joinLinkForEvent(), 'Join link'));
+  document.getElementById('copyEventLinkBtn')?.addEventListener('click', () => copyText(openplayLinkFor('events'), 'Event link'));
+  document.getElementById('copyQuickStatsLinkBtn')?.addEventListener('click', () => copyText(openplayLinkFor('stats'), 'Stats link'));
 }
 
 function refreshShareLinks() {
   ensureShareBox();
   refreshJoinEventPicker();
-  const joinLink = linkFor('join');
+  const joinLink = joinLinkForEvent();
   const joinInput = document.getElementById('joinShareLink');
   const eventInput = document.getElementById('eventShareLink');
   const statsInput = document.getElementById('quickStatsShareLink');
   const qrImage = document.getElementById('joinQrImage');
   if (joinInput) joinInput.value = joinLink;
-  if (eventInput) eventInput.value = linkFor('events');
-  if (statsInput) statsInput.value = linkFor('stats');
+  if (eventInput) eventInput.value = openplayLinkFor('events');
+  if (statsInput) statsInput.value = openplayLinkFor('stats');
   if (qrImage) qrImage.src = qrSrc(joinLink);
 }
 
