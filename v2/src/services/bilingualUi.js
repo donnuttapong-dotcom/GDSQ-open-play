@@ -178,13 +178,20 @@ export function applyBilingualUiLabels() {
   translateHeadings();
 }
 
-let pendingApply = false;
+let applyTimer = null;
 function scheduleApplyBilingualUiLabels() {
-  if (pendingApply) return;
-  pendingApply = true;
-  requestAnimationFrame(() => {
-    pendingApply = false;
-    applyBilingualUiLabels();
+  clearTimeout(applyTimer);
+  applyTimer = setTimeout(() => {
+    applyTimer = null;
+    requestAnimationFrame(applyBilingualUiLabels);
+  }, 180);
+}
+
+function shouldReactToMutations(mutations) {
+  return mutations.some((mutation) => {
+    if (!mutation.addedNodes.length && !mutation.removedNodes.length) return false;
+    const target = mutation.target;
+    return target?.id === 'eventList' || target?.id === 'managePlayers' || target?.id === 'matchPanels' || target?.id === 'joinPlayers' || target?.id === 'tab-stats' || target?.closest?.('#eventList,#managePlayers,#matchPanels,#joinPlayers,#tab-stats');
   });
 }
 
@@ -192,16 +199,14 @@ function bootBilingualUi() {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
   const run = () => {
     applyBilingualUiLabels();
-    const root = document.body;
+    const root = document.querySelector('main') || document.body;
     if (!root || !window.MutationObserver) return;
     const observer = new MutationObserver((mutations) => {
-      if (mutations.some((mutation) => mutation.addedNodes.length || mutation.removedNodes.length)) {
-        scheduleApplyBilingualUiLabels();
-      }
+      if (shouldReactToMutations(mutations)) scheduleApplyBilingualUiLabels();
     });
     observer.observe(root, { childList: true, subtree: true });
   };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run, { once: true });
   else run();
 }
 
