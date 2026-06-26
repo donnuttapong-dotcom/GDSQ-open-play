@@ -160,29 +160,51 @@ function translateHeadings() {
   replaceTextVariants('h3', ['แต้มต่างดีที่สุด', 'Best Diff / แต้มต่างดีที่สุด', 'Best Diff'], 'แต้มต่างดีที่สุด', 'Best Diff');
 }
 
-function ensureManualPickTeamGuide() {
-  const manual0 = document.getElementById('manual0');
-  const manual1 = document.getElementById('manual1');
-  const manual2 = document.getElementById('manual2');
-  const manual3 = document.getElementById('manual3');
-  if (!manual0 || !manual1 || !manual2 || !manual3) return;
-  const grid = manual0.parentElement;
-  if (!grid) return;
-  let guide = document.getElementById('manualPickTeamGuide');
-  if (!guide) {
-    guide = document.createElement('div');
-    guide.id = 'manualPickTeamGuide';
-    guide.className = 'grid grid-cols-2 gap-2 mt-2 text-xs font-black';
-    grid.before(guide);
+function enhanceManualPickTeams() {
+  const selects = ['manual0', 'manual1', 'manual2', 'manual3'].map((id) => document.getElementById(id));
+  if (selects.some((select) => !select)) return;
+  const existing = document.getElementById('manualTeamLayout');
+  if (existing) {
+    text('manualTeamALabel', 'ทีม A', 'TEAM A');
+    text('manualTeamBLabel', 'ทีม B', 'TEAM B');
+    return;
   }
-  const lang = currentLang();
-  const teamA = lang === 'en' ? 'TEAM A: Slot 1 + 2' : 'TEAM A: ช่อง 1 + 2';
-  const teamB = lang === 'en' ? 'TEAM B: Slot 3 + 4' : 'TEAM B: ช่อง 3 + 4';
-  guide.innerHTML = `<div class="soft p-2 border-lime-300/30">${teamA}</div><div class="soft p-2 border-yellow-300/30">${teamB}</div>`;
-  manual0.title = lang === 'en' ? 'Team A Player 1' : 'ทีม A ผู้เล่น 1';
-  manual1.title = lang === 'en' ? 'Team A Player 2' : 'ทีม A ผู้เล่น 2';
-  manual2.title = lang === 'en' ? 'Team B Player 1' : 'ทีม B ผู้เล่น 1';
-  manual3.title = lang === 'en' ? 'Team B Player 2' : 'ทีม B ผู้เล่น 2';
+  const originalParent = selects[0].parentElement;
+  if (!originalParent || selects.some((select) => select.parentElement !== originalParent)) return;
+
+  const oldGuide = document.getElementById('manualPickTeamGuide');
+  if (oldGuide) oldGuide.remove();
+  originalParent.id = 'manualTeamLayout';
+  originalParent.className = 'grid gap-3 mt-2';
+  originalParent.textContent = '';
+
+  const teamA = document.createElement('div');
+  teamA.className = 'soft p-3 border border-lime-300/30';
+  const teamATitle = document.createElement('div');
+  teamATitle.id = 'manualTeamALabel';
+  teamATitle.className = 'text-xs font-black lime mb-2';
+  teamATitle.textContent = currentLang() === 'en' ? 'TEAM A' : 'ทีม A';
+  const teamAGrid = document.createElement('div');
+  teamAGrid.className = 'grid sm:grid-cols-2 gap-2';
+  selects[0].title = currentLang() === 'en' ? 'Team A Player 1' : 'ทีม A ผู้เล่น 1';
+  selects[1].title = currentLang() === 'en' ? 'Team A Player 2' : 'ทีม A ผู้เล่น 2';
+  teamAGrid.append(selects[0], selects[1]);
+  teamA.append(teamATitle, teamAGrid);
+
+  const teamB = document.createElement('div');
+  teamB.className = 'soft p-3 border border-cyan-300/30';
+  const teamBTitle = document.createElement('div');
+  teamBTitle.id = 'manualTeamBLabel';
+  teamBTitle.className = 'text-xs font-black text-cyan-300 mb-2';
+  teamBTitle.textContent = currentLang() === 'en' ? 'TEAM B' : 'ทีม B';
+  const teamBGrid = document.createElement('div');
+  teamBGrid.className = 'grid sm:grid-cols-2 gap-2';
+  selects[2].title = currentLang() === 'en' ? 'Team B Player 1' : 'ทีม B ผู้เล่น 1';
+  selects[3].title = currentLang() === 'en' ? 'Team B Player 2' : 'ทีม B ผู้เล่น 2';
+  teamBGrid.append(selects[2], selects[3]);
+  teamB.append(teamBTitle, teamBGrid);
+
+  originalParent.append(teamA, teamB);
 }
 
 let applyingLabels = false;
@@ -204,7 +226,7 @@ export function applyBilingualUiLabels() {
     ph('manageNewPlayerName', 'เพิ่มผู้เล่น', 'Add player');
 
     unlockOrganizerPlayerButtons();
-    ensureManualPickTeamGuide();
+    enhanceManualPickTeams();
     translateButtons();
     translateHeadings();
   } finally {
