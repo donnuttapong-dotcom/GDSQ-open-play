@@ -1,32 +1,39 @@
 # GDSQ Open Play v2 — Stable Shared Mode Baseline
 
-Version: `v2-player-page-01`
-Saved after Supabase Shared Mode + performance cleanup + standalone Player Info page.
+Version: `v2-stable-manual-team-01`
+
+Saved after Supabase Shared Mode + performance cleanup + standalone Player Info page + Manual Pick team clarity.
+
+## Stable commit
+
+```text
+f588636cc0d379c1e6f80305152d43f106174786
+```
 
 ## Stable links
 
 ### Organizer / Main system
 
 ```text
-https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/openplay.html?mode=supabase&v=v2-performance-safe-01
+https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/openplay.html?mode=supabase&v=v2-stable-manual-team-01
 ```
 
 ### JOIN QR / QR display page
 
 ```text
-https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/join-qr.html?mode=supabase&v=v2-supabase-shared-mode-01
+https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/join-qr.html?mode=supabase&v=v2-stable-manual-team-01
 ```
 
 ### JOIN / Player join form
 
 ```text
-https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/join.html?mode=supabase&v=v2-player-page-01
+https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/join.html?mode=supabase&v=v2-stable-manual-team-01
 ```
 
 ### PLAYER INFO / Personal player page
 
 ```text
-https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/player.html?mode=supabase&v=v2-player-page-01
+https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/player.html?mode=supabase&v=v2-stable-manual-team-01
 ```
 
 ## Current stable behavior
@@ -48,12 +55,23 @@ https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/player.html?mode=supabas
 - Player status syncs to `playing` on start and back to `ready` on cancel/confirm in shared mode.
 - Existing local/demo mode remains available with `mode=mock`.
 
-## Performance cleanup applied
+## Stability cleanup applied
 
-- Removed persistent full-body observer from `shareLinksUi.js`.
-- Kept only one immediate cleanup and one delayed cleanup for legacy Organizer QR block.
-- Throttled `bilingualUi.js` DOM observer with a 180ms debounce.
-- Limited bilingual observer reaction to high-change render zones only: events, manage players, matches, join players, stats.
+- `bilingualUi.js` now guards against repeated label application with `applyingLabels`.
+- DOM observer is throttled and does not create repeated timers while one is pending.
+- Observer does not react while labels are already being applied.
+- Organizer player button unlock remains available without changing score/stat calculations.
+- `shouldRest()` remains disabled for UI blocking so player controls and match generation do not get stuck.
+
+## Manual Pick clarity applied
+
+- Manual Pick now displays team grouping clearly:
+  - `manual0` + `manual1` = Team A
+  - `manual2` + `manual3` = Team B
+- The same original select IDs are preserved.
+- Manual Preview logic is not changed.
+- Auto Match logic is not changed.
+- Score, Stats, Join, QR, Player Info, and Supabase services are not changed by this UI clarity patch.
 
 ## Important note
 
@@ -61,4 +79,4 @@ Older events created in Local Mode are not migrated automatically to Supabase. F
 
 ## Good rollback marker
 
-Use this file as the reference baseline if future changes cause issues.
+Use commit `f588636cc0d379c1e6f80305152d43f106174786` as the stable reference if future changes cause issues.
