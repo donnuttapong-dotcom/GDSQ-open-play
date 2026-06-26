@@ -160,34 +160,43 @@ function translateHeadings() {
   replaceTextVariants('h3', ['แต้มต่างดีที่สุด', 'Best Diff / แต้มต่างดีที่สุด', 'Best Diff'], 'แต้มต่างดีที่สุด', 'Best Diff');
 }
 
+let applyingLabels = false;
+
 export function applyBilingualUiLabels() {
-  ensureLangToggle();
-  updateToggleText();
-  text('tabBtn-events', 'อีเว้นท์', 'Events');
-  text('tabBtn-join', 'เข้าร่วม', 'Join');
-  text('tabBtn-manage', 'ผู้จัด', 'Organizer');
-  text('tabBtn-stats', 'สถิติ', 'Stats');
+  if (applyingLabels) return;
+  applyingLabels = true;
+  try {
+    ensureLangToggle();
+    updateToggleText();
+    text('tabBtn-events', 'อีเว้นท์', 'Events');
+    text('tabBtn-join', 'เข้าร่วม', 'Join');
+    text('tabBtn-manage', 'ผู้จัด', 'Organizer');
+    text('tabBtn-stats', 'สถิติ', 'Stats');
 
-  ph('newEventName', 'ชื่องาน', 'Event name');
-  ph('newEventVenue', 'สถานที่', 'Venue');
-  ph('joinName', 'ชื่อเล่น', 'Nickname');
-  ph('manageNewPlayerName', 'เพิ่มผู้เล่น', 'Add player');
+    ph('newEventName', 'ชื่องาน', 'Event name');
+    ph('newEventVenue', 'สถานที่', 'Venue');
+    ph('joinName', 'ชื่อเล่น', 'Nickname');
+    ph('manageNewPlayerName', 'เพิ่มผู้เล่น', 'Add player');
 
-  unlockOrganizerPlayerButtons();
-  translateButtons();
-  translateHeadings();
+    unlockOrganizerPlayerButtons();
+    translateButtons();
+    translateHeadings();
+  } finally {
+    applyingLabels = false;
+  }
 }
 
 let applyTimer = null;
 function scheduleApplyBilingualUiLabels() {
-  clearTimeout(applyTimer);
+  if (applyTimer || applyingLabels) return;
   applyTimer = setTimeout(() => {
     applyTimer = null;
     requestAnimationFrame(applyBilingualUiLabels);
-  }, 180);
+  }, 420);
 }
 
 function shouldReactToMutations(mutations) {
+  if (applyingLabels) return false;
   return mutations.some((mutation) => {
     if (!mutation.addedNodes.length && !mutation.removedNodes.length) return false;
     const target = mutation.target;
