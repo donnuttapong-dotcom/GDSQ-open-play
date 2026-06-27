@@ -119,8 +119,9 @@ function countConsecutiveRests(player, historyStats) {
   return count;
 }
 
-export function shouldRest() {
-  return false;
+export function shouldRest(player, historyStats = { waves: [] }, rules = {}) {
+  const mergedRules = { ...DEFAULT_MATCHMAKING_RULES, ...rules };
+  return countConsecutiveGames(player, historyStats) >= mergedRules.rotationConsecutiveGameLimit;
 }
 
 function minutesSinceLastPlayed(player, historyStats, nowMs) {
@@ -239,6 +240,17 @@ function canApplyTwoGameRest(availablePlayers, historyStats, rules) {
   return availablePlayers.filter((player) => countConsecutiveGames(player, historyStats) < rules.rotationConsecutiveGameLimit).length >= 4;
 }
 
+function addRestingPlayers(restingPlayers, players) {
+  const existing = new Set(restingPlayers.map((player) => playerId(player)));
+  players.forEach((player) => {
+    const id = playerId(player);
+    if (!existing.has(id)) {
+      restingPlayers.push(player);
+      existing.add(id);
+    }
+  });
+}
+
 export function generateMatches({ players = [], courts = [], history = [], rules = {}, now = Date.now() } = {}) {
   const mergedRules = { ...DEFAULT_MATCHMAKING_RULES, ...rules };
   const historyStats = buildMatchHistoryStats(history);
@@ -264,9 +276,14 @@ export function generateMatches({ players = [], courts = [], history = [], rules
     if (availableForCourt.length < 4) break;
 
     const enforceTwoGameRest = canApplyTwoGameRest(availableForCourt, historyStats, mergedRules);
+    const restBlockedPlayers = enforceTwoGameRest
+      ? availableForCourt.filter((player) => shouldRest(player, historyStats, mergedRules))
+      : [];
     const rotationPool = enforceTwoGameRest
-      ? availableForCourt.filter((player) => countConsecutiveGames(player, historyStats) < mergedRules.rotationConsecutiveGameLimit)
+      ? availableForCourt.filter((player) => !shouldRest(player, historyStats, mergedRules))
       : availableForCourt;
+
+    addRestingPlayers(restingPlayers, restBlockedPlayers);
 
     const shortlist = [...rotationPool]
       .sort((a, b) => playerPriorityScore(a, historyStats, mergedRules, now) - playerPriorityScore(b, historyStats, mergedRules, now))
@@ -288,13 +305,16 @@ export function generateMatches({ players = [], courts = [], history = [], rules
       teamA: split.teamA,
       teamB: split.teamB,
       fairnessScore: Math.round(bestGroup.score + split.score),
-      restBlockedCount: 0
+      restBlockedCount: restBlockedPlayers.length
     });
   }
 
+  const selectedIds = new Set();
+  previews.forEach((preview) => [...preview.teamA, ...preview.teamB].forEach((player) => selectedIds.add(playerId(player))));
+
   return {
     previews,
-    restingPlayers,
+    restingPlayers: restingPlayers.filter((player) => !selectedIds.has(playerId(player))),
     availablePlayers,
     reason: previews.length ? 'ok' : 'No court could be assigned.'
   };
