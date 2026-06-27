@@ -1,4 +1,4 @@
-import './bilingualUi.js';
+import './bilingualUi.js?v=v2-bilingual-02';
 import './shareLinksUi.js';
 import { getServiceMode, SERVICE_MODES } from './serviceMode.js';
 import { getSupabaseClient } from './supabaseClient.js';
