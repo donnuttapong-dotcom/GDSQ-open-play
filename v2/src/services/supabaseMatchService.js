@@ -112,7 +112,7 @@ export async function cancelMatch(supabase, matchId, payload = {}) {
 
 export async function confirmScore(supabase, matchId, payload) {
   const { data: existing, error: readError } = await supabase.from('v2_matches').select('id,status').eq('id', matchId).single();
-  if (readError) throw error;
+  if (readError) throw readError;
   if (existing.status === 'confirmed') return fetchMatch(supabase, matchId);
   const { error } = await supabase.from('v2_matches').update({
     status: 'confirmed',
