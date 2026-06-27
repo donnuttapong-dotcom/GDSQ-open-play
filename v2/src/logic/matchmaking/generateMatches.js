@@ -94,6 +94,16 @@ function teamBOf(match) {
   return normalizeTeamIds(match?.teamB || match?.team_b || match?.B || match?.teams?.B);
 }
 
+function numberFromValue(value) {
+  const match = String(value || '').match(/(\d+)/);
+  const number = match ? Number(match[1]) : null;
+  return Number.isFinite(number) && number > 0 ? number : null;
+}
+
+function courtNumberOf(court, fallback) {
+  return Number(court?.courtNumber || court?.court_number) || numberFromValue(court?.id || court?.courtId || court?.name || court?.courtName) || fallback;
+}
+
 export function buildMatchHistoryStats(history = []) {
   const partnerRepeats = new Map();
   const opponentRepeats = new Map();
@@ -167,7 +177,8 @@ function countConsecutiveRests(player, historyStats) {
   return count;
 }
 
-export function shouldRest(player, historyStats = { waves: [] }, rules = {}) {
+export function shouldRest(player, historyStats = { waves: [] }, rules = null) {
+  if (!rules || !Object.keys(rules).length) return false;
   const mergedRules = { ...DEFAULT_MATCHMAKING_RULES, ...rules };
   const limit = Math.max(1, Number(mergedRules.rotationConsecutiveGameLimit || 2));
   return countConsecutiveGames(player, historyStats) >= limit;
@@ -303,7 +314,7 @@ function addRestingPlayers(restingPlayers, players) {
 export function generateMatches({ players = [], courts = [], history = [], rules = {}, now = Date.now() } = {}) {
   const mergedRules = { ...DEFAULT_MATCHMAKING_RULES, ...rules };
   const historyStats = buildMatchHistoryStats(history);
-  const courtList = courts.length ? courts : [{ id: 'court-1', name: 'Court 1' }];
+  const courtList = courts.length ? courts : [{ id: 'court-1', name: 'Court 1', courtNumber: 1 }];
   const eligiblePlayers = players.filter((player) => player && !['playing', 'left', 'removed'].includes(normalizeStatus(player)));
   const restingPlayers = [];
   const availablePlayers = eligiblePlayers;
@@ -325,12 +336,17 @@ export function generateMatches({ players = [], courts = [], history = [], rules
     if (availableForCourt.length < 4) break;
 
     const enforceTwoGameRest = canApplyTwoGameRest(availableForCourt, historyStats, mergedRules);
-    const restBlockedPlayers = enforceTwoGameRest
+    let restBlockedPlayers = enforceTwoGameRest
       ? availableForCourt.filter((player) => shouldRest(player, historyStats, mergedRules))
       : [];
-    const rotationPool = enforceTwoGameRest
+    let rotationPool = enforceTwoGameRest
       ? availableForCourt.filter((player) => !shouldRest(player, historyStats, mergedRules))
       : availableForCourt;
+
+    if (rotationPool.length < 4 && availableForCourt.length >= 4) {
+      restBlockedPlayers = [];
+      rotationPool = availableForCourt;
+    }
 
     addRestingPlayers(restingPlayers, restBlockedPlayers);
 
@@ -346,11 +362,15 @@ export function generateMatches({ players = [], courts = [], history = [], rules
 
     if (!bestGroup) break;
     const split = bestTeamSplit(bestGroup.group, historyStats, mergedRules);
+    const courtNumber = courtNumberOf(court, previews.length + 1);
+    const courtName = court.name || court.courtName || `COURT ${courtNumber}`;
     bestGroup.group.forEach((player) => used.add(playerId(player)));
 
     previews.push({
-      courtId: court.id || court.name,
-      courtName: court.name || court.id,
+      courtId: court.id || court.name || `court-${courtNumber}`,
+      courtNumber,
+      court_number: courtNumber,
+      courtName,
       teamA: split.teamA,
       teamB: split.teamB,
       fairnessScore: Math.round(bestGroup.score + split.score),
