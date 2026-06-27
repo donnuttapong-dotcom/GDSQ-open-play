@@ -5,16 +5,37 @@ function playerId(player) {
   return typeof player === 'string' ? player : player?.id || player?.eventPlayerId || player?.event_player_id;
 }
 
+function courtNumberFromValue(value) {
+  const match = String(value || '').match(/(\d+)/);
+  const number = match ? Number(match[1]) : null;
+  return Number.isFinite(number) && number > 0 ? number : null;
+}
+
+function courtNumberFromPayload(payload) {
+  return (
+    Number(payload.courtNumber || payload.court_number) ||
+    courtNumberFromValue(payload.courtId || payload.court_id) ||
+    courtNumberFromValue(payload.courtName || payload.court_name)
+  );
+}
+
+function courtLabel(number) {
+  return number ? `Court ${number}` : 'Court -';
+}
+
 function normalizeMatch(row) {
   const players = row?.players || [];
   const teamA = players.filter((p) => p.team === 'A').sort((a, b) => a.slot - b.slot).map((p) => p.event_player_id);
   const teamB = players.filter((p) => p.team === 'B').sort((a, b) => a.slot - b.slot).map((p) => p.event_player_id);
+  const courtNumber = Number(row?.court_number) || null;
   return {
     ...row,
     eventId: row?.event_id,
     organizationId: row?.organization_id,
-    courtNumber: row?.court_number,
-    court_number: row?.court_number,
+    courtNumber,
+    court_number: courtNumber,
+    courtName: row?.court_name || courtLabel(courtNumber),
+    court_name: row?.court_name || courtLabel(courtNumber),
     teamA,
     teamB,
     teamAScore: row?.team_a_score,
@@ -56,10 +77,11 @@ export async function listEventMatches(supabase, eventId) {
 }
 
 export async function createMatchPreview(supabase, payload) {
+  const courtNumber = courtNumberFromPayload(payload);
   const { data: match, error } = await supabase.from('v2_matches').insert({
     organization_id: payload.organizationId,
     event_id: payload.eventId,
-    court_number: payload.courtNumber || payload.court_number || null,
+    court_number: courtNumber,
     status: 'preview',
     idempotency_key: payload.idempotencyKey || null
   }).select('*').single();
@@ -90,7 +112,7 @@ export async function cancelMatch(supabase, matchId, payload = {}) {
 
 export async function confirmScore(supabase, matchId, payload) {
   const { data: existing, error: readError } = await supabase.from('v2_matches').select('id,status').eq('id', matchId).single();
-  if (readError) throw readError;
+  if (readError) throw error;
   if (existing.status === 'confirmed') return fetchMatch(supabase, matchId);
   const { error } = await supabase.from('v2_matches').update({
     status: 'confirmed',
