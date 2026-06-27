@@ -2,25 +2,44 @@ export const DEFAULT_MATCHMAKING_RULES = {
   maxConsecutiveGames: 999,
   rotationConsecutiveGameLimit: 2,
   rotationConsecutiveRestLimit: 2,
-  rotationHardPenalty: 9000,
+  rotationHardPenalty: 20000,
   rotationHardBonus: 9000,
   candidateLimit: 16,
-  lowGamesWeight: 150,
-  waitMinuteBonus: 10,
-  neverPlayedBonus: 360,
-  freshPlayerBonus: 220,
-  justPlayedPenalty: 260,
-  consecutivePenalty: 120,
+  lowGamesWeight: 260,
+  waitMinuteBonus: 12,
+  neverPlayedBonus: 1400,
+  freshPlayerBonus: 900,
+  justPlayedPenalty: 1100,
+  consecutivePenalty: 900,
   partnerRepeatPenalty: 110,
   opponentRepeatPenalty: 36,
   levelGapPenalty: 80,
   teamGameGapPenalty: 12,
-  groupGameSpreadPenalty: 42
+  groupGameSpreadPenalty: 120
 };
 
 function toTime(value) {
   const t = new Date(value || 0).getTime();
   return Number.isFinite(t) ? t : 0;
+}
+
+function matchTime(match, fallbackTime = 0) {
+  return (
+    toTime(
+      match?.completedAt ||
+        match?.completed_at ||
+        match?.confirmedAt ||
+        match?.confirmed_at ||
+        match?.endedAt ||
+        match?.ended_at ||
+        match?.updatedAt ||
+        match?.updated_at ||
+        match?.startedAt ||
+        match?.started_at ||
+        match?.createdAt ||
+        match?.created_at
+    ) || fallbackTime
+  );
 }
 
 function playerId(player) {
@@ -39,7 +58,8 @@ function addPair(map, a, b, count = 1) {
 
 function getMatchesPlayed(player, historyStats) {
   const id = playerId(player);
-  return Number(player?.matchesPlayed ?? player?.matches_played ?? player?.played ?? historyStats?.playedCount?.get(id) ?? 0) || 0;
+  if (historyStats?.playedCount?.has(id)) return Number(historyStats.playedCount.get(id)) || 0;
+  return Number(player?.matchesPlayed ?? player?.matches_played ?? player?.played ?? 0) || 0;
 }
 
 function getLevel(player) {
@@ -58,19 +78,47 @@ function normalizeTeamIds(team) {
   return (team || []).map((item) => (typeof item === 'string' ? item : item?.id || item?.playerId || item?.eventPlayerId)).filter(Boolean).map(String);
 }
 
+function matchStatus(match) {
+  return String(match?.status || 'confirmed').toLowerCase();
+}
+
+function shouldUseMatchInHistory(match) {
+  return !['cancelled', 'canceled', 'deleted', 'removed', 'void', 'draft', 'preview'].includes(matchStatus(match));
+}
+
+function teamAOf(match) {
+  return normalizeTeamIds(match?.teamA || match?.team_a || match?.A || match?.teams?.A);
+}
+
+function teamBOf(match) {
+  return normalizeTeamIds(match?.teamB || match?.team_b || match?.B || match?.teams?.B);
+}
+
 export function buildMatchHistoryStats(history = []) {
   const partnerRepeats = new Map();
   const opponentRepeats = new Map();
   const lastPlayedAt = new Map();
   const playedCount = new Map();
   const waves = [];
+  const syntheticStepMs = 240000;
+  const syntheticBaseMs = 4102444800000;
 
-  const sorted = [...history].sort((a, b) => toTime(b.completedAt || b.completed_at || b.startedAt || b.createdAt) - toTime(a.completedAt || a.completed_at || a.startedAt || a.createdAt));
+  const sorted = history
+    .map((match, index) => ({
+      match,
+      index,
+      time: matchTime(match, syntheticBaseMs - index * syntheticStepMs)
+    }))
+    .filter(({ match }) => shouldUseMatchInHistory(match))
+    .sort((a, b) => b.time - a.time || a.index - b.index);
 
-  for (const match of sorted) {
-    const time = toTime(match.completedAt || match.completed_at || match.startedAt || match.createdAt);
-    const teamA = normalizeTeamIds(match.teamA || match.A || match.teams?.A);
-    const teamB = normalizeTeamIds(match.teamB || match.B || match.teams?.B);
+  for (const item of sorted) {
+    const match = item.match;
+    const time = item.time;
+    const teamA = teamAOf(match);
+    const teamB = teamBOf(match);
+    const allPlayers = [...teamA, ...teamB];
+    if (allPlayers.length < 4) continue;
 
     for (let i = 0; i < teamA.length; i += 1) {
       for (let j = i + 1; j < teamA.length; j += 1) addPair(partnerRepeats, teamA[i], teamA[j]);
@@ -80,7 +128,7 @@ export function buildMatchHistoryStats(history = []) {
     }
     for (const a of teamA) for (const b of teamB) addPair(opponentRepeats, a, b);
 
-    [...teamA, ...teamB].forEach((id) => {
+    allPlayers.forEach((id) => {
       const sid = String(id);
       playedCount.set(sid, (playedCount.get(sid) || 0) + 1);
       if (!lastPlayedAt.has(sid) || time > lastPlayedAt.get(sid)) lastPlayedAt.set(sid, time);
@@ -91,7 +139,7 @@ export function buildMatchHistoryStats(history = []) {
       wave = { time, playerIds: new Set() };
       waves.push(wave);
     }
-    [...teamA, ...teamB].forEach((id) => wave.playerIds.add(String(id)));
+    allPlayers.forEach((id) => wave.playerIds.add(String(id)));
   }
 
   return { partnerRepeats, opponentRepeats, waves, lastPlayedAt, playedCount };
@@ -121,7 +169,8 @@ function countConsecutiveRests(player, historyStats) {
 
 export function shouldRest(player, historyStats = { waves: [] }, rules = {}) {
   const mergedRules = { ...DEFAULT_MATCHMAKING_RULES, ...rules };
-  return countConsecutiveGames(player, historyStats) >= mergedRules.rotationConsecutiveGameLimit;
+  const limit = Math.max(1, Number(mergedRules.rotationConsecutiveGameLimit || 2));
+  return countConsecutiveGames(player, historyStats) >= limit;
 }
 
 function minutesSinceLastPlayed(player, historyStats, nowMs) {
