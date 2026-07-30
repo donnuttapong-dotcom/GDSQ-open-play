@@ -22,7 +22,7 @@ body{background:#10151b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-s
 <div id="playerModal" class="modal-bg hidden"><div class="cut card modal-card p-4"><div class="flex justify-between gap-3"><div><div class="mini">PLAYER STATS POPUP</div><h3 id="modalPlayerName" class="text-3xl font-black lime">Player</h3></div><button id="closePlayerModal" class="cut bg-red-500 px-3 py-2 font-black">ปิด</button></div><div id="modalPlayerBody" class="space-y-3 mt-3"></div></div></div>
 <script type="module">
 import { createV2Services } from './src/services/index.js';
-import { modeLabel } from './src/services/serviceMode.js';
+import { modeLabel } from './src/services/serviceMode.js?v=legacy-stats-link-fix-01';
 import { generateMatches, buildMatchHistoryStats, shouldRest } from './src/logic/matchmaking/generateMatches.js';
 import { calculatePlayerRanking } from './src/logic/ranking/calculatePlayerRanking.js';
 import { saveScoreDraft, getScoreDraft, clearScoreDraft } from './src/services/localDraftService.js';
