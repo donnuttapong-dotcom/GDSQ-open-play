@@ -8,6 +8,28 @@ const EVENTS_KEY = 'gdsq_v2_events';
 const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
 const STATS_TAB_KEY = 'gdsq_v2_open_tab';
 
+function hydrateLegacyStatsShare() {
+  const params = new URLSearchParams(location.search);
+  const encoded = params.get('share');
+  if (!encoded || params.get('mode') !== 'mock') return;
+  try {
+    const binary = atob(encoded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const payload = JSON.parse(new TextDecoder().decode(bytes));
+    if (payload?.version !== 1 || !payload?.event?.id) return;
+    const events = safeJsonParse(localStorage.getItem(EVENTS_KEY) || '[]', []);
+    const nextEvents = events.filter((event) => String(event.id) !== String(payload.event.id));
+    localStorage.setItem(EVENTS_KEY, JSON.stringify([payload.event, ...nextEvents]));
+    localStorage.setItem(SELECTED_EVENT_KEY, payload.event.id);
+    localStorage.setItem(`gdsq_v2_event_players:${payload.event.id}`, JSON.stringify(payload.players || []));
+    localStorage.setItem(`gdsq_v2_matches:${payload.event.id}`, JSON.stringify(payload.matches || []));
+  } catch (error) {
+    console.warn('Could not open this stats link.', error);
+  }
+}
+
+hydrateLegacyStatsShare();
+
 export const SERVICE_MODES = {
   MOCK: 'mock',
   SUPABASE: 'supabase'
