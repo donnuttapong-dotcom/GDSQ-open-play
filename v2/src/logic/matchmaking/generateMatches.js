@@ -1,8 +1,8 @@
 export const DEFAULT_MATCHMAKING_RULES = {
-  maxConsecutiveGames: 999,
+  maxConsecutiveGames: 2,
   rotationConsecutiveGameLimit: 2,
   rotationConsecutiveRestLimit: 2,
-  enforceAutoRest: false,
+  enforceAutoRest: true,
   rotationHardPenalty: 20000,
   rotationHardBonus: 9000,
   candidateLimit: 16,
@@ -235,8 +235,15 @@ export function generateMatches({ players = [], courts = [], history = [], rules
   const mergedRules = { ...DEFAULT_MATCHMAKING_RULES, ...rules };
   const historyStats = buildMatchHistoryStats(history);
   const courtList = courts.length ? courts : [{ id: 'court-1', name: 'Court 1' }];
-  const availablePlayers = players.filter((player) => player && !['playing', 'left', 'removed'].includes(normalizeStatus(player)));
-  const restingPlayers = [];
+  const eligiblePlayers = players.filter((player) => player && !['playing', 'left', 'removed'].includes(normalizeStatus(player)));
+  const proposedRestingPlayers = mergedRules.enforceAutoRest ? eligiblePlayers.filter((player) => shouldRest(player, historyStats, mergedRules)) : [];
+  const proposedRestingIds = new Set(proposedRestingPlayers.map(playerId));
+  const restedAvailablePlayers = eligiblePlayers.filter((player) => !proposedRestingIds.has(playerId(player)));
+  // A rest rule must never stall an Open Play session. If it leaves fewer than
+  // one full match, release the rest queue and let the fairness scoring choose.
+  const canRestWithoutBlockingPlay = restedAvailablePlayers.length >= 4;
+  const restingPlayers = canRestWithoutBlockingPlay ? proposedRestingPlayers : [];
+  const availablePlayers = canRestWithoutBlockingPlay ? restedAvailablePlayers : eligiblePlayers;
 
   if (availablePlayers.length < 4) return { previews: [], restingPlayers, availablePlayers, reason: `Not enough eligible players. Need 4, got ${availablePlayers.length}.` };
 
@@ -263,6 +270,7 @@ export function generateMatches({ players = [], courts = [], history = [], rules
 
     previews.push({
       courtId: court.id || court.name,
+      courtNumber: Number(court.courtNumber ?? court.court_number) || Number(String(court.id || court.name || '').match(/\d+/)?.[0]) || null,
       courtName: court.name || court.id,
       teamA: split.teamA,
       teamB: split.teamB,

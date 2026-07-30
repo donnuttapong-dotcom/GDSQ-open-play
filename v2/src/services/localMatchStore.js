@@ -42,6 +42,30 @@ function hasScore(value) {
   return value !== null && value !== undefined && String(value).trim() !== '' && Number.isFinite(Number(value));
 }
 
+function isActive(match) {
+  return ['preview', 'assigned', 'playing', 'pending_score'].includes(String(match?.status || '').toLowerCase());
+}
+
+function courtKey(match) {
+  const source = match?.courtId || match?.court_id || match?.court_number || match?.courtNumber || match?.courtName || match?.court_name || '';
+  const number = String(source).match(/\d+/)?.[0];
+  return number ? `court-${number}` : String(source).toLowerCase();
+}
+
+function matchPlayerIds(match) {
+  return [...(match?.teamA || match?.team_a || []), ...(match?.teamB || match?.team_b || [])].map(playerId).filter(Boolean).map(String);
+}
+
+function assertAvailable(matches, candidate, exceptId = '') {
+  const currentPlayers = new Set(matchPlayerIds(candidate));
+  if (currentPlayers.size !== 4) throw new Error('A preview match must contain four different players');
+  for (const match of matches) {
+    if (!isActive(match) || String(match.id) === String(exceptId)) continue;
+    if (courtKey(match) === courtKey(candidate)) throw new Error('Court is already in use');
+    if (matchPlayerIds(match).some((id) => currentPlayers.has(id))) throw new Error('A selected player is already assigned to another active match');
+  }
+}
+
 export function listLocalEventMatches(eventId) {
   return list(eventId).sort((a, b) => new Date(b.createdAt || b.startedAt || 0) - new Date(a.createdAt || a.startedAt || 0));
 }
@@ -65,8 +89,26 @@ export function createLocalMatchPreview(payload) {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
+  assertAvailable(matches, match);
   save(payload.eventId, [match, ...matches]);
   return match;
+}
+
+export function updateLocalMatchPreview(eventId, matchId, payload) {
+  const matches = list(eventId);
+  const index = matches.findIndex((match) => String(match.id) === String(matchId));
+  if (index < 0) throw new Error('Match not found');
+  if (String(matches[index].status).toLowerCase() !== 'preview') throw new Error('Only preview matches can be edited');
+  const updated = {
+    ...matches[index],
+    teamA: (payload.teamA || []).map(playerId).filter(Boolean),
+    teamB: (payload.teamB || []).map(playerId).filter(Boolean),
+    updatedAt: new Date().toISOString()
+  };
+  assertAvailable(matches, updated, matchId);
+  matches[index] = updated;
+  save(eventId, matches);
+  return updated;
 }
 
 export function startLocalMatch(eventId, matchId) {
@@ -75,6 +117,7 @@ export function startLocalMatch(eventId, matchId) {
   if (index < 0) throw new Error('Match not found');
   if (matches[index].status === 'confirmed') return matches[index];
   if (matches[index].status === 'cancelled') throw new Error('Cancelled match cannot be started');
+  assertAvailable(matches, matches[index], matchId);
   matches[index] = {
     ...matches[index],
     status: 'playing',

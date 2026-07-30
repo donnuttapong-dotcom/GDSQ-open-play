@@ -2,11 +2,13 @@
 // Supabase is auto-enabled when public project config exists.
 
 import { hasSupabaseConfig } from './supabaseClient.js';
+import { publishLocalEventForPublicStats } from './publicStatsPublisher.js';
 
 const MODE_KEY = 'gdsq_v2_service_mode';
 const EVENTS_KEY = 'gdsq_v2_events';
 const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
 const STATS_TAB_KEY = 'gdsq_v2_open_tab';
+const PUBLIC_APP_URL = 'https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/openplay.html';
 
 function hydrateLegacyStatsShare() {
   const params = new URLSearchParams(location.search);
@@ -86,21 +88,26 @@ function readEvents() {
   return safeJsonParse(localStorage.getItem(EVENTS_KEY) || '[]', []);
 }
 
-function statsLinkForEvent(eventId) {
-  const url = new URL(location.href);
+function statsLinkForEvent(eventId, shared = isSupabaseMode()) {
+  if (!shared || !eventId) return '';
+  const url = new URL(PUBLIC_APP_URL);
   url.searchParams.set('event', eventId);
   url.searchParams.set('tab', 'stats');
-  url.searchParams.set('mode', getServiceMode());
-  url.searchParams.set('v', 'v2-supabase-shared-mode-01');
+  url.searchParams.set('mode', SERVICE_MODES.SUPABASE);
   return url.toString();
 }
 
-function updateStatsStatus(select, badge, linkInput, events) {
+function updateStatsStatus(select, badge, linkInput, copyButton, events) {
   const selected = events.find((event) => String(event.id) === String(select.value));
   const info = eventStatusInfo(selected);
   badge.className = `pill ${info.cls}`;
   badge.textContent = info.label;
-  if (linkInput) linkInput.value = statsLinkForEvent(select.value);
+  const link = statsLinkForEvent(select.value);
+  if (linkInput) {
+    linkInput.value = link;
+    linkInput.placeholder = link ? '' : statsLanguageText('publishFirst');
+  }
+  if (copyButton) copyButton.disabled = !select.value;
 }
 
 function shouldOpenStatsTab() {
@@ -138,7 +145,7 @@ function injectStatsEventSelector() {
       <div class="flex md:justify-end"><span id="statsEventStatus" class="pill pill-draft">STATUS</span></div>
     </div>
     <div class="grid md:grid-cols-[1fr_auto] gap-2 mt-3 items-end">
-      <label class="text-xs text-slate-400">ลิงก์หน้าสถิติของอีเว้นท์นี้
+      <label class="text-xs text-slate-400"><span id="statsShareLabel">ลิงก์สถิติสาธารณะ</span>
         <input id="statsShareLink" class="w-full rounded-lg border p-3 mt-1 text-xs" readonly />
       </label>
       <button id="copyStatsLinkBtn" class="cut bg-lime text-black p-3 font-black">COPY STATS LINK</button>
@@ -156,7 +163,7 @@ function injectStatsEventSelector() {
   select.innerHTML = events.map((event) => `<option value="${event.id}">${eventStatusInfo(event).label.split(' · ')[0]} — ${eventTitle(event)}</option>`).join('');
   select.value = events.some((event) => String(event.id) === String(selectedId)) ? selectedId : events[0].id;
   localStorage.setItem(SELECTED_EVENT_KEY, select.value);
-  updateStatsStatus(select, badge, linkInput, events);
+  updateStatsStatus(select, badge, linkInput, copyButton, events);
 
   select.addEventListener('change', () => {
     localStorage.setItem(SELECTED_EVENT_KEY, select.value);
@@ -170,18 +177,62 @@ function injectStatsEventSelector() {
   });
 
   copyButton.addEventListener('click', async () => {
-    const link = statsLinkForEvent(select.value);
+    let link = statsLinkForEvent(select.value);
+    if (!isSupabaseMode()) {
+      copyButton.disabled = true;
+      copyButton.textContent = statsLanguageText('publishing');
+      try {
+        const sharedEventId = await publishLocalEventForPublicStats(select.value);
+        link = statsLinkForEvent(sharedEventId, true);
+        linkInput.value = link;
+      } catch (error) {
+        copyButton.textContent = statsLanguageText('publishFailed');
+        copyButton.disabled = false;
+        setTimeout(() => { copyButton.textContent = statsLanguageText('publishCopy'); }, 2200);
+        return;
+      }
+    }
     linkInput.value = link;
     linkInput.select();
     try {
       await navigator.clipboard.writeText(link);
-      copyButton.textContent = 'COPIED';
-      setTimeout(() => { copyButton.textContent = 'COPY STATS LINK'; }, 1200);
+      copyButton.textContent = statsLanguageText('copied');
+      setTimeout(() => { copyButton.textContent = statsLanguageText(isSupabaseMode() ? 'copy' : 'publishCopy'); }, 1200);
     } catch (error) {
-      prompt('Copy Stats Link', link);
+      linkInput.focus();
+      linkInput.select();
+      try { document.execCommand('copy'); } catch (fallbackError) { /* The selected field remains available for manual copy. */ }
+      copyButton.textContent = statsLanguageText('copyFallback');
+      setTimeout(() => { copyButton.textContent = statsLanguageText(isSupabaseMode() ? 'copy' : 'publishCopy'); }, 1600);
     }
   });
+  applyStatsLanguage();
   return true;
+}
+
+function statsLanguageText(key) {
+  const thai = localStorage.getItem('gdsq_v2_ui_lang') !== 'en';
+  return {
+    copy: thai ? 'คัดลอกลิงก์สถิติ' : 'COPY STATS LINK',
+    publishCopy: thai ? 'เผยแพร่และคัดลอกลิงก์' : 'PUBLISH & COPY LINK',
+    publishing: thai ? 'กำลังเผยแพร่...' : 'PUBLISHING...',
+    publishFailed: thai ? 'เผยแพร่ไม่สำเร็จ ลองใหม่' : 'PUBLISH FAILED - TRY AGAIN',
+    copied: thai ? 'คัดลอกแล้ว' : 'COPIED',
+    copyFallback: thai ? 'เลือกแล้ว กดคัดลอกส่งให้เพื่อน' : 'SELECTED - PRESS COPY',
+    publishFirst: thai ? 'กดเผยแพร่และคัดลอก เพื่อสร้างลิงก์สั้นที่เปิดได้ทุกเครื่อง' : 'Publish and copy to create a short public link for every device.',
+    shareLabel: thai ? 'ลิงก์สถิติสาธารณะ' : 'Public stats link',
+  }[key];
+}
+
+function applyStatsLanguage() {
+  const copyButton = document.getElementById('copyStatsLinkBtn');
+  if (copyButton) copyButton.textContent = statsLanguageText(isSupabaseMode() ? 'copy' : 'publishCopy');
+  const label = document.getElementById('statsShareLabel');
+  if (label) label.textContent = statsLanguageText('shareLabel');
+  const select = document.getElementById('statsEventSelect');
+  const badge = document.getElementById('statsEventStatus');
+  const linkInput = document.getElementById('statsShareLink');
+  if (select && badge && linkInput) updateStatsStatus(select, badge, linkInput, copyButton, readEvents());
 }
 
 function bootStatsEventSelector() {
@@ -190,6 +241,7 @@ function bootStatsEventSelector() {
     openStatsTabIfRequested();
     injectStatsEventSelector();
   };
+  window.addEventListener('gdsq-language-change', applyStatsLanguage);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tryInject);
   else tryInject();
   let tries = 0;

@@ -13,12 +13,13 @@ import {
 import { getCourts as getMockCourts } from './mockEventService.js';
 import { getEventPlayers as getMockEventPlayers } from './mockPlayerService.js';
 import { getMatchHistory as getMockMatchHistory } from './mockMatchService.js';
-import { listLocalEventPlayers, checkInLocalPlayer, updateLocalEventPlayerLevel } from './localPlayerStore.js';
+import { listLocalEventPlayers, checkInLocalPlayer, updateLocalEventPlayerLevel, findLocalPlayerProfileByEmail } from './localPlayerStore.js?v=email-profile-02';
 import { mergeLocalPlayerStats, setLocalPlayerStatus, setLocalPlayerLevel, forceAllLocalPlayersReady, applyLocalMatchResult, releaseInactivePlayingPlayers } from './localPlayerStatsStore.js';
-import { listLocalEventMatches, createLocalMatchPreview, startLocalMatch, cancelLocalMatch, confirmLocalScore } from './localMatchStore.js';
+import { listLocalEventMatches, createLocalMatchPreview, updateLocalMatchPreview, startLocalMatch, cancelLocalMatch, confirmLocalScore } from './localMatchStore.js';
+import { clearLocalEventData } from './localEventCleanup.js';
 import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus, deleteEvent as deleteSupabaseEvent } from './supabaseEventService.js';
-import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer, updateEventPlayerStatus as updateSupabaseEventPlayerStatus, updateEventPlayerLevel as updateSupabaseEventPlayerLevel } from './supabasePlayerService.js';
-import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, startMatch as startSupabaseMatch, cancelMatch as cancelSupabaseMatch, confirmScore as confirmSupabaseScore } from './supabaseMatchService.js';
+import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer, updateEventPlayerStatus as updateSupabaseEventPlayerStatus, updateEventPlayerLevel as updateSupabaseEventPlayerLevel, findPlayerProfileByEmail as findSupabasePlayerProfileByEmail } from './supabasePlayerService.js?v=email-profile-01';
+import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, updateMatchPreview as updateSupabaseMatchPreview, startMatch as startSupabaseMatch, cancelMatch as cancelSupabaseMatch, confirmScore as confirmSupabaseScore } from './supabaseMatchService.js';
 
 const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
 
@@ -47,8 +48,11 @@ function matchPlayerIds(match) {
     .filter(Boolean);
 }
 
-async function setSupabasePlayersStatus(supabase, players, status) {
-  await Promise.all(matchPlayerIds({ teamA: players, teamB: [] }).map((id) => updateSupabaseEventPlayerStatus(supabase, id, status)));
+async function setSupabasePlayersStatusSafely(supabase, players, status) {
+  const updates = await Promise.allSettled(
+    matchPlayerIds({ teamA: players, teamB: [] }).map((id) => updateSupabaseEventPlayerStatus(supabase, id, status))
+  );
+  return updates.some((result) => result.status === 'rejected');
 }
 
 export function createV2Services({ supabase = getSupabaseClient(), organizationId = '00000000-0000-4000-8000-000000000001', mode = getServiceMode() } = {}) {
@@ -97,7 +101,9 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
 
     async deleteEvent(eventId) {
       if (isSupabase) return deleteSupabaseEvent(requireSupabase(supabase), eventId);
-      return deleteLocalEvent(eventId);
+      const result = deleteLocalEvent(eventId);
+      clearLocalEventData(eventId);
+      return result;
     },
 
     async getCourts() {
@@ -128,6 +134,11 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async checkInPlayer(payload) {
       if (isSupabase) return checkInSupabasePlayer(requireSupabase(supabase), { ...payload, organizationId: payload.organizationId || organizationId });
       return checkInLocalPlayer(payload);
+    },
+
+    async findPlayerProfileByEmail(email) {
+      if (isSupabase) return findSupabasePlayerProfileByEmail(requireSupabase(supabase), organizationId, email);
+      return findLocalPlayerProfileByEmail(email);
     },
 
     async setPlayerStatus(eventId, playerId, status) {
@@ -182,11 +193,16 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
       return createLocalMatchPreview(payload);
     },
 
+    async updateMatchPreview(matchId, payload) {
+      if (isSupabase) return updateSupabaseMatchPreview(requireSupabase(supabase), matchId, { ...payload, organizationId: payload.organizationId || organizationId });
+      return updateLocalMatchPreview(payload.eventId, matchId, payload);
+    },
+
     async startMatch(matchId, payload = {}) {
       if (isSupabase) {
         const match = await startSupabaseMatch(requireSupabase(supabase), matchId);
-        await setSupabasePlayersStatus(requireSupabase(supabase), matchPlayerIds(match), 'playing');
-        return match;
+        const playerStatusWarning = await setSupabasePlayersStatusSafely(requireSupabase(supabase), matchPlayerIds(match), 'playing');
+        return { ...match, playerStatusWarning };
       }
       const match = startLocalMatch(payload.eventId, matchId);
       setLocalPlayerStatus(payload.eventId, matchPlayerIds(match), 'playing');
@@ -196,8 +212,8 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async cancelMatch(matchId, payload = {}) {
       if (isSupabase) {
         const match = await cancelSupabaseMatch(requireSupabase(supabase), matchId, payload);
-        await setSupabasePlayersStatus(requireSupabase(supabase), matchPlayerIds(match), 'ready');
-        return match;
+        const playerStatusWarning = await setSupabasePlayersStatusSafely(requireSupabase(supabase), matchPlayerIds(match), 'ready');
+        return { ...match, playerStatusWarning };
       }
       const match = cancelLocalMatch(payload.eventId, matchId, {
         reason: payload.reason || 'cancelled_by_organizer',
@@ -212,8 +228,11 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async confirmScore(matchId, payload) {
       if (isSupabase) {
         const match = await confirmSupabaseScore(requireSupabase(supabase), matchId, payload);
-        await setSupabasePlayersStatus(requireSupabase(supabase), matchPlayerIds(match), 'ready');
-        return match;
+        const playerUpdates = await Promise.allSettled(
+          matchPlayerIds(match).map((id) => updateSupabaseEventPlayerStatus(requireSupabase(supabase), id, 'ready'))
+        );
+        const playerStatusWarning = playerUpdates.some((result) => result.status === 'rejected');
+        return { ...match, playerStatusWarning };
       }
       const match = confirmLocalScore(payload.eventId, matchId, payload);
       applyLocalMatchResult(payload.eventId, match);

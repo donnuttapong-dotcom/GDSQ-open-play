@@ -7,6 +7,62 @@ function normalizeLevel(level) {
   return value ? Number(value[0]) : 3;
 }
 
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+async function upsertPlayerProfile(supabase, payload, name, level) {
+  const email = normalizeEmail(payload.email);
+  if (!email) return null;
+  const base = supabase
+    .from('v2_players')
+    .select('*')
+    .eq('organization_id', payload.organizationId)
+    .ilike('email', email)
+    .maybeSingle();
+  const { data: existing, error: readError } = await base;
+  if (readError) throw readError;
+
+  const profilePatch = {
+    display_name: name,
+    email,
+    default_level: level,
+    avatar_url: payload.avatarUrl || existing?.avatar_url || null,
+    updated_at: new Date().toISOString()
+  };
+  if (existing) {
+    const { data, error } = await supabase
+      .from('v2_players')
+      .update(profilePatch)
+      .eq('id', existing.id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  const { data, error } = await supabase
+    .from('v2_players')
+    .insert({ organization_id: payload.organizationId, ...profilePatch })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function findPlayerProfileByEmail(supabase, organizationId, email) {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return null;
+  const { data, error } = await supabase
+    .from('v2_players')
+    .select('*')
+    .eq('organization_id', organizationId)
+    .ilike('email', normalized)
+    .maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
 function normalizePlayer(row) {
   if (!row) return null;
   const level = normalizeLevel(row.estimated_level);
@@ -22,6 +78,8 @@ function normalizePlayer(row) {
     estimatedLevel: level,
     estimated_level: level,
     level,
+    avatarUrl: row.avatar_url || '',
+    avatar_url: row.avatar_url || '',
     status: row.status || 'checked_in',
     queueJoinedAt: row.queue_joined_at || row.created_at,
     createdAt: row.created_at,
@@ -44,25 +102,43 @@ export async function listEventPlayers(supabase, eventId) {
 export async function checkInPlayer(supabase, payload) {
   const name = String(payload.displayName || payload.name || '').trim();
   if (!name) throw new Error('Player name is required');
+  const level = normalizeLevel(payload.estimatedLevel || payload.level);
+  const profile = await upsertPlayerProfile(supabase, payload, name, level);
 
-  const { data: existing, error: readError } = await supabase
+  const existingQuery = supabase
     .from('v2_event_players')
     .select('*')
     .eq('event_id', payload.eventId)
-    .ilike('display_name', name)
-    .neq('status', 'removed')
-    .maybeSingle();
+    .neq('status', 'removed');
+  const { data: existing, error: readError } = profile
+    ? await existingQuery.eq('player_id', profile.id).maybeSingle()
+    : await existingQuery.ilike('display_name', name).maybeSingle();
   if (readError) throw readError;
-  if (existing) return { ...normalizePlayer(existing), duplicate: true };
+  if (existing) {
+    const { data, error } = await supabase
+      .from('v2_event_players')
+      .update({
+        display_name: profile?.display_name || name,
+        estimated_level: profile?.default_level || level,
+        avatar_url: profile?.avatar_url || payload.avatarUrl || existing.avatar_url || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', existing.id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return { ...normalizePlayer(data), duplicate: true };
+  }
 
   const { data, error } = await supabase
     .from('v2_event_players')
     .insert({
       organization_id: payload.organizationId,
       event_id: payload.eventId,
-      player_id: payload.playerId || null,
-      display_name: name,
-      estimated_level: normalizeLevel(payload.estimatedLevel || payload.level),
+      player_id: profile?.id || payload.playerId || null,
+      display_name: profile?.display_name || name,
+      estimated_level: profile?.default_level || level,
+      avatar_url: profile?.avatar_url || payload.avatarUrl || null,
       status: payload.status || 'checked_in',
       queue_joined_at: new Date().toISOString()
     })
