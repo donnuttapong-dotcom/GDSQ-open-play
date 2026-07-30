@@ -53,6 +53,25 @@ async function fetchMatch(supabase, matchId) {
   return normalizeMatch(data);
 }
 
+function activeStatus(match) {
+  return ['preview', 'assigned', 'playing', 'pending_score'].includes(String(match?.status || '').toLowerCase());
+}
+
+function matchPlayerIds(match) {
+  return [...(match?.teamA || []), ...(match?.teamB || [])].map(playerId).filter(Boolean).map(String);
+}
+
+async function assertMatchAvailable(supabase, candidate, exceptMatchId = '') {
+  const activeMatches = await listEventMatches(supabase, candidate.eventId);
+  const candidatePlayers = new Set(matchPlayerIds(candidate));
+  if (candidatePlayers.size !== 4) throw new Error('A preview match must contain four different players');
+  for (const match of activeMatches) {
+    if (!activeStatus(match) || String(match.id) === String(exceptMatchId)) continue;
+    if (Number(match.courtNumber) === Number(candidate.courtNumber)) throw new Error('Court is already in use');
+    if (matchPlayerIds(match).some((id) => candidatePlayers.has(id))) throw new Error('A selected player is already assigned to another active match');
+  }
+}
+
 function matchPlayerRows(payload, matchId) {
   const explicit = Array.isArray(payload.players) ? payload.players : [];
   const source = explicit.length ? explicit : [
@@ -78,6 +97,12 @@ export async function listEventMatches(supabase, eventId) {
 
 export async function createMatchPreview(supabase, payload) {
   const courtNumber = courtNumberFromPayload(payload);
+  await assertMatchAvailable(supabase, {
+    eventId: payload.eventId,
+    courtNumber,
+    teamA: payload.teamA,
+    teamB: payload.teamB
+  });
   const { data: match, error } = await supabase.from('v2_matches').insert({
     organization_id: payload.organizationId,
     event_id: payload.eventId,
@@ -90,15 +115,55 @@ export async function createMatchPreview(supabase, payload) {
   const rows = matchPlayerRows(payload, match.id);
   if (rows.length) {
     const { error: playerError } = await supabase.from('v2_match_players').insert(rows);
-    if (playerError) throw playerError;
+    if (playerError) {
+      await supabase.from('v2_matches').delete().eq('id', match.id);
+      throw playerError;
+    }
   }
   return fetchMatch(supabase, match.id);
 }
 
-export async function startMatch(supabase, matchId) {
-  const { error } = await supabase.from('v2_matches').update({ status: 'playing', started_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', matchId);
-  if (error) throw error;
+export async function updateMatchPreview(supabase, matchId, payload) {
+  const existing = await fetchMatch(supabase, matchId);
+  if (String(existing.status).toLowerCase() !== 'preview') throw new Error('Only preview matches can be edited');
+  const candidate = { ...existing, teamA: payload.teamA, teamB: payload.teamB };
+  await assertMatchAvailable(supabase, candidate, matchId);
+  const previousRows = existing.players || [];
+  const { error: deleteError } = await supabase.from('v2_match_players').delete().eq('match_id', matchId);
+  if (deleteError) throw deleteError;
+  const rows = matchPlayerRows({
+    ...payload,
+    eventId: existing.eventId,
+    organizationId: existing.organizationId
+  }, matchId);
+  const { error: insertError } = await supabase.from('v2_match_players').insert(rows);
+  if (insertError) {
+    await supabase.from('v2_match_players').insert(previousRows.map(({ id, created_at, ...row }) => row));
+    throw insertError;
+  }
   return fetchMatch(supabase, matchId);
+}
+
+export async function startMatch(supabase, matchId) {
+  const existing = await fetchMatch(supabase, matchId);
+  await assertMatchAvailable(supabase, existing, matchId);
+  const { error: rpcError } = await supabase.rpc('v2_start_match_safely', { p_match_id: matchId });
+  if (!rpcError) return fetchMatch(supabase, matchId);
+  const rpcUnavailable = rpcError.code === 'PGRST202' || /v2_start_match_safely/i.test(String(rpcError.message || ''));
+  if (rpcUnavailable) {
+    // Compatibility path for the existing production database. Availability was
+    // checked above; the RPC remains the preferred protection for multi-device starts.
+    const { data, error } = await supabase
+      .from('v2_matches')
+      .update({ status: 'playing', started_at: existing.startedAt || new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', matchId)
+      .eq('status', 'preview')
+      .select('id');
+    if (error) throw error;
+    if (!data?.length) throw new Error('Match was already started or changed. Refresh and try again.');
+    return fetchMatch(supabase, matchId);
+  }
+  throw rpcError;
 }
 
 export async function cancelMatch(supabase, matchId, payload = {}) {
@@ -114,7 +179,10 @@ export async function confirmScore(supabase, matchId, payload) {
   const { data: existing, error: readError } = await supabase.from('v2_matches').select('id,status').eq('id', matchId).single();
   if (readError) throw readError;
   if (existing.status === 'confirmed') return fetchMatch(supabase, matchId);
-  const { error } = await supabase.from('v2_matches').update({
+  if (!Number.isFinite(Number(payload.teamAScore)) || !Number.isFinite(Number(payload.teamBScore)) || Number(payload.teamAScore) === Number(payload.teamBScore)) {
+    throw new Error('Scores must be different valid numbers');
+  }
+  const { data, error } = await supabase.from('v2_matches').update({
     status: 'confirmed',
     team_a_score: payload.teamAScore,
     team_b_score: payload.teamBScore,
@@ -122,7 +190,11 @@ export async function confirmScore(supabase, matchId, payload) {
     completed_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     confirmed_by: payload.confirmedBy || null
-  }).eq('id', matchId).neq('status', 'confirmed');
+  }).eq('id', matchId).neq('status', 'confirmed').select('id');
   if (error) throw error;
+  if (!data?.length) {
+    const latest = await fetchMatch(supabase, matchId);
+    if (latest.status !== 'confirmed') throw new Error('ไม่สามารถบันทึกผลการแข่งขันได้ กรุณารีเฟรชแล้วลองใหม่');
+  }
   return fetchMatch(supabase, matchId);
 }
