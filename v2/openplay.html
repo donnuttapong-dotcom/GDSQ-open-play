@@ -10,7 +10,7 @@ body{background:#10151b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-s
 </style>
 </head>
 <body>
-<header class="sticky top-0 z-50 bg-[#0d1217]/95 border-b border-white/10 p-3"><div class="max-w-7xl mx-auto flex justify-between items-center gap-2"><div class="flex items-center gap-2"><a class="cut bg-lime px-3 py-2 font-black text-black" href="./">← HOME</a><div><div class="text-[10px] tracking-[.25em] lime">GDSQ PICKLEBALL</div><b>OPEN PLAY v2</b></div></div><span id="modeBadge" class="pill pill-live">MODE</span></div></header>
+<header class="sticky top-0 z-50 bg-[#0d1217]/95 border-b border-white/10 p-3"><div class="max-w-7xl mx-auto flex justify-between items-center gap-2"><div class="flex items-center gap-2"><a class="cut bg-lime px-3 py-2 font-black text-black" href="./">← HOME</a><div><div class="text-[10px] tracking-[.25em] lime">GDSQ PICKLEBALL</div><b>OPEN PLAY v2</b></div></div><button id="languageToggle" class="cut bg-white/5 px-3 py-2 text-xs font-black" type="button" aria-label="Change language">EN</button><span id="modeBadge" class="pill pill-live">MODE</span></div></header>
 <main class="max-w-7xl mx-auto p-3">
 <nav class="grid grid-cols-4 gap-2 text-xs font-black text-center mb-4"><button id="tabBtn-events" class="cut btn py-3 tab-active" data-tab="events">Events</button><button id="tabBtn-join" class="cut btn py-3 tab-idle" data-tab="join">Join</button><button id="tabBtn-manage" class="cut btn py-3 tab-idle" data-tab="manage">Manage</button><button id="tabBtn-stats" class="cut btn py-3 tab-idle" data-tab="stats">Stats</button></nav>
 <div id="msg" class="hidden mb-3 p-3 rounded-xl border border-lime-300/40 bg-lime-300/10 text-lime-100 whitespace-pre-wrap"></div>
@@ -152,6 +152,62 @@ setInterval(updateLiveTimers,1000);
 setInterval(()=>{if(['stats','manage'].includes(currentTab))refreshCurrentSilently();},3000);
 initCreateEventDefaults();
 loadAll();
+</script>
+<script>
+(() => {
+  const languageKey = 'gdsq_v2_ui_lang';
+  const copy = {
+    th: {
+      home: '← หน้าแรก', events: 'อีเวนต์', join: 'เข้าร่วม', manage: 'จัดการ', stats: 'สถิติ',
+      refresh: 'รีเฟรช', create: 'สร้างอีเวนต์', savePlayer: 'บันทึกและเข้าคิว',
+      refreshManage: 'รีเฟรชข้อมูล', live: 'เปิด LIVE', draft: 'ฉบับร่าง',
+      clearPreview: 'ล้างพรีวิว', manualPreview: 'สร้างพรีวิวเอง', addPlayer: 'เพิ่มผู้เล่น',
+      refreshStats: 'รีเฟรชสถิติ', liveChip: 'กำลังเล่น', previewChip: 'พรีวิว'
+    },
+    en: {
+      home: '← HOME', events: 'Events', join: 'Join', manage: 'Manage', stats: 'Stats',
+      refresh: 'Refresh', create: 'Create Event', savePlayer: 'Save & Join Queue',
+      refreshManage: 'Refresh Data', live: 'Set LIVE', draft: 'Draft',
+      clearPreview: 'Clear Previews', manualPreview: 'Create Manual Preview', addPlayer: 'Add Player',
+      refreshStats: 'Refresh Stats', liveChip: 'LIVE', previewChip: 'Preview'
+    }
+  };
+  const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  const apply = () => {
+    const lang = localStorage.getItem(languageKey) === 'en' ? 'en' : 'th';
+    const text = copy[lang];
+    document.documentElement.lang = lang;
+    const toggle = document.getElementById('languageToggle');
+    if (toggle) {
+      toggle.textContent = lang === 'th' ? 'EN' : 'TH';
+      toggle.setAttribute('aria-label', lang === 'th' ? 'Switch to English' : 'เปลี่ยนเป็นภาษาไทย');
+    }
+    document.querySelectorAll('a[href="./"]').forEach((el) => { el.textContent = text.home; });
+    set('tabBtn-events', text.events);
+    set('tabBtn-join', text.join);
+    set('tabBtn-manage', text.manage);
+    set('tabBtn-stats', text.stats);
+    set('refreshEventsBtn', text.refresh);
+    set('createEventBtn', text.create);
+    set('savePlayerBtn', text.savePlayer);
+    set('refreshManageBtn', text.refreshManage);
+    set('eventLiveBtn', text.live);
+    set('clearPreviewBtn', text.clearPreview);
+    set('manualPreviewBtn', text.manualPreview);
+    set('manageCreatePlayerBtn', text.addPlayer);
+    set('refreshStatsBtn', text.refreshStats);
+    set('chipLive', text.liveChip);
+    set('chipPreview', text.previewChip);
+  };
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('languageToggle');
+    if (toggle) toggle.addEventListener('click', () => {
+      localStorage.setItem(languageKey, localStorage.getItem(languageKey) === 'en' ? 'th' : 'en');
+      apply();
+    });
+    apply();
+  });
+})();
 </script>
 </body>
 </html>
