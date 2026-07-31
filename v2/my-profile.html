@@ -71,6 +71,7 @@
     const services = createV2Services();
     let authPlayer = null;
     let busy = false;
+    let messageKey = '';
 
     function language() {
       return localStorage.getItem('gdsq_v2_ui_lang') === 'en' ? 'en' : 'th';
@@ -120,6 +121,7 @@
       $('registeredBadge').textContent = text('registered');
       $('historyTitle').textContent = text('history');
       $('historyInfo').textContent = text('historyInfo');
+      if (messageKey) $('message').textContent = text(messageKey);
     }
 
     function setBusy(next) {
@@ -129,8 +131,9 @@
       applyLanguage();
     }
 
-    function showMessage(message, error = false) {
+    function showMessage(message, error = false, key = '') {
       const box = $('message');
+      messageKey = key;
       box.textContent = message;
       box.className = `mt-3 rounded-lg border p-3 text-sm ${error ? 'border-red-300/40 bg-red-300/10 text-red-100' : 'border-lime-300/40 bg-lime-300/10 text-lime-100'}`;
     }
@@ -154,7 +157,7 @@
       if (!profile) {
         $('profileCard').classList.add('hidden');
         $('historyCard').classList.add('hidden');
-        showMessage(text('noProfile'), true);
+        showMessage(text('noProfile'), true, 'noProfile');
         return;
       }
 
@@ -212,12 +215,12 @@
       $('eventCount').textContent = `${eventTotal} ${text('events').toUpperCase()}`;
       $('profileCard').classList.remove('hidden');
       $('historyCard').classList.remove('hidden');
-      showMessage(text('loaded'));
+      showMessage(text('loaded'), false, 'loaded');
     }
 
     async function handleAuthAction() {
       const email = $('email').value.trim().toLowerCase();
-      if (!/^\S+@\S+\.\S+$/.test(email)) return showMessage(text('invalidEmail'), true);
+      if (!/^\S+@\S+\.\S+$/.test(email)) return showMessage(text('invalidEmail'), true, 'invalidEmail');
       setBusy(true);
       try {
         if (services.mode !== 'supabase' || authPlayer) {
@@ -226,11 +229,11 @@
           const redirect = `${location.origin}${location.pathname}`;
           await services.sendPlayerSignInLink(email, redirect);
           localStorage.setItem('gdsq_v2_last_player_email', email);
-          showMessage(text('sent'));
+          showMessage(text('sent'), false, 'sent');
         }
       } catch (error) {
         console.error('Profile action failed', error);
-        showMessage(error.message || text('error'), true);
+        showMessage(error.message || text('error'), true, error.message ? '' : 'error');
       } finally {
         setBusy(false);
       }
@@ -264,9 +267,9 @@
         $('signOutBtn').classList.add('hidden');
         $('profileCard').classList.add('hidden');
         $('historyCard').classList.add('hidden');
-        showMessage(text('signedOut'));
+        showMessage(text('signedOut'), false, 'signedOut');
       } catch (error) {
-        showMessage(error.message || text('error'), true);
+        showMessage(error.message || text('error'), true, error.message ? '' : 'error');
       } finally {
         setBusy(false);
       }
@@ -280,7 +283,7 @@
 
     boot().catch((error) => {
       console.error('Profile boot failed', error);
-      showMessage(error.message || text('error'), true);
+      showMessage(error.message || text('error'), true, error.message ? '' : 'error');
     });
   </script>
 </body>
