@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { buildMatchHistoryStats, generateMatches, shouldRest } from '../src/logic/matchmaking/generateMatches.js';
 import { calculatePlayerRanking } from '../src/logic/ranking/calculatePlayerRanking.js';
-import { createLocalMatchPreview, updateLocalMatchPreview, startLocalMatch } from '../src/services/localMatchStore.js';
+import { createLocalMatchPreview, updateLocalMatchPreview, startLocalMatch, confirmLocalScore, listLocalEventMatches } from '../src/services/localMatchStore.js';
 import { checkInLocalPlayer } from '../src/services/localPlayerStore.js';
 import { setLocalPlayerStatus } from '../src/services/localPlayerStatsStore.js';
 import { applyLocalMatchResult } from '../src/services/localPlayerStatsStore.js';
@@ -265,6 +265,40 @@ function match(id, teamA, teamB, minutesAgo) {
   assert.equal(proposed.low.courtNumber, 1);
   assert.equal(proposed.high.courtNumber, 2);
   assert.equal(proposed.outside, undefined);
+
+  // End-to-end local event flow: registration, two matches, and cumulative stats.
+  const flowEventId = 'full-flow-event';
+  const flowPlayers = ['one', 'two', 'three', 'four'].map((id) => checkInLocalPlayer({
+    eventId: flowEventId,
+    displayName: id,
+    level: 3
+  }));
+  const flowFirst = createLocalMatchPreview({
+    eventId: flowEventId,
+    courtId: 'court-1',
+    courtName: 'Court 1',
+    teamA: flowPlayers.slice(0, 2),
+    teamB: flowPlayers.slice(2, 4)
+  });
+  startLocalMatch(flowEventId, flowFirst.id);
+  const flowResultOne = confirmLocalScore(flowEventId, flowFirst.id, { teamAScore: 11, teamBScore: 8 });
+  applyLocalMatchResult(flowEventId, flowResultOne);
+  const flowSecond = createLocalMatchPreview({
+    eventId: flowEventId,
+    courtId: 'court-1',
+    courtName: 'Court 1',
+    teamA: flowPlayers.slice(2, 4),
+    teamB: flowPlayers.slice(0, 2)
+  });
+  startLocalMatch(flowEventId, flowSecond.id);
+  const flowResultTwo = confirmLocalScore(flowEventId, flowSecond.id, { teamAScore: 11, teamBScore: 9 });
+  applyLocalMatchResult(flowEventId, flowResultTwo);
+  const flowStats = JSON.parse(localStorage.getItem(`gdsq_v2_player_stats:${flowEventId}`));
+  assert.equal(flowStats[flowPlayers[0].id].delta.matchesPlayed, 2);
+  assert.equal(flowStats[flowPlayers[0].id].delta.wins, 1);
+  assert.equal(flowStats[flowPlayers[0].id].delta.losses, 1);
+  assert.equal(flowStats[flowPlayers[0].id].status, 'ready');
+  assert.equal(listLocalEventMatches(flowEventId).filter((item) => item.status === 'confirmed').length, 2);
   globalThis.localStorage = originalStorage;
 }
 
