@@ -185,10 +185,28 @@ html,body{overflow-x:hidden}
   #msg,.app-shell>section{grid-column:2}
   #tab-manage .manage-grid{grid-template-columns:minmax(0,1.45fr) minmax(272px,.78fr);align-items:start}
   #tab-manage .manage-grid>div:first-child{grid-column:2;grid-row:1;gap:12px}
+  #tab-manage .manage-grid>div:first-child,#tab-manage .manage-grid>div:first-child>.card{min-width:0}
+  #tab-manage .manage-grid>div:first-child>.card:first-child .grid,#manualTeamLayout{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  #tab-manage .manage-grid>div:first-child>.card:nth-child(3) .grid{grid-template-columns:minmax(0,1fr)}
   #tab-manage #matchPanels{grid-column:1;grid-row:1;gap:12px}
   #tab-manage #matchPanels>.card{border-radius:8px}
   #tab-manage .manage-head-card{padding:16px 18px}
   #tab-manage .manage-head-card h2{font-size:20px}
+}
+/* iPad portrait keeps the desktop navigation, while the control workspace uses one wide column. */
+@media(min-width:961px) and (max-width:1199px){
+  .app-shell{grid-template-columns:174px minmax(0,1fr);column-gap:14px;padding:16px 14px 36px}
+  .topbar-inner{padding:0 14px}
+  .mode-tabs{padding:8px}
+  .mode-tabs button{padding:0 9px}
+  #tab-manage .manage-grid{grid-template-columns:minmax(0,1fr)}
+  #tab-manage .manage-grid>div:first-child,#tab-manage #matchPanels{grid-column:1;grid-row:auto;width:auto}
+  #tab-manage .manage-grid>div:first-child>.card:first-child .grid{grid-template-columns:1fr}
+}
+@media(min-width:1200px) and (max-width:1399px){
+  #tab-manage .manage-grid>div:first-child,#tab-manage .manage-grid>div:first-child>.card{min-width:0}
+  #tab-manage .manage-grid>div:first-child>.card:first-child .grid,#manualTeamLayout{grid-template-columns:minmax(0,1fr)}
+  #tab-manage .manage-grid>div:first-child>.card:nth-child(3) .grid{grid-template-columns:minmax(0,1fr)}
 }
 </style>
 </head>
