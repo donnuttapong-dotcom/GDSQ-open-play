@@ -35,7 +35,11 @@ export function getSupabaseClient() {
   if (!cachedClient) {
     const { url, key } = getSupabaseConfig();
     cachedClient = createClient(url, key, {
-      auth: { persistSession: false },
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      },
       realtime: { params: { eventsPerSecond: 10 } }
     });
   }

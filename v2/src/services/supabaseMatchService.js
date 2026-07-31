@@ -182,6 +182,15 @@ export async function confirmScore(supabase, matchId, payload) {
   if (!Number.isFinite(Number(payload.teamAScore)) || !Number.isFinite(Number(payload.teamBScore)) || Number(payload.teamAScore) === Number(payload.teamBScore)) {
     throw new Error('Scores must be different valid numbers');
   }
+  const { error: rpcError } = await supabase.rpc('v2_confirm_score_safely', {
+    p_match_id: matchId,
+    p_team_a_score: Number(payload.teamAScore),
+    p_team_b_score: Number(payload.teamBScore)
+  });
+  if (!rpcError) return fetchMatch(supabase, matchId);
+  const rpcUnavailable = rpcError.code === 'PGRST202' || /v2_confirm_score_safely/i.test(String(rpcError.message || ''));
+  if (!rpcUnavailable) throw rpcError;
+
   const { data, error } = await supabase.from('v2_matches').update({
     status: 'confirmed',
     team_a_score: payload.teamAScore,

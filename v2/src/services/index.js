@@ -18,7 +18,7 @@ import { mergeLocalPlayerStats, setLocalPlayerStatus, setLocalPlayerLevel, force
 import { listLocalEventMatches, createLocalMatchPreview, updateLocalMatchPreview, startLocalMatch, cancelLocalMatch, confirmLocalScore } from './localMatchStore.js';
 import { clearLocalEventData } from './localEventCleanup.js';
 import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus, deleteEvent as deleteSupabaseEvent } from './supabaseEventService.js';
-import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer, updateEventPlayerStatus as updateSupabaseEventPlayerStatus, updateEventPlayerLevel as updateSupabaseEventPlayerLevel, findPlayerProfileByEmail as findSupabasePlayerProfileByEmail } from './supabasePlayerService.js?v=join-recovery-01';
+import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer, updateEventPlayerStatus as updateSupabaseEventPlayerStatus, updateEventPlayerLevel as updateSupabaseEventPlayerLevel, findPlayerProfileByEmail as findSupabasePlayerProfileByEmail, getAuthenticatedPlayer as getSupabaseAuthenticatedPlayer, sendPlayerSignInLink as sendSupabasePlayerSignInLink, signOutPlayer as signOutSupabasePlayer } from './supabasePlayerService.js?v=secure-profile-01';
 import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, updateMatchPreview as updateSupabaseMatchPreview, startMatch as startSupabaseMatch, cancelMatch as cancelSupabaseMatch, confirmScore as confirmSupabaseScore } from './supabaseMatchService.js';
 
 const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
@@ -139,6 +139,21 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async findPlayerProfileByEmail(email) {
       if (isSupabase) return findSupabasePlayerProfileByEmail(requireSupabase(supabase), organizationId, email);
       return findLocalPlayerProfileByEmail(email);
+    },
+
+    async getAuthenticatedPlayer() {
+      if (isSupabase) return getSupabaseAuthenticatedPlayer(requireSupabase(supabase));
+      return null;
+    },
+
+    async sendPlayerSignInLink(email, redirectTo) {
+      if (!isSupabase) return false;
+      return sendSupabasePlayerSignInLink(requireSupabase(supabase), email, redirectTo);
+    },
+
+    async signOutPlayer() {
+      if (!isSupabase) return true;
+      return signOutSupabasePlayer(requireSupabase(supabase));
     },
 
     async setPlayerStatus(eventId, playerId, status) {

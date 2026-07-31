@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node ./tests/matchmaking.test.js"
+    "test": "node ./tests/matchmaking.test.js && node ./tests/supabase-services.test.js"
   }
 }
