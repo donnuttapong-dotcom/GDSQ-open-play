@@ -4,9 +4,11 @@ import { calculatePlayerRanking } from '../src/logic/ranking/calculatePlayerRank
 import { createLocalMatchPreview, updateLocalMatchPreview, startLocalMatch } from '../src/services/localMatchStore.js';
 import { checkInLocalPlayer } from '../src/services/localPlayerStore.js';
 import { setLocalPlayerStatus } from '../src/services/localPlayerStatsStore.js';
+import { applyLocalMatchResult } from '../src/services/localPlayerStatsStore.js';
 import { saveScoreDraft } from '../src/services/localDraftService.js';
 import { clearLocalEventData } from '../src/services/localEventCleanup.js';
 import { buildAutoAssignmentProposal, getCourtAssignment, saveCourtSetup, savePlayerAssignments } from '../src/services/localCourtAssignmentStore.js';
+import { validateMatchScore } from '../src/logic/system/validateScore.js';
 
 const now = new Date('2026-06-22T10:00:00+07:00').getTime();
 
@@ -180,7 +182,8 @@ function match(id, teamA, teamB, minutesAgo) {
     eventId: 'email-event-one',
     displayName: 'Email Player',
     email: 'PLAYER@Example.com',
-    level: 3.5
+    level: 3.5,
+    avatarUrl: 'data:image/png;base64,profile-image'
   });
   const returningRegistration = checkInLocalPlayer({
     eventId: 'email-event-two',
@@ -190,6 +193,7 @@ function match(id, teamA, teamB, minutesAgo) {
   });
   assert.equal(firstRegistration.playerId, returningRegistration.playerId);
   assert.equal(returningRegistration.email, 'player@example.com');
+  assert.equal(returningRegistration.avatarUrl, 'data:image/png;base64,profile-image');
 
   const guestRegistration = checkInLocalPlayer({
     eventId: 'guest-event',
@@ -198,6 +202,26 @@ function match(id, teamA, teamB, minutesAgo) {
   });
   assert.equal(guestRegistration.playerId, null);
   assert.equal(guestRegistration.email, '');
+  const duplicateGuest = checkInLocalPlayer({ eventId: 'guest-event', displayName: 'Walk-in Guest', level: 3 });
+  assert.equal(duplicateGuest.id, guestRegistration.id);
+  assert.equal(JSON.parse(localStorage.getItem('gdsq_v2_event_players:guest-event')).length, 1);
+
+  assert.equal(validateMatchScore({ teamAScore: '11', teamBScore: '8' }).ok, true);
+  assert.equal(validateMatchScore({ teamAScore: '11', teamBScore: '11' }).ok, false);
+  assert.equal(validateMatchScore({ teamAScore: '-1', teamBScore: '8' }).ok, false);
+  assert.equal(validateMatchScore({ teamAScore: '100', teamBScore: '8' }).ok, false);
+
+  const statsEventId = 'stats-event';
+  const completedMatch = { id: 'confirmed-once', teamA: ['p1', 'p2'], teamB: ['p3', 'p4'], teamAScore: 11, teamBScore: 8 };
+  applyLocalMatchResult(statsEventId, completedMatch);
+  applyLocalMatchResult(statsEventId, completedMatch);
+  const stats = JSON.parse(localStorage.getItem(`gdsq_v2_player_stats:${statsEventId}`));
+  assert.equal(stats.p1.delta.matchesPlayed, 1);
+  assert.equal(stats.p1.delta.wins, 1);
+  assert.equal(stats.p1.delta.pointsFor, 11);
+  assert.equal(stats.p3.delta.losses, 1);
+  assert.equal(stats.p3.delta.pointsAgainst, 11);
+  assert.equal(stats.p1.status, 'ready');
 
   const cleanupEventId = 'cleanup-event';
   const cleanupPlayers = ['c1', 'c2', 'c3', 'c4'].map((id) => checkInLocalPlayer({ eventId: cleanupEventId, displayName: id, level: 3 }));
