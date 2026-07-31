@@ -56,6 +56,7 @@ label{line-height:1.45}
 .pill-win{background:rgba(215,255,25,.12);border-color:rgba(215,255,25,.6);color:var(--lime)}
 .pill-lose{background:rgba(255,91,104,.12);border-color:rgba(255,91,104,.45);color:#ff9ca5}
 .queue-card{border-left:4px solid rgba(255,255,255,.12)}
+.status-btn{min-height:44px}
 .queue-ready{border-left-color:var(--lime)}.queue-playing{border-left-color:var(--orange)}.queue-rest{border-left-color:var(--cyan)}.queue-left{border-left-color:#64748b}.queue-auto{border-left-color:#a78bfa}
 .status-btn{font-size:11px;font-weight:1000;border-radius:10px;padding:9px 10px}
 .status-ready-btn{background:var(--lime);color:#07121e}.status-rest-btn{background:#22d3ee;color:#07121e}.status-left-btn{background:#475569;color:#fff}.status-delete-btn{background:#ef4051;color:#fff}
@@ -206,6 +207,9 @@ html,body{overflow-x:hidden}
   #tab-manage #manualCourt,#tab-manage #manual0,#tab-manage #manual1,#tab-manage #manual2,#tab-manage #manual3,#tab-manage [data-preview-player]{min-height:44px;padding:9px 10px!important;font-size:12px}
   #tab-manage #matchPanels .event-card{min-height:0}
   #tab-manage .manage-grid>div:first-child>.card:first-child .grid{grid-template-columns:1fr}
+  #managePlayers .queue-card>div:first-child{flex-direction:column;align-items:stretch}
+  #managePlayers .queue-card>div:first-child>div{min-width:0;width:100%}
+  #managePlayers [data-level-player]{width:100%;min-width:0;min-height:44px}
 }
 @media(min-width:1200px) and (max-width:1399px){
   #tab-manage .manage-grid>div:first-child,#tab-manage .manage-grid>div:first-child>.card{min-width:0}
