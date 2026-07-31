@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { checkInPlayer, findPlayerProfileByEmail, getAuthenticatedPlayer } from '../src/services/supabasePlayerService.js';
-import { confirmScore } from '../src/services/supabaseMatchService.js';
+import { confirmScore, updateMatchPreview } from '../src/services/supabaseMatchService.js';
 
 function result(value) {
   return Promise.resolve(value);
@@ -152,6 +152,47 @@ function playerServiceFake({ user = null, existingProfile = null, existingEventP
     p_match_id: 'match-1',
     p_team_a_score: 11,
     p_team_b_score: 8
+  }]]);
+}
+
+// Preview roster changes use one database transaction and preserve player order.
+{
+  const rpcCalls = [];
+  const row = {
+    id: 'preview-1',
+    event_id: 'event-1',
+    organization_id: 'org-1',
+    court_number: 1,
+    status: 'preview',
+    players: [
+      { event_player_id: 'p1', team: 'A', slot: 1 },
+      { event_player_id: 'p2', team: 'A', slot: 2 },
+      { event_player_id: 'p3', team: 'B', slot: 1 },
+      { event_player_id: 'p4', team: 'B', slot: 2 }
+    ]
+  };
+  const supabase = {
+    rpc(name, payload) {
+      rpcCalls.push([name, payload]);
+      return result({ error: null });
+    },
+    from() {
+      const chain = {
+        select() { return chain; },
+        eq() { return chain; },
+        single() { return result({ data: row, error: null }); }
+      };
+      return chain;
+    }
+  };
+  const updated = await updateMatchPreview(supabase, row.id, {
+    teamA: ['p4', 'p2'],
+    teamB: ['p3', 'p1']
+  });
+  assert.deepEqual(updated.teamA, ['p1', 'p2']);
+  assert.deepEqual(rpcCalls, [['v2_update_match_preview_safely', {
+    p_match_id: 'preview-1',
+    p_event_player_ids: ['p4', 'p2', 'p3', 'p1']
   }]]);
 }
 

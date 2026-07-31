@@ -127,6 +127,19 @@ export async function updateMatchPreview(supabase, matchId, payload) {
   const existing = await fetchMatch(supabase, matchId);
   if (String(existing.status).toLowerCase() !== 'preview') throw new Error('Only preview matches can be edited');
   const candidate = { ...existing, teamA: payload.teamA, teamB: payload.teamB };
+  const candidatePlayerIds = matchPlayerIds(candidate);
+  if (new Set(candidatePlayerIds).size !== 4) throw new Error('A preview match must contain four different players');
+
+  const { error: rpcError } = await supabase.rpc('v2_update_match_preview_safely', {
+    p_match_id: matchId,
+    p_event_player_ids: candidatePlayerIds
+  });
+  if (!rpcError) return fetchMatch(supabase, matchId);
+
+  const rpcUnavailable = rpcError.code === 'PGRST202' || /v2_update_match_preview_safely/i.test(String(rpcError.message || ''));
+  if (!rpcUnavailable) throw rpcError;
+
+  // Compatibility path while an older deployment is still receiving the new RPC.
   await assertMatchAvailable(supabase, candidate, matchId);
   const previousRows = existing.players || [];
   const { error: deleteError } = await supabase.from('v2_match_players').delete().eq('match_id', matchId);
