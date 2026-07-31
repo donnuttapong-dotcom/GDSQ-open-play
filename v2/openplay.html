@@ -193,14 +193,15 @@ html,body{overflow-x:hidden}
   #tab-manage .manage-head-card{padding:16px 18px}
   #tab-manage .manage-head-card h2{font-size:20px}
 }
-/* iPad portrait keeps the desktop navigation, while the control workspace uses one wide column. */
+/* iPad keeps the desktop organizer composition: live courts and previews lead the workspace. */
 @media(min-width:961px) and (max-width:1199px){
   .app-shell{grid-template-columns:174px minmax(0,1fr);column-gap:14px;padding:16px 14px 36px}
   .topbar-inner{padding:0 14px}
   .mode-tabs{padding:8px}
   .mode-tabs button{padding:0 9px}
-  #tab-manage .manage-grid{grid-template-columns:minmax(0,1fr)}
-  #tab-manage .manage-grid>div:first-child,#tab-manage #matchPanels{grid-column:1;grid-row:auto;width:auto}
+  #tab-manage .manage-grid{grid-template-columns:minmax(0,1.45fr) minmax(248px,.78fr);gap:12px}
+  #tab-manage .manage-grid>div:first-child{grid-column:2;grid-row:1;display:grid;gap:12px;min-width:0}
+  #tab-manage #matchPanels{grid-column:1;grid-row:1;display:flex;flex-direction:column;gap:12px;min-width:0}
   #tab-manage .manage-grid>div:first-child>.card:first-child .grid{grid-template-columns:1fr}
 }
 @media(min-width:1200px) and (max-width:1399px){
