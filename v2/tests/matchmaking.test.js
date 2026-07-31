@@ -176,6 +176,9 @@ function match(id, teamA, teamB, minutesAgo) {
   }), /already assigned/);
   const edited = updateLocalMatchPreview(eventId, first.id, { teamA: ['p1', 'p2'], teamB: ['p3', 'p5'] });
   assert.deepEqual(edited.teamB, ['p3', 'p5']);
+  const swapped = updateLocalMatchPreview(eventId, first.id, { teamA: ['p3', 'p2'], teamB: ['p1', 'p5'] });
+  assert.deepEqual(swapped.teamA, ['p3', 'p2']);
+  assert.deepEqual(swapped.teamB, ['p1', 'p5']);
   assert.equal(startLocalMatch(eventId, first.id).status, 'playing');
 
   const firstRegistration = checkInLocalPlayer({
