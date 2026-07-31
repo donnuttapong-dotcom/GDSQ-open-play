@@ -18,7 +18,7 @@ import { mergeLocalPlayerStats, setLocalPlayerStatus, setLocalPlayerLevel, force
 import { listLocalEventMatches, createLocalMatchPreview, updateLocalMatchPreview, startLocalMatch, cancelLocalMatch, confirmLocalScore } from './localMatchStore.js';
 import { clearLocalEventData } from './localEventCleanup.js';
 import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus, deleteEvent as deleteSupabaseEvent } from './supabaseEventService.js';
-import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer, updateEventPlayerStatus as updateSupabaseEventPlayerStatus, updateEventPlayerLevel as updateSupabaseEventPlayerLevel, findPlayerProfileByEmail as findSupabasePlayerProfileByEmail } from './supabasePlayerService.js?v=email-profile-01';
+import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer, updateEventPlayerStatus as updateSupabaseEventPlayerStatus, updateEventPlayerLevel as updateSupabaseEventPlayerLevel, findPlayerProfileByEmail as findSupabasePlayerProfileByEmail } from './supabasePlayerService.js?v=join-recovery-01';
 import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, updateMatchPreview as updateSupabaseMatchPreview, startMatch as startSupabaseMatch, cancelMatch as cancelSupabaseMatch, confirmScore as confirmSupabaseScore } from './supabaseMatchService.js';
 
 const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';

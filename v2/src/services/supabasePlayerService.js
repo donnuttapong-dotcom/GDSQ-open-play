@@ -11,6 +11,12 @@ function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+function isMissingSchemaObject(error, objectName) {
+  const code = String(error?.code || '');
+  const message = String(error?.message || '').toLowerCase();
+  return ['PGRST204', 'PGRST205'].includes(code) && message.includes(String(objectName).toLowerCase());
+}
+
 async function upsertPlayerProfile(supabase, payload, name, level) {
   const email = normalizeEmail(payload.email);
   if (!email) return null;
@@ -21,6 +27,9 @@ async function upsertPlayerProfile(supabase, payload, name, level) {
     .ilike('email', email)
     .maybeSingle();
   const { data: existing, error: readError } = await base;
+  // Older production installs do not have v2_players yet. Joining the event
+  // must still work as a guest until the private profile store is available.
+  if (readError && isMissingSchemaObject(readError, 'v2_players')) return null;
   if (readError) throw readError;
 
   const profilePatch = {
@@ -59,6 +68,7 @@ export async function findPlayerProfileByEmail(supabase, organizationId, email) 
     .eq('organization_id', organizationId)
     .ilike('email', normalized)
     .maybeSingle();
+  if (error && isMissingSchemaObject(error, 'v2_players')) return null;
   if (error) throw error;
   return data || null;
 }
@@ -103,50 +113,78 @@ export async function checkInPlayer(supabase, payload) {
   const name = String(payload.displayName || payload.name || '').trim();
   if (!name) throw new Error('Player name is required');
   const level = normalizeLevel(payload.estimatedLevel || payload.level);
+  const requestedEmail = normalizeEmail(payload.email);
   const profile = await upsertPlayerProfile(supabase, payload, name, level);
+  const profileState = {
+    profileLinked: Boolean(profile),
+    profileFallback: Boolean(requestedEmail && !profile)
+  };
 
   const existingQuery = supabase
     .from('v2_event_players')
     .select('*')
     .eq('event_id', payload.eventId)
-    .neq('status', 'removed');
+    .neq('status', 'removed')
+    .order('queue_joined_at', { ascending: false })
+    .limit(1);
   const { data: existing, error: readError } = profile
     ? await existingQuery.eq('player_id', profile.id).maybeSingle()
     : await existingQuery.ilike('display_name', name).maybeSingle();
   if (readError) throw readError;
   if (existing) {
-    const { data, error } = await supabase
+    const eventPlayerPatch = {
+      display_name: profile?.display_name || name,
+      estimated_level: profile?.default_level || level,
+      updated_at: new Date().toISOString()
+    };
+    const avatarUrl = profile?.avatar_url || payload.avatarUrl || existing.avatar_url || '';
+    if (avatarUrl) eventPlayerPatch.avatar_url = avatarUrl;
+    let { data, error } = await supabase
       .from('v2_event_players')
-      .update({
-        display_name: profile?.display_name || name,
-        estimated_level: profile?.default_level || level,
-        avatar_url: profile?.avatar_url || payload.avatarUrl || existing.avatar_url || null,
-        updated_at: new Date().toISOString()
-      })
+      .update(eventPlayerPatch)
       .eq('id', existing.id)
       .select('*')
       .single();
+    if (error && isMissingSchemaObject(error, 'avatar_url')) {
+      delete eventPlayerPatch.avatar_url;
+      ({ data, error } = await supabase
+        .from('v2_event_players')
+        .update(eventPlayerPatch)
+        .eq('id', existing.id)
+        .select('*')
+        .single());
+    }
     if (error) throw error;
-    return { ...normalizePlayer(data), duplicate: true };
+    return { ...normalizePlayer(data), ...profileState, duplicate: true };
   }
 
-  const { data, error } = await supabase
+  const eventPlayerPayload = {
+    organization_id: payload.organizationId,
+    event_id: payload.eventId,
+    player_id: profile?.id || payload.playerId || null,
+    display_name: profile?.display_name || name,
+    estimated_level: profile?.default_level || level,
+    status: payload.status || 'checked_in',
+    queue_joined_at: new Date().toISOString()
+  };
+  const avatarUrl = profile?.avatar_url || payload.avatarUrl || '';
+  if (avatarUrl) eventPlayerPayload.avatar_url = avatarUrl;
+  let { data, error } = await supabase
     .from('v2_event_players')
-    .insert({
-      organization_id: payload.organizationId,
-      event_id: payload.eventId,
-      player_id: profile?.id || payload.playerId || null,
-      display_name: profile?.display_name || name,
-      estimated_level: profile?.default_level || level,
-      avatar_url: profile?.avatar_url || payload.avatarUrl || null,
-      status: payload.status || 'checked_in',
-      queue_joined_at: new Date().toISOString()
-    })
+    .insert(eventPlayerPayload)
     .select('*')
     .single();
+  if (error && isMissingSchemaObject(error, 'avatar_url')) {
+    delete eventPlayerPayload.avatar_url;
+    ({ data, error } = await supabase
+      .from('v2_event_players')
+      .insert(eventPlayerPayload)
+      .select('*')
+      .single());
+  }
 
   if (error) throw error;
-  return normalizePlayer(data);
+  return { ...normalizePlayer(data), ...profileState };
 }
 
 export async function updateEventPlayerStatus(supabase, eventPlayerId, status) {
