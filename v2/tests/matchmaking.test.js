@@ -120,6 +120,85 @@ function match(id, teamA, teamB, minutesAgo) {
   assert.deepEqual(selectedIds, ['low1', 'low2', 'low3', 'low4']);
 }
 
+// Test 3b: former winning and losing teammates are always split into new teams.
+{
+  const history = [
+    { ...match('result', ['winner-1', 'winner-2'], ['loser-1', 'loser-2'], 5), winner: 'A' }
+  ];
+  const result = generateMatches({
+    players: ['winner-1', 'winner-2', 'loser-1', 'loser-2'].map((id) => player(id, 0, 3)),
+    courts: [{ id: 'c1', name: 'Court 1' }],
+    history,
+    now
+  });
+  assert.equal(result.previews.length, 1);
+  const teams = result.previews[0];
+  const teamKeys = [teams.teamA, teams.teamB].map((team) => team.map((item) => item.id).sort().join('|'));
+  assert.equal(teamKeys.includes('winner-1|winner-2'), false);
+  assert.equal(teamKeys.includes('loser-1|loser-2'), false);
+}
+
+// Test 3c: players waiting through two completed rounds are assigned before others.
+{
+  const history = [
+    match('wait-recent', ['active-1', 'active-2'], ['active-3', 'active-4'], 2),
+    match('wait-previous', ['active-1', 'active-3'], ['active-2', 'active-4'], 8)
+  ];
+  const waiting = ['waiting-1', 'waiting-2', 'waiting-3', 'waiting-4'].map((id) => player(id, 0, 3, 30));
+  const active = ['active-1', 'active-2', 'active-3', 'active-4'].map((id) => player(id, 2, 3, 30));
+  const result = generateMatches({
+    players: [...waiting, ...active],
+    courts: [{ id: 'c1', name: 'Court 1' }],
+    history,
+    now
+  });
+  const selected = [...result.previews[0].teamA, ...result.previews[0].teamB].map((item) => item.id).sort();
+  assert.deepEqual(selected, waiting.map((item) => item.id).sort());
+  assert.deepEqual(result.constraints.unservedWaitLimitPlayers, []);
+}
+
+// Test 3d: every automatic preview meets the 80% balance floor.
+{
+  const result = generateMatches({
+    players: [player('a', 0, 2), player('b', 0, 2), player('c', 0, 4), player('d', 0, 4)],
+    courts: [{ id: 'c1', name: 'Court 1' }],
+    history: [],
+    now
+  });
+  assert.equal(result.previews.length, 1);
+  assert.equal(result.previews[0].balancePercent >= 80, true);
+}
+
+// Test 3e: insufficient court capacity is reported when players have waited two rounds.
+{
+  const history = [
+    match('capacity-recent', ['active-1', 'active-2'], ['active-3', 'active-4'], 2),
+    match('capacity-previous', ['active-1', 'active-3'], ['active-2', 'active-4'], 8)
+  ];
+  const waiting = Array.from({ length: 8 }, (_, index) => player(`waiting-${index + 1}`, 0, 3, 30));
+  const active = ['active-1', 'active-2', 'active-3', 'active-4'].map((id) => player(id, 2, 3, 30));
+  const result = generateMatches({
+    players: [...waiting, ...active],
+    courts: [{ id: 'c1', name: 'Court 1' }],
+    history,
+    now
+  });
+  assert.equal(result.previews.length, 1);
+  assert.equal(result.constraints.unservedWaitLimitPlayers.length, 4);
+}
+
+// Test 3f: if 80% balance is impossible, do not create an unfair automatic preview.
+{
+  const result = generateMatches({
+    players: [player('a', 0, 2), player('b', 0, 2), player('c', 0, 2), player('d', 0, 4)],
+    courts: [{ id: 'c1', name: 'Court 1' }],
+    history: [],
+    now
+  });
+  assert.equal(result.previews.length, 0);
+  assert.match(result.reason, /80% balance/);
+}
+
 // Test 4: no preview if fewer than four eligible players.
 {
   const result = generateMatches({

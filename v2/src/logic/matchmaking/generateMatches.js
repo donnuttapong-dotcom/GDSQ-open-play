@@ -3,9 +3,15 @@ export const DEFAULT_MATCHMAKING_RULES = {
   rotationConsecutiveGameLimit: 2,
   rotationConsecutiveRestLimit: 2,
   enforceAutoRest: true,
+  enforceUniquePartners: true,
+  separatePreviousWinningTeams: true,
+  separatePreviousLosingTeams: true,
+  maxConsecutiveWaitRounds: 2,
+  minBalancePercent: 80,
   rotationHardPenalty: 20000,
   rotationHardBonus: 9000,
   candidateLimit: 16,
+  candidatePlanLimit: 48,
   lowGamesWeight: 260,
   waitMinuteBonus: 12,
   neverPlayedBonus: 1400,
@@ -89,6 +95,8 @@ function shouldUseMatchInHistory(match) {
 export function buildMatchHistoryStats(history = []) {
   const partnerRepeats = new Map();
   const opponentRepeats = new Map();
+  const winningPartnerRepeats = new Map();
+  const losingPartnerRepeats = new Map();
   const lastPlayedAt = new Map();
   const playedCount = new Map();
   const waves = [];
@@ -110,6 +118,12 @@ export function buildMatchHistoryStats(history = []) {
     for (let i = 0; i < teamB.length; i += 1) for (let j = i + 1; j < teamB.length; j += 1) addPair(partnerRepeats, teamB[i], teamB[j]);
     for (const a of teamA) for (const b of teamB) addPair(opponentRepeats, a, b);
 
+    const winner = matchWinner(item.match);
+    const winningTeam = winner === 'A' ? teamA : winner === 'B' ? teamB : [];
+    const losingTeam = winner === 'A' ? teamB : winner === 'B' ? teamA : [];
+    for (let i = 0; i < winningTeam.length; i += 1) for (let j = i + 1; j < winningTeam.length; j += 1) addPair(winningPartnerRepeats, winningTeam[i], winningTeam[j]);
+    for (let i = 0; i < losingTeam.length; i += 1) for (let j = i + 1; j < losingTeam.length; j += 1) addPair(losingPartnerRepeats, losingTeam[i], losingTeam[j]);
+
     allPlayers.forEach((id) => {
       const sid = String(id);
       playedCount.set(sid, (playedCount.get(sid) || 0) + 1);
@@ -124,7 +138,17 @@ export function buildMatchHistoryStats(history = []) {
     allPlayers.forEach((id) => wave.playerIds.add(String(id)));
   }
 
-  return { partnerRepeats, opponentRepeats, waves, lastPlayedAt, playedCount };
+  return { partnerRepeats, opponentRepeats, winningPartnerRepeats, losingPartnerRepeats, waves, lastPlayedAt, playedCount };
+}
+
+function matchWinner(match) {
+  const winner = String(match?.winner || match?.winningTeam || match?.winning_team || '').trim().toUpperCase();
+  if (winner === 'A' || winner === 'TEAM A') return 'A';
+  if (winner === 'B' || winner === 'TEAM B') return 'B';
+  const scoreA = Number(match?.teamAScore ?? match?.team_a_score);
+  const scoreB = Number(match?.teamBScore ?? match?.team_b_score);
+  if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB) || scoreA === scoreB) return '';
+  return scoreA > scoreB ? 'A' : 'B';
 }
 
 export function countConsecutiveGames(player, historyStats) {
@@ -210,6 +234,23 @@ function teamAverageLevel(team) {
   return team.reduce((sum, player) => sum + getLevel(player), 0) / team.length;
 }
 
+function balancePercent(teamA, teamB) {
+  const gap = Math.abs(teamAverageLevel(teamA) - teamAverageLevel(teamB));
+  return Math.max(0, Math.round(100 - Math.min(gap, 2.5) / 2.5 * 100));
+}
+
+function teamPairKey(team) {
+  return pairKey(playerId(team[0]), playerId(team[1]));
+}
+
+function teamPairIsAllowed(team, historyStats, rules) {
+  const key = teamPairKey(team);
+  if (rules.enforceUniquePartners && (historyStats.partnerRepeats.get(key) || 0) > 0) return false;
+  if (rules.separatePreviousWinningTeams && (historyStats.winningPartnerRepeats.get(key) || 0) > 0) return false;
+  if (rules.separatePreviousLosingTeams && (historyStats.losingPartnerRepeats.get(key) || 0) > 0) return false;
+  return true;
+}
+
 function pairingScore(teamA, teamB, historyStats, rules) {
   const levelGap = Math.abs(teamAverageLevel(teamA) - teamAverageLevel(teamB));
   const partnerRepeat = (historyStats.partnerRepeats.get(pairKey(playerId(teamA[0]), playerId(teamA[1]))) || 0) + (historyStats.partnerRepeats.get(pairKey(playerId(teamB[0]), playerId(teamB[1]))) || 0);
@@ -225,8 +266,11 @@ function bestTeamSplit(group, historyStats, rules) {
   for (const [aIndexes, bIndexes] of splits) {
     const teamA = aIndexes.map((index) => group[index]);
     const teamB = bIndexes.map((index) => group[index]);
+    const balance = balancePercent(teamA, teamB);
+    if (balance < rules.minBalancePercent) continue;
+    if (!teamPairIsAllowed(teamA, historyStats, rules) || !teamPairIsAllowed(teamB, historyStats, rules)) continue;
     const score = pairingScore(teamA, teamB, historyStats, rules);
-    if (!best || score < best.score) best = { teamA, teamB, score };
+    if (!best || score < best.score || (score === best.score && balance > best.balancePercent)) best = { teamA, teamB, score, balancePercent: balance };
   }
   return best;
 }
@@ -247,37 +291,84 @@ export function generateMatches({ players = [], courts = [], history = [], rules
 
   if (availablePlayers.length < 4) return { previews: [], restingPlayers, availablePlayers, reason: `Not enough eligible players. Need 4, got ${availablePlayers.length}.` };
 
-  const used = new Set();
-  const previews = [];
+  const waitedTooLong = availablePlayers.filter((player) => countConsecutiveRests(player, historyStats) >= mergedRules.maxConsecutiveWaitRounds);
+  const waitLimitIds = new Set(waitedTooLong.map(playerId));
+  let searchBudget = 1200;
 
-  for (const court of courtList) {
-    const availableForCourt = availablePlayers.filter((player) => !used.has(playerId(player)));
-    if (availableForCourt.length < 4) break;
+  function candidatesForCourt(courtIndex, usedIds) {
+    const availableForCourt = availablePlayers.filter((player) => !usedIds.has(playerId(player)));
+    if (availableForCourt.length < 4) return [];
 
-    const shortlist = [...availableForCourt]
-      .sort((a, b) => playerPriorityScore(a, historyStats, mergedRules, now) - playerPriorityScore(b, historyStats, mergedRules, now))
-      .slice(0, mergedRules.candidateLimit);
+    const remainingSlots = Math.min(availableForCourt.length, (courtList.length - courtIndex) * 4);
+    const waitingForCourt = availableForCourt.filter((player) => waitLimitIds.has(playerId(player)));
+    // Ensure every player who has sat out two completed rounds is placed before
+    // the available court capacity runs out.
+    const requiredWaitingPlayers = Math.min(4, Math.max(0, waitingForCourt.length - Math.max(0, remainingSlots - 4)));
+    const priorityList = [...availableForCourt]
+      .sort((a, b) => playerPriorityScore(a, historyStats, mergedRules, now) - playerPriorityScore(b, historyStats, mergedRules, now));
+    const forcedCandidates = priorityList.filter((player) => waitLimitIds.has(playerId(player)));
+    const shortlist = [...forcedCandidates, ...priorityList.filter((player) => !waitLimitIds.has(playerId(player)))]
+      .slice(0, Math.max(mergedRules.candidateLimit, forcedCandidates.length));
 
-    let bestGroup = null;
-    for (const group of combinations(shortlist, 4)) {
-      const score = groupScore(group, historyStats, mergedRules, now);
-      if (!bestGroup || score < bestGroup.score) bestGroup = { group, score };
-    }
+    return combinations(shortlist, 4)
+      .filter((group) => group.filter((player) => waitLimitIds.has(playerId(player))).length >= requiredWaitingPlayers)
+      .map((group) => {
+        const split = bestTeamSplit(group, historyStats, mergedRules);
+        return split ? { group, split, score: groupScore(group, historyStats, mergedRules, now) + split.score } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.score - b.score)
+      .slice(0, mergedRules.candidatePlanLimit);
+  }
 
-    if (!bestGroup) break;
-    const split = bestTeamSplit(bestGroup.group, historyStats, mergedRules);
-    bestGroup.group.forEach((player) => used.add(playerId(player)));
-
-    previews.push({
+  function toPreview(court, candidate) {
+    return {
       courtId: court.id || court.name,
       courtNumber: Number(court.courtNumber ?? court.court_number) || Number(String(court.id || court.name || '').match(/\d+/)?.[0]) || null,
       courtName: court.name || court.id,
-      teamA: split.teamA,
-      teamB: split.teamB,
-      fairnessScore: Math.round(bestGroup.score + split.score),
+      teamA: candidate.split.teamA,
+      teamB: candidate.split.teamB,
+      fairnessScore: Math.round(candidate.score),
+      balancePercent: candidate.split.balancePercent,
       restBlockedCount: 0
-    });
+    };
   }
 
-  return { previews, restingPlayers, availablePlayers, reason: previews.length ? 'ok' : 'No court could be assigned.' };
+  function planCourts(courtIndex, usedIds, planned) {
+    const remainingPlayers = availablePlayers.filter((player) => !usedIds.has(playerId(player)));
+    if (courtIndex >= courtList.length || remainingPlayers.length < 4 || searchBudget <= 0) return planned;
+    const candidates = candidatesForCourt(courtIndex, usedIds);
+    if (!candidates.length) return planned;
+
+    let bestPlan = planned;
+    const maximumPreviewCount = planned.length + Math.min(courtList.length - courtIndex, Math.floor(remainingPlayers.length / 4));
+    for (const candidate of candidates) {
+      if (searchBudget-- <= 0) break;
+      const nextUsed = new Set(usedIds);
+      candidate.group.forEach((player) => nextUsed.add(playerId(player)));
+      const nextPlan = planCourts(courtIndex + 1, nextUsed, [...planned, toPreview(courtList[courtIndex], candidate)]);
+      if (nextPlan.length > bestPlan.length || (nextPlan.length === bestPlan.length && nextPlan.reduce((sum, preview) => sum + preview.fairnessScore, 0) < bestPlan.reduce((sum, preview) => sum + preview.fairnessScore, 0))) bestPlan = nextPlan;
+      if (bestPlan.length === maximumPreviewCount) return bestPlan;
+    }
+    return bestPlan;
+  }
+
+  const previews = planCourts(0, new Set(), []);
+  const used = new Set(previews.flatMap((preview) => [...preview.teamA, ...preview.teamB].map(playerId)));
+
+  const unservedWaitLimitPlayers = waitedTooLong.filter((player) => !used.has(playerId(player)));
+  const reason = previews.length
+    ? 'ok'
+    : 'No court could be assigned without repeating partners or dropping below the 80% balance target.';
+  return {
+    previews,
+    restingPlayers,
+    availablePlayers,
+    reason,
+    constraints: {
+      minBalancePercent: mergedRules.minBalancePercent,
+      waitedTwoRounds: waitedTooLong.map(playerId),
+      unservedWaitLimitPlayers: unservedWaitLimitPlayers.map(playerId)
+    }
+  };
 }
