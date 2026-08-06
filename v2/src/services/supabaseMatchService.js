@@ -240,3 +240,22 @@ export async function updateConfirmedScore(supabase, matchId, payload) {
   if (error) throw error;
   return fetchMatch(supabase, matchId);
 }
+
+export async function isAdminPasscodeConfigured(supabase) {
+  const { data, error } = await supabase.rpc('v2_admin_passcode_configured');
+  if (error) throw error;
+  return data === true;
+}
+
+export async function setAdminPasscode(supabase, passcode) {
+  const { error } = await supabase.rpc('v2_set_admin_passcode', { p_passcode: passcode });
+  if (error) throw error;
+  return true;
+}
+
+export async function updateConfirmedScoreWithPasscode(supabase, matchId, payload) {
+  const score = validConfirmedScore(payload);
+  const { error } = await supabase.rpc('v2_update_confirmed_match_score_with_passcode', { p_match_id: matchId, p_team_a_score: score.teamAScore, p_team_b_score: score.teamBScore, p_passcode: payload.passcode });
+  if (error) throw error;
+  return fetchMatch(supabase, matchId);
+}

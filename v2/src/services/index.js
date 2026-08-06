@@ -19,7 +19,7 @@ import { listLocalEventMatches, createLocalMatchPreview, updateLocalMatchPreview
 import { clearLocalEventData } from './localEventCleanup.js';
 import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus, deleteEvent as deleteSupabaseEvent } from './supabaseEventService.js';
 import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer, updateEventPlayerStatus as updateSupabaseEventPlayerStatus, updateEventPlayerLevel as updateSupabaseEventPlayerLevel, findPlayerProfileByEmail as findSupabasePlayerProfileByEmail, getAuthenticatedPlayer as getSupabaseAuthenticatedPlayer, sendPlayerSignInLink as sendSupabasePlayerSignInLink, signOutPlayer as signOutSupabasePlayer } from './supabasePlayerService.js?v=secure-profile-01';
-import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, updateMatchPreview as updateSupabaseMatchPreview, startMatch as startSupabaseMatch, cancelMatch as cancelSupabaseMatch, confirmScore as confirmSupabaseScore, updateConfirmedScore as updateSupabaseConfirmedScore } from './supabaseMatchService.js';
+import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, updateMatchPreview as updateSupabaseMatchPreview, startMatch as startSupabaseMatch, cancelMatch as cancelSupabaseMatch, confirmScore as confirmSupabaseScore, updateConfirmedScore as updateSupabaseConfirmedScore, isAdminPasscodeConfigured as isSupabaseAdminPasscodeConfigured, setAdminPasscode as setSupabaseAdminPasscode, updateConfirmedScoreWithPasscode as updateSupabaseConfirmedScoreWithPasscode } from './supabaseMatchService.js';
 
 const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
 
@@ -265,6 +265,14 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
       rebuildLocalMatchStats(payload.eventId, listLocalEventMatches(payload.eventId));
       return match;
     },
+
+    async isAdminPasscodeConfigured() { return isSupabase ? isSupabaseAdminPasscodeConfigured(requireSupabase(supabase)) : Boolean(localStorage.getItem('gdsq_v2_admin_passcode')); },
+    async setAdminPasscode(passcode) { if (isSupabase) return setSupabaseAdminPasscode(requireSupabase(supabase), passcode); localStorage.setItem('gdsq_v2_admin_passcode', passcode); return true; },
+    async updateConfirmedScoreWithPasscode(matchId, payload) {
+      if (isSupabase) return updateSupabaseConfirmedScoreWithPasscode(requireSupabase(supabase), matchId, payload);
+      if (payload.passcode !== localStorage.getItem('gdsq_v2_admin_passcode')) throw new Error('Invalid admin passcode');
+      return this.updateConfirmedScore(matchId, payload);
+    }
 
   };
 }
