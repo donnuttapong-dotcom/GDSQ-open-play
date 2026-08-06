@@ -14,12 +14,12 @@ import { getCourts as getMockCourts } from './mockEventService.js';
 import { getEventPlayers as getMockEventPlayers } from './mockPlayerService.js';
 import { getMatchHistory as getMockMatchHistory } from './mockMatchService.js';
 import { listLocalEventPlayers, checkInLocalPlayer, updateLocalEventPlayerLevel, findLocalPlayerProfileByEmail } from './localPlayerStore.js?v=email-profile-02';
-import { mergeLocalPlayerStats, setLocalPlayerStatus, setLocalPlayerLevel, forceAllLocalPlayersReady, applyLocalMatchResult, releaseInactivePlayingPlayers } from './localPlayerStatsStore.js';
-import { listLocalEventMatches, createLocalMatchPreview, updateLocalMatchPreview, startLocalMatch, cancelLocalMatch, confirmLocalScore } from './localMatchStore.js';
+import { mergeLocalPlayerStats, setLocalPlayerStatus, setLocalPlayerLevel, forceAllLocalPlayersReady, applyLocalMatchResult, rebuildLocalMatchStats, releaseInactivePlayingPlayers } from './localPlayerStatsStore.js';
+import { listLocalEventMatches, createLocalMatchPreview, updateLocalMatchPreview, startLocalMatch, cancelLocalMatch, confirmLocalScore, updateLocalConfirmedScore } from './localMatchStore.js';
 import { clearLocalEventData } from './localEventCleanup.js';
 import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus, deleteEvent as deleteSupabaseEvent } from './supabaseEventService.js';
 import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer, updateEventPlayerStatus as updateSupabaseEventPlayerStatus, updateEventPlayerLevel as updateSupabaseEventPlayerLevel, findPlayerProfileByEmail as findSupabasePlayerProfileByEmail, getAuthenticatedPlayer as getSupabaseAuthenticatedPlayer, sendPlayerSignInLink as sendSupabasePlayerSignInLink, signOutPlayer as signOutSupabasePlayer } from './supabasePlayerService.js?v=secure-profile-01';
-import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, updateMatchPreview as updateSupabaseMatchPreview, startMatch as startSupabaseMatch, cancelMatch as cancelSupabaseMatch, confirmScore as confirmSupabaseScore } from './supabaseMatchService.js';
+import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, updateMatchPreview as updateSupabaseMatchPreview, startMatch as startSupabaseMatch, cancelMatch as cancelSupabaseMatch, confirmScore as confirmSupabaseScore, updateConfirmedScore as updateSupabaseConfirmedScore } from './supabaseMatchService.js';
 
 const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
 
@@ -252,6 +252,19 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
       const match = confirmLocalScore(payload.eventId, matchId, payload);
       applyLocalMatchResult(payload.eventId, match);
       return match;
-    }
+    },
+
+    async canEditConfirmedResults() {
+      if (!isSupabase) return true;
+      return Boolean(await getSupabaseAuthenticatedPlayer(requireSupabase(supabase)));
+    },
+
+    async updateConfirmedScore(matchId, payload) {
+      if (isSupabase) return updateSupabaseConfirmedScore(requireSupabase(supabase), matchId, payload);
+      const match = updateLocalConfirmedScore(payload.eventId, matchId, payload);
+      rebuildLocalMatchStats(payload.eventId, listLocalEventMatches(payload.eventId));
+      return match;
+    },
+
   };
 }

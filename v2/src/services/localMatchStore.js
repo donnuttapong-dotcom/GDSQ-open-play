@@ -183,6 +183,32 @@ export function confirmLocalScore(eventId, matchId, payload) {
   return matches[index];
 }
 
+function validFinalScore(payload = {}) {
+  const teamAScore = Number(payload.teamAScore);
+  const teamBScore = Number(payload.teamBScore);
+  if (!Number.isInteger(teamAScore) || !Number.isInteger(teamBScore) || teamAScore < 0 || teamBScore < 0 || teamAScore > 99 || teamBScore > 99 || teamAScore === teamBScore) {
+    throw new Error('Scores must be different whole numbers between 0 and 99');
+  }
+  return { teamAScore, teamBScore };
+}
+
+export function updateLocalConfirmedScore(eventId, matchId, payload) {
+  const matches = list(eventId);
+  const index = matches.findIndex((match) => String(match.id) === String(matchId));
+  if (index < 0) throw new Error('Match not found');
+  if (String(matches[index].status).toLowerCase() !== 'confirmed') throw new Error('Only confirmed results can be edited from statistics');
+  const score = validFinalScore(payload);
+  matches[index] = {
+    ...matches[index],
+    teamAScore: score.teamAScore,
+    teamBScore: score.teamBScore,
+    winner: score.teamAScore > score.teamBScore ? 'A' : 'B',
+    updatedAt: new Date().toISOString()
+  };
+  save(eventId, matches);
+  return matches[index];
+}
+
 export function clearLocalEventMatches(eventId) {
   if (!eventId) return;
   localStorage.removeItem(key(eventId));

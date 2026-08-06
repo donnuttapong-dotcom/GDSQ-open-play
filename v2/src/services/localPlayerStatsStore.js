@@ -170,6 +170,45 @@ export function applyLocalMatchResult(eventId, match) {
   return stats;
 }
 
+export function rebuildLocalMatchStats(eventId, matches = []) {
+  const stats = readStats(eventId);
+  for (const record of Object.values(stats)) {
+    record.delta = getBaseStats();
+    record.appliedMatchIds = [];
+  }
+
+  const confirmedMatches = matches.filter((match) => String(match?.status || '').toLowerCase() === 'confirmed');
+  for (const match of confirmedMatches) {
+    const teamA = (match.teamA || match.team_a || []).map(playerId).filter(Boolean).map(String);
+    const teamB = (match.teamB || match.team_b || []).map(playerId).filter(Boolean).map(String);
+    const scoreA = Number(match.teamAScore ?? match.team_a_score);
+    const scoreB = Number(match.teamBScore ?? match.team_b_score);
+    if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB) || scoreA === scoreB) continue;
+    const teamAWon = scoreA > scoreB;
+    const matchId = String(match.id || '');
+    for (const id of teamA) {
+      const record = ensurePlayer(stats, id);
+      record.delta.matchesPlayed += 1;
+      record.delta.wins += teamAWon ? 1 : 0;
+      record.delta.losses += teamAWon ? 0 : 1;
+      record.delta.pointsFor += scoreA;
+      record.delta.pointsAgainst += scoreB;
+      record.appliedMatchIds = [...(record.appliedMatchIds || []), matchId];
+    }
+    for (const id of teamB) {
+      const record = ensurePlayer(stats, id);
+      record.delta.matchesPlayed += teamAWon ? 0 : 1;
+      record.delta.wins += teamAWon ? 0 : 1;
+      record.delta.losses += teamAWon ? 1 : 0;
+      record.delta.pointsFor += scoreB;
+      record.delta.pointsAgainst += scoreA;
+      record.appliedMatchIds = [...(record.appliedMatchIds || []), matchId];
+    }
+  }
+  writeStats(eventId, stats);
+  return stats;
+}
+
 export function clearLocalPlayerStats(eventId) {
   if (!eventId) return;
   localStorage.removeItem(key(eventId));

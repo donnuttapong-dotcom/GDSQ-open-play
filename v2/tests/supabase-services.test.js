@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { checkInPlayer, findPlayerProfileByEmail, getAuthenticatedPlayer } from '../src/services/supabasePlayerService.js';
-import { confirmScore, updateMatchPreview } from '../src/services/supabaseMatchService.js';
+import { confirmScore, updateConfirmedScore, updateMatchPreview } from '../src/services/supabaseMatchService.js';
 
 function result(value) {
   return Promise.resolve(value);
@@ -193,6 +193,31 @@ function playerServiceFake({ user = null, existingProfile = null, existingEventP
   assert.deepEqual(rpcCalls, [['v2_update_match_preview_safely', {
     p_match_id: 'preview-1',
     p_event_player_ids: ['p4', 'p2', 'p3', 'p1']
+  }]]);
+}
+
+// Editing an already confirmed result uses the signed-in-only RPC, not a direct table update.
+{
+  const rpcCalls = [];
+  const row = {
+    id: 'confirmed-1', event_id: 'event-1', organization_id: 'org-1', court_number: 1,
+    status: 'confirmed', team_a_score: 9, team_b_score: 11, winner: 'B', players: []
+  };
+  const supabase = {
+    rpc(name, payload) { rpcCalls.push([name, payload]); return result({ error: null }); },
+    from() {
+      const chain = {
+        select() { return chain; },
+        eq() { return chain; },
+        single() { return result({ data: row, error: null }); }
+      };
+      return chain;
+    }
+  };
+  const updated = await updateConfirmedScore(supabase, row.id, { teamAScore: 11, teamBScore: 9 });
+  assert.equal(updated.status, 'confirmed');
+  assert.deepEqual(rpcCalls, [['v2_update_confirmed_match_score', {
+    p_match_id: 'confirmed-1', p_team_a_score: 11, p_team_b_score: 9
   }]]);
 }
 

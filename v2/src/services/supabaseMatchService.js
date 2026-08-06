@@ -220,3 +220,23 @@ export async function confirmScore(supabase, matchId, payload) {
   }
   return fetchMatch(supabase, matchId);
 }
+
+function validConfirmedScore(payload = {}) {
+  const teamAScore = Number(payload.teamAScore);
+  const teamBScore = Number(payload.teamBScore);
+  if (!Number.isInteger(teamAScore) || !Number.isInteger(teamBScore) || teamAScore < 0 || teamBScore < 0 || teamAScore > 99 || teamBScore > 99 || teamAScore === teamBScore) {
+    throw new Error('Scores must be different whole numbers between 0 and 99');
+  }
+  return { teamAScore, teamBScore };
+}
+
+export async function updateConfirmedScore(supabase, matchId, payload) {
+  const score = validConfirmedScore(payload);
+  const { error } = await supabase.rpc('v2_update_confirmed_match_score', {
+    p_match_id: matchId,
+    p_team_a_score: score.teamAScore,
+    p_team_b_score: score.teamBScore
+  });
+  if (error) throw error;
+  return fetchMatch(supabase, matchId);
+}
