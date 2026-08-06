@@ -246,7 +246,7 @@ const dom={modeBadge:$('modeBadge'),msg:$('msg'),languageToggle:$('languageToggl
 const services=createV2Services();
 mountAdminResultsTab({services});
 const levels=Array.from({length:25},(_,i)=>2+i*.25);
-let currentTab='manage',events=[],event=null,players=[],matches=[],refreshing=false,scoreEditingUntil=0,pendingAvatarUrl='',connectionHealth='checking',qrHealth='checking',operationalCheckTask=null;
+let currentTab=new URLSearchParams(location.search).get('admin')==='1'?'admin':'manage',events=[],event=null,players=[],matches=[],refreshing=false,scoreEditingUntil=0,pendingAvatarUrl='',connectionHealth='checking',qrHealth='checking',operationalCheckTask=null;
 const LANG_KEY='gdsq_v2_ui_lang';
 const COURT_COUNT_KEY='gdsq_v2_event_court_counts';
 const AUTO_REST_OVERRIDE_KEY='gdsq_v2_auto_rest_overrides';
@@ -433,7 +433,7 @@ setInterval(updateLiveTimers,1000);
 setInterval(()=>{if(services.mode==='supabase'&&['stats','manage'].includes(currentTab)&&!isEditingControl())refreshCurrentSilently();},3000);
 initCreateEventDefaults();
 window.addEventListener('gdsq-language-change',applyStaticPageLanguage);applyLanguage();
-loadAll().catch(error=>{console.error('Initial load failed',error);showMessage(actionErrorMessage(error));renderPreEventChecklist();});
+loadAll().then(()=>setTab(currentTab)).catch(error=>{console.error('Initial load failed',error);showMessage(actionErrorMessage(error));renderPreEventChecklist();});
 </script>
 <script type="module" src="./src/ui/courtAssignmentUi.js?v=court-assignment-01"></script>
 </body>
