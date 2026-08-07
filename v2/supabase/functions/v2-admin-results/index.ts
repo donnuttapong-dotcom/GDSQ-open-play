@@ -23,7 +23,7 @@ Deno.serve(async (request) => {
   if (!url || !serviceRoleKey) return json({ ok: false, error: 'Admin service is not configured' }, 500, origin);
   const body = await request.json().catch(() => null);
   const action = String(body?.action || ''), passcode = String(body?.passcode || '');
-  if (!['verify', 'updateScore'].includes(action) || passcode.length < 6 || passcode.length > 128) return json({ ok: false, error: 'Invalid request' }, 400, origin);
+  if (!['verify', 'updateScore', 'updatePlayers', 'deleteMatch'].includes(action) || passcode.length < 5 || passcode.length > 128) return json({ ok: false, error: 'Invalid request' }, 400, origin);
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
   const ipHash = await hash(clientIp(request)), windowStart = new Date(Date.now() - 15 * 60 * 1000).toISOString();
   const { count, error: countError } = await admin.from('v2_admin_access_attempts').select('*', { count: 'exact', head: true }).eq('ip_hash', ipHash).eq('success', false).gte('created_at', windowStart);
@@ -34,6 +34,18 @@ Deno.serve(async (request) => {
   await admin.from('v2_admin_access_attempts').insert({ ip_hash: ipHash, action, success });
   if (!success) return json({ ok: false, error: 'Invalid Admin passcode' }, 401, origin);
   if (action === 'verify') return json({ ok: true }, 200, origin);
+  if (action === 'deleteMatch') {
+    const { error: deleteError } = await admin.rpc('v2_admin_soft_delete_match', { p_match_id: body.matchId, p_ip_hash: ipHash });
+    if (deleteError) return json({ ok: false, error: deleteError.message || 'Could not delete match' }, 400, origin);
+    return json({ ok: true }, 200, origin);
+  }
+  if (action === 'updatePlayers') {
+    const ids = Array.isArray(body.eventPlayerIds) ? body.eventPlayerIds.map(String) : [];
+    if (ids.length !== 4 || new Set(ids).size !== 4) return json({ ok: false, error: 'Choose four different players' }, 400, origin);
+    const { error: playersError } = await admin.rpc('v2_admin_update_match_players', { p_match_id: body.matchId, p_event_player_ids: ids, p_ip_hash: ipHash });
+    if (playersError) return json({ ok: false, error: playersError.message || 'Could not update players' }, 400, origin);
+    return json({ ok: true }, 200, origin);
+  }
   const teamAScore = Number(body.teamAScore), teamBScore = Number(body.teamBScore);
   if (!Number.isInteger(teamAScore) || !Number.isInteger(teamBScore) || teamAScore < 0 || teamBScore < 0 || teamAScore > 99 || teamBScore > 99 || teamAScore === teamBScore) return json({ ok: false, error: 'Invalid score' }, 400, origin);
   const { error: updateError } = await admin.rpc('v2_admin_update_confirmed_match_score', { p_match_id: body.matchId, p_team_a_score: teamAScore, p_team_b_score: teamBScore, p_ip_hash: ipHash });
