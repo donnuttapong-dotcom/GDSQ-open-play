@@ -8,7 +8,9 @@ const MODE_KEY = 'gdsq_v2_service_mode';
 const EVENTS_KEY = 'gdsq_v2_events';
 const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
 const STATS_TAB_KEY = 'gdsq_v2_open_tab';
-const PUBLIC_APP_URL = 'https://donnuttapong-dotcom.github.io/GDSQ-open-play/v2/openplay.html';
+// Build shared links from the deployed host so a fallback host never sends
+// players back to a stale GitHub Pages URL.
+const publicAppUrl = () => new URL('./openplay.html', location.href).toString();
 
 function hydrateLegacyStatsShare() {
   const params = new URLSearchParams(location.search);
@@ -90,7 +92,7 @@ function readEvents() {
 
 function statsLinkForEvent(eventId, shared = isSupabaseMode()) {
   if (!shared || !eventId) return '';
-  const url = new URL(PUBLIC_APP_URL);
+  const url = new URL(publicAppUrl());
   url.searchParams.set('event', eventId);
   url.searchParams.set('tab', 'stats');
   url.searchParams.set('mode', SERVICE_MODES.SUPABASE);
