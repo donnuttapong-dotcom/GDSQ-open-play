@@ -10,16 +10,18 @@ export const DEFAULT_MATCHMAKING_RULES = {
   minBalancePercent: 80,
   rotationHardPenalty: 20000,
   rotationHardBonus: 9000,
-  candidateLimit: 16,
-  candidatePlanLimit: 48,
-  lowGamesWeight: 260,
+  candidateLimit: 24,
+  candidatePlanLimit: 72,
+  lowGamesWeight: 520,
   waitMinuteBonus: 12,
   neverPlayedBonus: 1400,
   freshPlayerBonus: 900,
   justPlayedPenalty: 1100,
   consecutivePenalty: 900,
   partnerRepeatPenalty: 110,
-  opponentRepeatPenalty: 36,
+  opponentRepeatPenalty: 90,
+  recentOpponentRepeatPenalty: 600,
+  recentGroupRepeatPenalty: 5000,
   levelGapPenalty: 80,
   teamGameGapPenalty: 12,
   groupGameSpreadPenalty: 120
@@ -47,6 +49,10 @@ function playerId(player) {
 
 function pairKey(a, b) {
   return [String(a), String(b)].sort().join('|');
+}
+
+function groupKey(players) {
+  return players.map((player) => typeof player === 'string' ? player : playerId(player)).filter(Boolean).sort().join('|');
 }
 
 function addPair(map, a, b, count = 1) {
@@ -99,6 +105,8 @@ export function buildMatchHistoryStats(history = []) {
   const losingPartnerRepeats = new Map();
   const lastPlayedAt = new Map();
   const playedCount = new Map();
+  const recentOpponentPairs = new Set();
+  const recentGroupKeys = new Set();
   const waves = [];
   const syntheticStepMs = 240000;
   const syntheticBaseMs = 4102444800000;
@@ -108,7 +116,7 @@ export function buildMatchHistoryStats(history = []) {
     .filter(({ match }) => shouldUseMatchInHistory(match))
     .sort((a, b) => b.time - a.time || a.index - b.index);
 
-  for (const item of sorted) {
+  for (const [historyIndex, item] of sorted.entries()) {
     const teamA = teamAOf(item.match);
     const teamB = teamBOf(item.match);
     const allPlayers = [...teamA, ...teamB];
@@ -117,6 +125,13 @@ export function buildMatchHistoryStats(history = []) {
     for (let i = 0; i < teamA.length; i += 1) for (let j = i + 1; j < teamA.length; j += 1) addPair(partnerRepeats, teamA[i], teamA[j]);
     for (let i = 0; i < teamB.length; i += 1) for (let j = i + 1; j < teamB.length; j += 1) addPair(partnerRepeats, teamB[i], teamB[j]);
     for (const a of teamA) for (const b of teamB) addPair(opponentRepeats, a, b);
+
+    // The recent window is deliberately stricter than older history. It keeps
+    // the same four people from being sent straight back onto a court together.
+    if (historyIndex < 8) {
+      recentGroupKeys.add(groupKey(allPlayers));
+      for (const a of teamA) for (const b of teamB) recentOpponentPairs.add(pairKey(a, b));
+    }
 
     const winner = matchWinner(item.match);
     const winningTeam = winner === 'A' ? teamA : winner === 'B' ? teamB : [];
@@ -138,7 +153,7 @@ export function buildMatchHistoryStats(history = []) {
     allPlayers.forEach((id) => wave.playerIds.add(String(id)));
   }
 
-  return { partnerRepeats, opponentRepeats, winningPartnerRepeats, losingPartnerRepeats, waves, lastPlayedAt, playedCount };
+  return { partnerRepeats, opponentRepeats, winningPartnerRepeats, losingPartnerRepeats, recentOpponentPairs, recentGroupKeys, waves, lastPlayedAt, playedCount };
 }
 
 function matchWinner(match) {
@@ -223,6 +238,7 @@ function groupScore(group, historyStats, rules, nowMs) {
       const key = pairKey(playerId(group[i]), playerId(group[j]));
       repeatScore += (historyStats.partnerRepeats.get(key) || 0) * 14;
       repeatScore += (historyStats.opponentRepeats.get(key) || 0) * 5;
+      repeatScore += historyStats.recentOpponentPairs?.has(key) ? rules.recentOpponentRepeatPenalty : 0;
     }
   }
   const games = group.map((player) => getMatchesPlayed(player, historyStats));
@@ -255,7 +271,11 @@ function pairingScore(teamA, teamB, historyStats, rules) {
   const levelGap = Math.abs(teamAverageLevel(teamA) - teamAverageLevel(teamB));
   const partnerRepeat = (historyStats.partnerRepeats.get(pairKey(playerId(teamA[0]), playerId(teamA[1]))) || 0) + (historyStats.partnerRepeats.get(pairKey(playerId(teamB[0]), playerId(teamB[1]))) || 0);
   let opponentRepeat = 0;
-  for (const a of teamA) for (const b of teamB) opponentRepeat += historyStats.opponentRepeats.get(pairKey(playerId(a), playerId(b))) || 0;
+  for (const a of teamA) for (const b of teamB) {
+    const key = pairKey(playerId(a), playerId(b));
+    opponentRepeat += historyStats.opponentRepeats.get(key) || 0;
+    if (historyStats.recentOpponentPairs?.has(key)) opponentRepeat += rules.recentOpponentRepeatPenalty / Math.max(1, rules.opponentRepeatPenalty);
+  }
   const teamGameGap = Math.abs(teamA.reduce((sum, player) => sum + getMatchesPlayed(player, historyStats), 0) - teamB.reduce((sum, player) => sum + getMatchesPlayed(player, historyStats), 0));
   return levelGap * rules.levelGapPenalty + partnerRepeat * rules.partnerRepeatPenalty + opponentRepeat * rules.opponentRepeatPenalty + teamGameGap * rules.teamGameGapPenalty;
 }
@@ -296,7 +316,10 @@ export function generateMatches({ players = [], courts = [], history = [], rules
   let searchBudget = 1200;
 
   function candidatesForCourt(courtIndex, usedIds) {
-    const availableForCourt = availablePlayers.filter((player) => !usedIds.has(playerId(player)));
+    const court = courtList[courtIndex];
+    const minLevel = Number.isFinite(Number(court?.minLevel)) ? Number(court.minLevel) : -Infinity;
+    const maxLevel = Number.isFinite(Number(court?.maxLevel)) ? Number(court.maxLevel) : Infinity;
+    const availableForCourt = availablePlayers.filter((player) => !usedIds.has(playerId(player)) && getLevel(player) >= minLevel && getLevel(player) <= maxLevel);
     if (availableForCourt.length < 4) return [];
 
     const remainingSlots = Math.min(availableForCourt.length, (courtList.length - courtIndex) * 4);
@@ -310,13 +333,16 @@ export function generateMatches({ players = [], courts = [], history = [], rules
     const shortlist = [...forcedCandidates, ...priorityList.filter((player) => !waitLimitIds.has(playerId(player)))]
       .slice(0, Math.max(mergedRules.candidateLimit, forcedCandidates.length));
 
-    return combinations(shortlist, 4)
+    const evaluated = combinations(shortlist, 4)
       .filter((group) => group.filter((player) => waitLimitIds.has(playerId(player))).length >= requiredWaitingPlayers)
       .map((group) => {
         const split = bestTeamSplit(group, historyStats, mergedRules);
-        return split ? { group, split, score: groupScore(group, historyStats, mergedRules, now) + split.score } : null;
+        return split ? { group, split, recentGroup: historyStats.recentGroupKeys?.has(groupKey(group)), score: groupScore(group, historyStats, mergedRules, now) + split.score + (historyStats.recentGroupKeys?.has(groupKey(group)) ? mergedRules.recentGroupRepeatPenalty : 0) } : null;
       })
-      .filter(Boolean)
+      .filter(Boolean);
+    // Do not repeat the same four-player court when another valid group exists.
+    const noRecentGroup = evaluated.filter((candidate) => !candidate.recentGroup);
+    return (noRecentGroup.length ? noRecentGroup : evaluated)
       .sort((a, b) => a.score - b.score)
       .slice(0, mergedRules.candidatePlanLimit);
   }

@@ -85,6 +85,38 @@ function match(id, teamA, teamB, minutesAgo) {
   assert.equal(shouldRest(player('p1', 0), buildMatchHistoryStats(history)), false);
 }
 
+// Test 2c1: configured court level bands keep automatic previews on their intended courts.
+{
+  const result = generateMatches({
+    players: [
+      ...Array.from({ length: 4 }, (_, index) => player(`social-${index + 1}`, 0, 2.5)),
+      ...Array.from({ length: 4 }, (_, index) => player(`challenge-${index + 1}`, 0, 4.25))
+    ],
+    courts: [
+      { id: 'court-1', name: 'Social Court', courtNumber: 1, minLevel: 2, maxLevel: 3 },
+      { id: 'court-2', name: 'Challenge Court', courtNumber: 2, minLevel: 4, maxLevel: 5 }
+    ],
+    history: [],
+    now
+  });
+  assert.equal(result.previews.length, 2);
+  assert.equal(result.previews[0].teamA.concat(result.previews[0].teamB).every((entry) => entry.level === 2.5), true);
+  assert.equal(result.previews[1].teamA.concat(result.previews[1].teamB).every((entry) => entry.level === 4.25), true);
+}
+
+// Test 2c2: when another valid group exists, do not put the same four people straight back together.
+{
+  const previousGroup = ['p1', 'p2', 'p3', 'p4'];
+  const result = generateMatches({
+    players: [...previousGroup, 'p5', 'p6', 'p7', 'p8'].map((id) => player(id, 0, 3)),
+    courts: [{ id: 'court-1', name: 'Court 1' }],
+    history: [match('previous-group', ['p1', 'p2'], ['p3', 'p4'], 4)],
+    now
+  });
+  const selected = result.previews[0].teamA.concat(result.previews[0].teamB).map((entry) => entry.id).sort().join('|');
+  assert.notEqual(selected, previousGroup.join('|'));
+}
+
 // Test 2d: auto rest never blocks the only four players who can form a match.
 {
   const history = [
