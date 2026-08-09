@@ -60,7 +60,7 @@ label{line-height:1.45}
 .queue-ready{border-left-color:var(--lime)}.queue-playing{border-left-color:var(--orange)}.queue-rest{border-left-color:var(--cyan)}.queue-left{border-left-color:#64748b}.queue-auto{border-left-color:#a78bfa}
 .status-btn{font-size:11px;font-weight:1000;border-radius:10px;padding:9px 10px}
 .status-ready-btn{background:var(--lime);color:#07121e}.status-rest-btn{background:#22d3ee;color:#07121e}.status-left-btn{background:#475569;color:#fff}.status-delete-btn{background:#ef4051;color:#fff}
-.queue-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-width:230px;margin-left:auto}.queue-actions .status-btn{min-width:0;padding:8px;font-size:10px}
+.queue-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;width:100%;max-width:260px;margin-left:auto}.queue-actions .status-btn{min-width:0;min-height:44px;padding:8px 5px;font-size:10px;white-space:nowrap}
 .live-match-card{overflow:hidden}.live-team-layout{display:grid;grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr);align-items:center;gap:8px;margin-top:12px}.live-team{min-width:0;padding:10px!important}.live-roster{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px}.live-player{display:grid;justify-items:center;gap:4px;min-width:0}.live-player-avatar{width:36px;height:36px}.live-player-name{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;font-size:10px;font-weight:1000}.live-vs{font-size:16px;font-weight:1000;color:#64748b;text-align:center}.live-score-grid{margin-top:12px!important}.live-score-grid input{min-height:48px;padding:8px!important;font-size:18px!important}.live-actions{margin-top:8px!important}.live-actions button{min-width:0;padding:10px 6px!important;font-size:11px}
 .timer{font-size:40px;line-height:1;font-weight:1000;font-variant-numeric:tabular-nums}
 .good{color:var(--lime)}.warn{color:var(--orange)}.bad{color:var(--danger)}
@@ -219,7 +219,7 @@ html,body{overflow-x:hidden}
   #tab-manage .manage-grid>div:first-child>.card:first-child .grid,#manualTeamLayout{grid-template-columns:minmax(0,1fr)}
   #tab-manage .manage-grid>div:first-child>.card:nth-child(3) .grid{grid-template-columns:minmax(0,1fr)}
 }
-@media(max-width:560px){.live-team-layout{grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr);gap:5px}.live-team{padding:8px!important}.live-player-avatar{width:32px;height:32px}.live-player-name{font-size:9px}.live-actions button{font-size:10px}.queue-actions{max-width:none;width:100%;margin-left:0}}
+@media(max-width:560px){.live-team-layout{grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr);gap:5px}.live-team{padding:8px!important}.live-player-avatar{width:32px;height:32px}.live-player-name{font-size:9px}.live-actions button{font-size:10px}.queue-actions{max-width:none;margin-left:0}.queue-actions .status-btn{font-size:9px;padding:8px 3px}}
 </style>
 </head>
 <body>
