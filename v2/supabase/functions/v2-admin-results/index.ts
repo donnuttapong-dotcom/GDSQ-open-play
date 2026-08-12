@@ -25,7 +25,7 @@ Deno.serve(async (request) => {
   if (!url || !serviceRoleKey) return json({ ok: false, error: 'Admin service is not configured' }, 500, origin);
   const body = await request.json().catch(() => null);
   const action = String(body?.action || ''), passcode = String(body?.passcode || '');
-  if (!['verify', 'listEvents', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer'].includes(action) || passcode.length < 5 || passcode.length > 128) return json({ ok: false, error: 'Invalid request' }, 400, origin);
+  if (!['verify', 'listEvents', 'listProfiles', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer'].includes(action) || passcode.length < 5 || passcode.length > 128) return json({ ok: false, error: 'Invalid request' }, 400, origin);
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
   const token = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   const { data: authData, error: authError } = await admin.auth.getUser(token);
@@ -49,6 +49,56 @@ Deno.serve(async (request) => {
       .order('created_at', { ascending: false });
     if (eventsError) return json({ ok: false, error: eventsError.message || 'Could not load events' }, 400, origin);
     return json({ ok: true, events: events || [] }, 200, origin);
+  }
+  if (action === 'listProfiles') {
+    const { data: profiles, error: profilesError } = await admin
+      .from('v2_players')
+      .select('id,display_name,email,email_verified_at,default_level,created_at,updated_at')
+      .order('display_name', { ascending: true });
+    if (profilesError) return json({ ok: false, error: profilesError.message || 'Could not load player profiles' }, 400, origin);
+    return json({ ok: true, profiles: profiles || [] }, 200, origin);
+  }
+  if (action === 'listClaims') {
+    const { data: claims, error: claimsError } = await admin
+      .from('v2_player_profile_claims')
+      .select('id,event_id,event_player_id,player_id,status,admin_note,created_at,reviewed_at')
+      .order('created_at', { ascending: false });
+    if (claimsError) return json({ ok: false, error: claimsError.message || 'Could not load profile claims' }, 400, origin);
+    const eventIds = [...new Set((claims || []).map((row) => row.event_id))];
+    const eventPlayerIds = [...new Set((claims || []).map((row) => row.event_player_id))];
+    const playerIds = [...new Set((claims || []).map((row) => row.player_id))];
+    const [eventsResult, eventPlayersResult, profilesResult] = await Promise.all([
+      eventIds.length ? admin.from('v2_events').select('id,name,event_date').in('id', eventIds) : Promise.resolve({ data: [], error: null }),
+      eventPlayerIds.length ? admin.from('v2_event_players').select('id,display_name,estimated_level').in('id', eventPlayerIds) : Promise.resolve({ data: [], error: null }),
+      playerIds.length ? admin.from('v2_players').select('id,display_name,email').in('id', playerIds) : Promise.resolve({ data: [], error: null })
+    ]);
+    const relatedError = eventsResult.error || eventPlayersResult.error || profilesResult.error;
+    if (relatedError) return json({ ok: false, error: relatedError.message || 'Could not load claim details' }, 400, origin);
+    const events = new Map((eventsResult.data || []).map((row) => [row.id, row]));
+    const eventPlayers = new Map((eventPlayersResult.data || []).map((row) => [row.id, row]));
+    const profiles = new Map((profilesResult.data || []).map((row) => [row.id, row]));
+    return json({ ok: true, claims: (claims || []).map((claim) => ({
+      ...claim,
+      event_name: events.get(claim.event_id)?.name || '',
+      event_date: events.get(claim.event_id)?.event_date || '',
+      event_player_name: eventPlayers.get(claim.event_player_id)?.display_name || '',
+      profile_name: profiles.get(claim.player_id)?.display_name || '',
+      profile_email: profiles.get(claim.player_id)?.email || ''
+    })) }, 200, origin);
+  }
+  if (action === 'updateProfileName') {
+    const playerId = String(body?.playerId || ''), displayName = String(body?.displayName || '').trim();
+    if (!validId(playerId) || displayName.length < 2 || displayName.length > 50) return json({ ok: false, error: 'Invalid player name' }, 400, origin);
+    const { error: updateNameError } = await admin.rpc('v2_admin_update_player_display_name', { p_player_id: playerId, p_display_name: displayName, p_ip_hash: ipHash });
+    if (updateNameError) return json({ ok: false, error: updateNameError.message || 'Could not update player name' }, 400, origin);
+    return json({ ok: true }, 200, origin);
+  }
+  if (action === 'reviewClaim') {
+    const claimId = String(body?.claimId || ''), approve = body?.approve === true, note = String(body?.note || '').trim();
+    if (!validId(claimId) || note.length > 200) return json({ ok: false, error: 'Invalid claim review' }, 400, origin);
+    const { error: reviewError } = await admin.rpc('v2_admin_review_player_profile_claim', { p_claim_id: claimId, p_approve: approve, p_admin_note: note || null, p_ip_hash: ipHash });
+    if (reviewError) return json({ ok: false, error: reviewError.message || 'Could not review profile claim' }, 400, origin);
+    return json({ ok: true }, 200, origin);
   }
   if (['archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent'].includes(action)) {
     const eventId = String(body?.eventId || '');

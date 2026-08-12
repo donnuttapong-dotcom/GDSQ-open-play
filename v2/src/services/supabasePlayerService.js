@@ -50,7 +50,7 @@ async function upsertPlayerProfile(supabase, payload, name, level) {
   const email = normalizeEmail(payload.email);
   if (!email) return null;
   const user = payload.authUser || await authenticatedUser(supabase);
-  if (!user || normalizeEmail(user.email) !== email) return null;
+  if (!user || !user.email_confirmed_at || normalizeEmail(user.email) !== email) return null;
   const base = supabase
     .from('v2_players')
     .select('*')
@@ -95,7 +95,7 @@ export async function findPlayerProfileByEmail(supabase, organizationId, email) 
   const normalized = normalizeEmail(email);
   if (!normalized) return null;
   const user = await authenticatedUser(supabase);
-  if (!user || normalizeEmail(user.email) !== normalized) return null;
+  if (!user || !user.email_confirmed_at || normalizeEmail(user.email) !== normalized) return null;
   const { data, error } = await supabase
     .from('v2_players')
     .select('*')
@@ -236,7 +236,73 @@ export async function checkInPlayer(supabase, payload) {
 
 export async function getAuthenticatedPlayer(supabase) {
   const user = await authenticatedUser(supabase);
-  return user ? { id: user.id, email: normalizeEmail(user.email) } : null;
+  return user ? {
+    id: user.id,
+    email: normalizeEmail(user.email),
+    emailVerified: Boolean(user.email_confirmed_at),
+    emailVerifiedAt: user.email_confirmed_at || null
+  } : null;
+}
+
+export async function joinVerifiedPlayerEvent(supabase, payload) {
+  const user = await authenticatedUser(supabase);
+  if (!user) throw new Error('AUTH_REQUIRED');
+  if (!user.email_confirmed_at) throw new Error('EMAIL_NOT_VERIFIED');
+  let avatarUrl = '';
+  if (payload.avatarUrl) {
+    const uploaded = await uploadAvatar(supabase, payload.avatarUrl, payload.eventId, user);
+    avatarUrl = uploaded.url || '';
+  }
+  const { data, error } = await supabase.rpc('v2_join_verified_player_event', {
+    p_event_id: payload.eventId,
+    p_display_name: String(payload.displayName || '').trim(),
+    p_level: normalizeLevel(payload.level),
+    p_avatar_url: avatarUrl || null
+  });
+  if (error) throw error;
+  return {
+    eventPlayerId: data?.event_player_id,
+    playerProfileId: data?.player_profile_id,
+    displayName: data?.display_name,
+    avatarUrl: data?.avatar_url || '',
+    alreadyJoined: Boolean(data?.already_joined),
+    emailVerified: Boolean(data?.email_verified)
+  };
+}
+
+export async function updateMyPlayerProfile(supabase, payload) {
+  const user = await authenticatedUser(supabase);
+  if (!user) throw new Error('AUTH_REQUIRED');
+  if (!user.email_confirmed_at) throw new Error('EMAIL_NOT_VERIFIED');
+  let avatarUrl = '';
+  if (payload.avatarUrl) {
+    const uploaded = await uploadAvatar(supabase, payload.avatarUrl, 'profile', user);
+    avatarUrl = uploaded.url || '';
+  }
+  const { data, error } = await supabase.rpc('v2_update_my_player_profile', {
+    p_display_name: String(payload.displayName || '').trim(),
+    p_avatar_url: avatarUrl || null,
+    p_default_level: payload.level == null ? null : normalizeLevel(payload.level)
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function requestPlayerProfileClaim(supabase, eventPlayerId) {
+  const { data, error } = await supabase.rpc('v2_request_player_profile_claim', {
+    p_event_player_id: eventPlayerId
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function listMyPlayerProfileClaims(supabase) {
+  const { data, error } = await supabase
+    .from('v2_player_profile_claims')
+    .select('id,event_id,event_player_id,player_id,status,admin_note,created_at,reviewed_at')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
 }
 
 export async function sendPlayerSignInLink(supabase, email, redirectTo) {
