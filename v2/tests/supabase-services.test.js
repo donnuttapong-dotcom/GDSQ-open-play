@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { checkInPlayer, findPlayerProfileByEmail, getAuthenticatedPlayer, joinVerifiedPlayerEvent, updateMyPlayerProfile, requestPlayerProfileClaim } from '../src/services/supabasePlayerService.js';
+import { checkInPlayer, findPlayerProfileByEmail, getAuthenticatedPlayer, joinVerifiedPlayerEvent, joinInstantPlayerEvent, updateMyPlayerProfile, requestPlayerProfileClaim } from '../src/services/supabasePlayerService.js';
 import { confirmScore, updateConfirmedScore, updateMatchPreview } from '../src/services/supabaseMatchService.js';
 
 function result(value) {
@@ -138,6 +138,21 @@ function playerServiceFake({ user = null, existingProfile = null, existingEventP
 {
   const supabase = { auth: { getUser: () => result({ data: { user: { id: 'unverified', email: 'new@example.com' } }, error: null }) } };
   await assert.rejects(() => joinVerifiedPlayerEvent(supabase, { eventId: 'event-1', displayName: 'New Player', level: 3 }), /EMAIL_NOT_VERIFIED/);
+}
+
+// Instant QR registration does not use Auth or trigger an email delivery.
+{
+  const calls = [];
+  const supabase = {
+    rpc(name, payload) {
+      calls.push([name, payload]);
+      return result({ data: { event_player_id: 'ep-instant', player_profile_id: 'profile-instant', display_name: 'Walk In', already_joined: false, email_verified: false }, error: null });
+    }
+  };
+  const joined = await joinInstantPlayerEvent(supabase, { eventId: 'event-1', displayName: ' Walk In ', email: ' WALKIN@OUTLOOK.COM ', level: 3.75 });
+  assert.equal(joined.eventPlayerId, 'ep-instant');
+  assert.equal(joined.emailVerified, false);
+  assert.deepEqual(calls, [['v2_join_instant_player_event', { p_event_id: 'event-1', p_display_name: 'Walk In', p_email: 'walkin@outlook.com', p_level: 3.75 }]]);
 }
 
 // Profile edits and historical claims use their owner-scoped RPCs.
