@@ -32,6 +32,21 @@ export async function listEvents(supabase, organizationId) {
   return (data || []).map(normalizeEvent);
 }
 
+// Archived events remain read-only history. They are intentionally excluded
+// from the normal organizer event list, but can be viewed in the Stats screen.
+export async function listArchivedEventsForDate(supabase, organizationId, eventDate) {
+  const { data, error } = await supabase
+    .from('v2_events')
+    .select('*, venue:v2_venues(*)')
+    .eq('organization_id', organizationId)
+    .eq('event_date', eventDate)
+    .eq('status', 'deleted')
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return (data || []).map(normalizeEvent);
+}
+
 export async function createEvent(supabase, payload) {
   const { data, error } = await supabase
     .from('v2_events')
@@ -82,5 +97,5 @@ export async function deleteEvent(supabase, eventId) {
     .single();
 
   if (error) throw error;
-  return { deletedId: data?.id || eventId };
+  return { archivedId: data?.id || eventId };
 }
