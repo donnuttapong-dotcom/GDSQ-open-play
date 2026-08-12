@@ -270,6 +270,24 @@ export async function joinVerifiedPlayerEvent(supabase, payload) {
   };
 }
 
+export async function joinInstantPlayerEvent(supabase, payload) {
+  const { data, error } = await supabase.rpc('v2_join_instant_player_event', {
+    p_event_id: payload.eventId,
+    p_display_name: String(payload.displayName || '').trim(),
+    p_email: normalizeEmail(payload.email),
+    p_level: normalizeLevel(payload.level)
+  });
+  if (error) throw error;
+  return {
+    eventPlayerId: data?.event_player_id,
+    playerProfileId: data?.player_profile_id,
+    displayName: data?.display_name,
+    avatarUrl: data?.avatar_url || '',
+    alreadyJoined: Boolean(data?.already_joined),
+    emailVerified: Boolean(data?.email_verified)
+  };
+}
+
 export async function updateMyPlayerProfile(supabase, payload) {
   const user = await authenticatedUser(supabase);
   if (!user) throw new Error('AUTH_REQUIRED');
