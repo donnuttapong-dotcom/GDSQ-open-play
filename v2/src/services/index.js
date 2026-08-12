@@ -8,7 +8,10 @@ import {
   selectEvent as selectLocalEvent,
   createEvent as createLocalEvent,
   updateEventStatus as updateLocalEventStatus,
-  deleteEvent as deleteLocalEvent
+  deleteEvent as deleteLocalEvent,
+  listAllEvents as listAllLocalEvents,
+  restoreEvent as restoreLocalEvent,
+  permanentlyDeleteEvent as permanentlyDeleteLocalEvent
 } from './localEventStore.js';
 import { getCourts as getMockCourts } from './mockEventService.js';
 import { getEventPlayers as getMockEventPlayers } from './mockPlayerService.js';
@@ -17,7 +20,7 @@ import { listLocalEventPlayers, checkInLocalPlayer, updateLocalEventPlayerLevel,
 import { mergeLocalPlayerStats, setLocalPlayerStatus, setLocalPlayerLevel, forceAllLocalPlayersReady, applyLocalMatchResult, rebuildLocalMatchStats, releaseInactivePlayingPlayers } from './localPlayerStatsStore.js';
 import { listLocalEventMatches, createLocalMatchPreview, updateLocalMatchPreview, startLocalMatch, cancelLocalMatch, confirmLocalScore, updateLocalConfirmedScore } from './localMatchStore.js';
 import { clearLocalEventData } from './localEventCleanup.js';
-import { listEvents as listSupabaseEvents, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus, deleteEvent as deleteSupabaseEvent } from './supabaseEventService.js';
+import { listEvents as listSupabaseEvents, listArchivedEventsForDate as listArchivedSupabaseEventsForDate, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus, deleteEvent as deleteSupabaseEvent } from './supabaseEventService.js';
 import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer, updateEventPlayerStatus as updateSupabaseEventPlayerStatus, updateEventPlayerLevel as updateSupabaseEventPlayerLevel, findPlayerProfileByEmail as findSupabasePlayerProfileByEmail, getAuthenticatedPlayer as getSupabaseAuthenticatedPlayer, sendPlayerSignInLink as sendSupabasePlayerSignInLink, signOutPlayer as signOutSupabasePlayer } from './supabasePlayerService.js?v=secure-profile-01';
 import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, updateMatchPreview as updateSupabaseMatchPreview, startMatch as startSupabaseMatch, cancelMatch as cancelSupabaseMatch, confirmScore as confirmSupabaseScore, updateConfirmedScore as updateSupabaseConfirmedScore, isAdminPasscodeConfigured as isSupabaseAdminPasscodeConfigured, setAdminPasscode as setSupabaseAdminPasscode, updateConfirmedScoreWithPasscode as updateSupabaseConfirmedScoreWithPasscode } from './supabaseMatchService.js';
 
@@ -66,13 +69,20 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
       return listLocalEvents();
     },
 
+    async listArchivedEventsForDate(eventDate) {
+      if (!isSupabase) return [];
+      return listArchivedSupabaseEventsForDate(requireSupabase(supabase), organizationId, eventDate);
+    },
+
     async getCurrentEvent() {
       const eventId = requestedEventId();
       if (isSupabase) {
         const events = await listSupabaseEvents(requireSupabase(supabase), organizationId);
         localStorage.setItem('gdsq_v2_events', JSON.stringify(events));
         const selected = eventId ? events.find((event) => String(event.id) === String(eventId)) : null;
-        return selected || events.find((event) => event.status === 'live') || events[0] || null;
+        const current = selected || events.find((event) => event.status === 'live') || events[0] || null;
+        if (current && String(current.id) !== String(eventId)) localStorage.setItem(SELECTED_EVENT_KEY, current.id);
+        return current;
       }
       if (eventId) {
         const selected = selectLocalEvent(eventId);
@@ -101,7 +111,22 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
 
     async deleteEvent(eventId) {
       if (isSupabase) return deleteSupabaseEvent(requireSupabase(supabase), eventId);
-      const result = deleteLocalEvent(eventId);
+      return deleteLocalEvent(eventId);
+    },
+
+    async listAllEvents() {
+      if (isSupabase) throw new Error('Archived Supabase events are available through the Admin service only.');
+      return listAllLocalEvents();
+    },
+
+    async restoreEvent(eventId) {
+      if (isSupabase) throw new Error('Restore Supabase events through the Admin service.');
+      return restoreLocalEvent(eventId);
+    },
+
+    async permanentlyDeleteEvent(eventId) {
+      if (isSupabase) throw new Error('Permanent Supabase deletion is restricted to the Admin service.');
+      const result = permanentlyDeleteLocalEvent(eventId);
       clearLocalEventData(eventId);
       return result;
     },
