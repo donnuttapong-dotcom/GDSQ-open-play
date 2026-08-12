@@ -25,7 +25,7 @@ Deno.serve(async (request) => {
   if (!url || !serviceRoleKey) return json({ ok: false, error: 'Admin service is not configured' }, 500, origin);
   const body = await request.json().catch(() => null);
   const action = String(body?.action || ''), passcode = String(body?.passcode || '');
-  if (!['verify', 'listEvents', 'listProfiles', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer'].includes(action) || passcode.length < 5 || passcode.length > 128) return json({ ok: false, error: 'Invalid request' }, 400, origin);
+  if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer'].includes(action) || passcode.length < 5 || passcode.length > 128) return json({ ok: false, error: 'Invalid request' }, 400, origin);
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
   const token = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   const { data: authData, error: authError } = await admin.auth.getUser(token);
@@ -58,11 +58,42 @@ Deno.serve(async (request) => {
     if (profilesError) return json({ ok: false, error: profilesError.message || 'Could not load player profiles' }, 400, origin);
     return json({ ok: true, profiles: profiles || [] }, 200, origin);
   }
+  if (action === 'listMembers') {
+    const organizationId = String(body?.organizationId || '00000000-0000-4000-8000-000000000001');
+    const page = Math.max(1, Math.min(Number(body?.page) || 1, 100000));
+    const pageSize = Math.max(1, Math.min(Number(body?.pageSize) || 25, 100));
+    const search = String(body?.search || '').trim().slice(0, 80);
+    if (!validId(organizationId)) return json({ ok: false, error: 'Invalid organization' }, 400, origin);
+    const { data: members, error: membersError } = await admin.rpc('v2_admin_list_members', {
+      p_organization_id: organizationId,
+      p_search: search,
+      p_limit: pageSize,
+      p_offset: (page - 1) * pageSize
+    });
+    if (membersError) return json({ ok: false, error: membersError.message || 'Could not load members' }, 400, origin);
+    const rows = members || [];
+    return json({ ok: true, members: rows, total: Number(rows[0]?.total_count || 0), page, pageSize }, 200, origin);
+  }
+  if (action === 'getMember') {
+    const playerId = String(body?.playerId || '');
+    const matchPage = Math.max(1, Math.min(Number(body?.matchPage) || 1, 100000));
+    const matchPageSize = Math.max(1, Math.min(Number(body?.matchPageSize) || 30, 100));
+    if (!validId(playerId)) return json({ ok: false, error: 'Invalid member id' }, 400, origin);
+    const { data: member, error: memberError } = await admin.rpc('v2_admin_get_member_detail', {
+      p_player_id: playerId,
+      p_match_limit: matchPageSize,
+      p_match_offset: (matchPage - 1) * matchPageSize
+    });
+    if (memberError) return json({ ok: false, error: memberError.message || 'Could not load member history' }, 400, origin);
+    return json({ ok: true, member, matchPage, matchPageSize }, 200, origin);
+  }
   if (action === 'listClaims') {
     const { data: claims, error: claimsError } = await admin
       .from('v2_player_profile_claims')
       .select('id,event_id,event_player_id,player_id,status,admin_note,created_at,reviewed_at')
-      .order('created_at', { ascending: false });
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(100);
     if (claimsError) return json({ ok: false, error: claimsError.message || 'Could not load profile claims' }, 400, origin);
     const eventIds = [...new Set((claims || []).map((row) => row.event_id))];
     const eventPlayerIds = [...new Set((claims || []).map((row) => row.event_player_id))];
