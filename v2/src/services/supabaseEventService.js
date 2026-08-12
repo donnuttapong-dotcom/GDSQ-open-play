@@ -32,6 +32,18 @@ export async function listEvents(supabase, organizationId) {
   return (data || []).map(normalizeEvent);
 }
 
+export async function getEventById(supabase, organizationId, eventId) {
+  const { data, error } = await supabase
+    .from('v2_events')
+    .select('*, venue:v2_venues(*)')
+    .eq('organization_id', organizationId)
+    .eq('id', eventId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return normalizeEvent(data);
+}
+
 // Archived events remain read-only history. They are intentionally excluded
 // from the normal organizer event list, but can be viewed in the Stats screen.
 export async function listArchivedEventsForDate(supabase, organizationId, eventDate) {
