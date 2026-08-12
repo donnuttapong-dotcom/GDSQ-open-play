@@ -21,7 +21,7 @@ import { mergeLocalPlayerStats, setLocalPlayerStatus, setLocalPlayerLevel, force
 import { listLocalEventMatches, createLocalMatchPreview, updateLocalMatchPreview, startLocalMatch, cancelLocalMatch, confirmLocalScore, updateLocalConfirmedScore } from './localMatchStore.js';
 import { clearLocalEventData } from './localEventCleanup.js';
 import { listEvents as listSupabaseEvents, getEventById as getSupabaseEventById, listArchivedEventsForDate as listArchivedSupabaseEventsForDate, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus, deleteEvent as deleteSupabaseEvent } from './supabaseEventService.js';
-import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer, updateEventPlayerStatus as updateSupabaseEventPlayerStatus, updateEventPlayerLevel as updateSupabaseEventPlayerLevel, findPlayerProfileByEmail as findSupabasePlayerProfileByEmail, getAuthenticatedPlayer as getSupabaseAuthenticatedPlayer, sendPlayerSignInLink as sendSupabasePlayerSignInLink, signOutPlayer as signOutSupabasePlayer, joinVerifiedPlayerEvent as joinSupabaseVerifiedPlayerEvent, updateMyPlayerProfile as updateSupabaseMyPlayerProfile, requestPlayerProfileClaim as requestSupabasePlayerProfileClaim, listMyPlayerProfileClaims as listSupabaseMyPlayerProfileClaims } from './supabasePlayerService.js?v=verified-identity-01';
+import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer, updateEventPlayerStatus as updateSupabaseEventPlayerStatus, updateEventPlayerLevel as updateSupabaseEventPlayerLevel, findPlayerProfileByEmail as findSupabasePlayerProfileByEmail, getAuthenticatedPlayer as getSupabaseAuthenticatedPlayer, sendPlayerSignInLink as sendSupabasePlayerSignInLink, signOutPlayer as signOutSupabasePlayer, joinVerifiedPlayerEvent as joinSupabaseVerifiedPlayerEvent, joinInstantPlayerEvent as joinSupabaseInstantPlayerEvent, updateMyPlayerProfile as updateSupabaseMyPlayerProfile, requestPlayerProfileClaim as requestSupabasePlayerProfileClaim, listMyPlayerProfileClaims as listSupabaseMyPlayerProfileClaims } from './supabasePlayerService.js?v=instant-registration-01';
 import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, updateMatchPreview as updateSupabaseMatchPreview, startMatch as startSupabaseMatch, cancelMatch as cancelSupabaseMatch, confirmScore as confirmSupabaseScore, updateConfirmedScore as updateSupabaseConfirmedScore, isAdminPasscodeConfigured as isSupabaseAdminPasscodeConfigured, setAdminPasscode as setSupabaseAdminPasscode, updateConfirmedScoreWithPasscode as updateSupabaseConfirmedScoreWithPasscode } from './supabaseMatchService.js';
 
 const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
@@ -189,6 +189,11 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async joinVerifiedPlayerEvent(payload) {
       if (!isSupabase) throw new Error('Verified QR registration requires Supabase mode.');
       return joinSupabaseVerifiedPlayerEvent(requireSupabase(supabase), payload);
+    },
+
+    async joinInstantPlayerEvent(payload) {
+      if (!isSupabase) throw new Error('Instant QR registration requires Supabase mode.');
+      return joinSupabaseInstantPlayerEvent(requireSupabase(supabase), payload);
     },
 
     async updateMyPlayerProfile(payload) {
