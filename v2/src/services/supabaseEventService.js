@@ -32,6 +32,20 @@ export async function listEvents(supabase, organizationId) {
   return (data || []).map(normalizeEvent);
 }
 
+// Summary needs a read-only history list, including archived events. This is
+// deliberately separate from listEvents(), which drives the active organizer flow.
+export async function listStatsEvents(supabase, organizationId) {
+  const { data, error } = await supabase
+    .from('v2_events')
+    .select('*, venue:v2_venues(*)')
+    .eq('organization_id', organizationId)
+    .order('event_date', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data || []).map(normalizeEvent);
+}
+
 export async function getEventById(supabase, organizationId, eventId) {
   const { data, error } = await supabase
     .from('v2_events')
