@@ -63,8 +63,7 @@ Deno.serve(async (request) => {
       if (restoreError) return json({ ok: false, error: restoreError.message || 'Could not restore event' }, 400, origin);
       return json({ ok: true }, 200, origin);
     }
-    if (String(body?.confirmation || '') !== `DELETE ${eventId}`) return json({ ok: false, error: 'Permanent delete confirmation does not match' }, 400, origin);
-    const { error: deleteEventError } = await admin.rpc('v2_admin_permanently_delete_event', { p_event_id: eventId, p_confirmation: body.confirmation, p_ip_hash: ipHash });
+    const { error: deleteEventError } = await admin.rpc('v2_admin_permanently_delete_event', { p_event_id: eventId, p_confirmation: 'ADMIN_CONFIRMED', p_ip_hash: ipHash });
     if (deleteEventError) return json({ ok: false, error: deleteEventError.message || 'Could not permanently delete event' }, 400, origin);
     return json({ ok: true }, 200, origin);
   }
