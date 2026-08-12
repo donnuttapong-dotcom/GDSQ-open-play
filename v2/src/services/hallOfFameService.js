@@ -83,6 +83,23 @@ export function buildHallOfFame({ events = [], eventPlayers = [], matches = [], 
   const careers = new Map();
   const confirmedMatches = matches.filter((match) => CONFIRMED.includes(String(match.status || '').toLowerCase()));
 
+  // A participation belongs to the career even when the player has not yet
+  // completed a match. Confirmed Match History remains the only score source.
+  for (const participant of eventPlayers) {
+    const event = eventById.get(String(participant.event_id));
+    if (!event) continue;
+    const identity = identityFor(participant);
+    let career = careers.get(identity) || emptyCareer(identity, participant, event);
+    career.eventIds.add(event.id);
+    if (eventTime(event) >= career.latestAt) {
+      career.displayName = participant.display_name || career.displayName;
+      career.avatarUrl = participant.avatar_url || career.avatarUrl;
+      career.currentLevel = Number(participant.estimated_level || career.currentLevel || 0);
+      career.latestAt = eventTime(event);
+    }
+    careers.set(identity, career);
+  }
+
   for (const match of confirmedMatches) {
     const event = eventById.get(String(match.event_id));
     const teamAScore = Number(match.team_a_score);
@@ -129,11 +146,16 @@ export function buildHallOfFame({ events = [], eventPlayers = [], matches = [], 
 }
 
 export async function loadHallOfFame(supabase, organizationId) {
-  const [events, eventPlayers, matches, matchPlayers] = await Promise.all([
+  const [events, eventPlayers, matches, matchPlayers, registeredCountResult] = await Promise.all([
     fetchAll(() => supabase.from('v2_events').select('id,name,event_date,start_time,end_time,status,venue_name,created_at,completed_at').eq('organization_id', organizationId).order('id')),
     fetchAll(() => supabase.from('v2_event_players').select('id,event_id,player_id,display_name,estimated_level,avatar_url,status,created_at').eq('organization_id', organizationId).neq('status', 'removed').order('id')),
     fetchAll(() => supabase.from('v2_matches').select('id,event_id,court_number,status,team_a_score,team_b_score,completed_at,created_at').eq('organization_id', organizationId).in('status', CONFIRMED).order('id')),
-    fetchAll(() => supabase.from('v2_match_players').select('match_id,event_player_id,player_id,team,slot').eq('organization_id', organizationId).order('match_id'))
+    fetchAll(() => supabase.from('v2_match_players').select('match_id,event_player_id,player_id,team,slot').eq('organization_id', organizationId).order('match_id')),
+    supabase.rpc('v2_public_registered_player_count', { p_organization_id: organizationId })
   ]);
-  return buildHallOfFame({ events, eventPlayers, matches, matchPlayers });
+  if (registeredCountResult.error) throw registeredCountResult.error;
+  return {
+    ...buildHallOfFame({ events, eventPlayers, matches, matchPlayers }),
+    totalRegisteredPlayers: Number(registeredCountResult.data || 0)
+  };
 }

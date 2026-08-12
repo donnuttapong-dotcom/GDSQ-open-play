@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { checkInPlayer, findPlayerProfileByEmail, getAuthenticatedPlayer } from '../src/services/supabasePlayerService.js';
+import { checkInPlayer, findPlayerProfileByEmail, getAuthenticatedPlayer, joinVerifiedPlayerEvent, updateMyPlayerProfile, requestPlayerProfileClaim } from '../src/services/supabasePlayerService.js';
 import { confirmScore, updateConfirmedScore, updateMatchPreview } from '../src/services/supabaseMatchService.js';
 
 function result(value) {
@@ -94,7 +94,7 @@ function playerServiceFake({ user = null, existingProfile = null, existingEventP
 
 // A verified email creates an owner-scoped profile and links the event player.
 {
-  const user = { id: 'auth-user-1', email: 'player@example.com' };
+  const user = { id: 'auth-user-1', email: 'player@example.com', email_confirmed_at: '2026-08-12T01:00:00.000Z' };
   const supabase = playerServiceFake({ user });
   const player = await checkInPlayer(supabase, {
     organizationId: 'org-1',
@@ -109,7 +109,56 @@ function playerServiceFake({ user = null, existingProfile = null, existingEventP
   const profileInsert = supabase.operations.find((operation) => operation.table === 'v2_players' && operation.action === 'insert');
   assert.equal(profileInsert.payload.user_id, user.id);
   assert.equal(profileInsert.payload.email, 'player@example.com');
-  assert.deepEqual(await getAuthenticatedPlayer(supabase), user);
+  assert.deepEqual(await getAuthenticatedPlayer(supabase), {
+    id: user.id,
+    email: user.email,
+    emailVerified: true,
+    emailVerifiedAt: user.email_confirmed_at
+  });
+}
+
+// Strict QR registration requires verified auth and delegates the atomic join to one RPC.
+{
+  const calls = [];
+  const user = { id: 'auth-user-2', email: 'qr@example.com', email_confirmed_at: '2026-08-12T02:00:00.000Z' };
+  const supabase = {
+    auth: { getUser: () => result({ data: { user }, error: null }) },
+    rpc(name, payload) {
+      calls.push([name, payload]);
+      return result({ data: { event_player_id: 'ep-1', player_profile_id: 'profile-2', display_name: 'QR Player', already_joined: false, email_verified: true }, error: null });
+    }
+  };
+  const joined = await joinVerifiedPlayerEvent(supabase, { eventId: 'event-1', displayName: ' QR Player ', level: 3.5 });
+  assert.equal(joined.eventPlayerId, 'ep-1');
+  assert.equal(joined.emailVerified, true);
+  assert.deepEqual(calls, [['v2_join_verified_player_event', { p_event_id: 'event-1', p_display_name: 'QR Player', p_level: 3.5, p_avatar_url: null }]]);
+}
+
+// Unverified sessions cannot create a permanent QR profile.
+{
+  const supabase = { auth: { getUser: () => result({ data: { user: { id: 'unverified', email: 'new@example.com' } }, error: null }) } };
+  await assert.rejects(() => joinVerifiedPlayerEvent(supabase, { eventId: 'event-1', displayName: 'New Player', level: 3 }), /EMAIL_NOT_VERIFIED/);
+}
+
+// Profile edits and historical claims use their owner-scoped RPCs.
+{
+  const calls = [];
+  const user = { id: 'auth-user-3', email: 'owner@example.com', email_confirmed_at: '2026-08-12T03:00:00.000Z' };
+  const supabase = {
+    auth: { getUser: () => result({ data: { user }, error: null }) },
+    rpc(name, payload) {
+      calls.push([name, payload]);
+      return result({ data: name === 'v2_request_player_profile_claim' ? 'claim-1' : { id: 'profile-3', display_name: payload.p_display_name }, error: null });
+    }
+  };
+  const updated = await updateMyPlayerProfile(supabase, { displayName: 'Owner Name', level: 4.25 });
+  const claimId = await requestPlayerProfileClaim(supabase, 'event-player-old');
+  assert.equal(updated.display_name, 'Owner Name');
+  assert.equal(claimId, 'claim-1');
+  assert.deepEqual(calls, [
+    ['v2_update_my_player_profile', { p_display_name: 'Owner Name', p_avatar_url: null, p_default_level: 4.25 }],
+    ['v2_request_player_profile_claim', { p_event_player_id: 'event-player-old' }]
+  ]);
 }
 
 // Score confirmation uses the database transaction guard before returning.
