@@ -79,6 +79,12 @@ export function ensureSeedEvents() {
 }
 
 export function listEvents() {
+  return ensureSeedEvents()
+    .filter((event) => !['deleted', 'archived'].includes(String(event.status || '').toLowerCase()))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+export function listAllEvents() {
   return ensureSeedEvents().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
@@ -97,7 +103,7 @@ export function selectEvent(eventId) {
 }
 
 export function createEvent(input) {
-  const events = listEvents();
+  const events = listAllEvents();
   const event = normalizeEvent(input);
   const next = [event, ...events];
   localStorage.setItem(EVENTS_KEY, JSON.stringify(next));
@@ -106,15 +112,37 @@ export function createEvent(input) {
 }
 
 export function updateEventStatus(eventId, status) {
-  const events = listEvents();
+  const events = listAllEvents();
   const next = events.map((event) => event.id === eventId ? { ...event, status, updatedAt: new Date().toISOString() } : event);
   localStorage.setItem(EVENTS_KEY, JSON.stringify(next));
   return next.find((event) => event.id === eventId) || null;
 }
 
 export function deleteEvent(eventId) {
-  const events = listEvents();
-  const next = events.filter((event) => event.id !== eventId);
+  const events = listAllEvents();
+  const next = events.map((event) => event.id === eventId
+    ? { ...event, status: 'deleted', archivedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+    : event);
+  localStorage.setItem(EVENTS_KEY, JSON.stringify(next));
+  if (localStorage.getItem(SELECTED_EVENT_KEY) === eventId) {
+    const fallback = next.find((event) => !['deleted', 'archived'].includes(String(event.status || '').toLowerCase()));
+    if (fallback) localStorage.setItem(SELECTED_EVENT_KEY, fallback.id);
+    else localStorage.removeItem(SELECTED_EVENT_KEY);
+  }
+  return { archivedId: eventId, events: next };
+}
+
+export function restoreEvent(eventId) {
+  const events = listAllEvents();
+  const next = events.map((event) => event.id === eventId
+    ? { ...event, status: event.completedAt ? 'completed' : 'draft', archivedAt: null, updatedAt: new Date().toISOString() }
+    : event);
+  localStorage.setItem(EVENTS_KEY, JSON.stringify(next));
+  return next.find((event) => event.id === eventId) || null;
+}
+
+export function permanentlyDeleteEvent(eventId) {
+  const next = listAllEvents().filter((event) => event.id !== eventId);
   localStorage.setItem(EVENTS_KEY, JSON.stringify(next));
   if (localStorage.getItem(SELECTED_EVENT_KEY) === eventId) {
     if (next[0]) localStorage.setItem(SELECTED_EVENT_KEY, next[0].id);
