@@ -51,7 +51,7 @@
 <div class="stickyShare"><div class="stickyShareInner"><div><b>พร้อมส่งสรุปหลังจบอีเว้นท์</b><div class="mini">ใช้ปุ่มด้านขวาเพื่อก๊อปลิงก์หรือข้อความพร้อมลิงก์</div></div><button class="btn" onclick="copySummaryLink()">COPY LINK</button><button class="btn orange" onclick="copyShareMessage()">COPY MESSAGE</button></div></div>
 <div id="playerModal" class="modal hidden" onclick="backdropClose(event)"><div class="modalBox" onclick="event.stopPropagation()"><div class="modalTop"><div><div class="micro lime">PLAYER POPUP DETAIL</div><b>รายละเอียดผู้เล่น</b></div><button class="closeBtn" onclick="closePlayerModal()">×</button></div><div id="modalPlayerDetail"><div class="loading">Loading player...</div></div></div></div>
 <script type="module">
-import { createV2Services } from './src/services/index.js';
+import { createV2Services } from './src/services/index.js?v=event-history-01';
 import { modeLabel } from './src/services/serviceMode.js';
 import { calculateEventHistoryRanking, summarizeConfirmedHistory } from './src/logic/stats/confirmedHistoryStats.js?v=history-truth-01';
 
