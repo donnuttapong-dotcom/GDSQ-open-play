@@ -1,4 +1,5 @@
 import { calculatePlayerRanking } from '../logic/ranking/calculatePlayerRanking.js';
+import { listCurrentGdsqRatings } from './gdsqRatingService.js';
 
 const CONFIRMED = ['confirmed', 'completed', 'done', 'finished'];
 
@@ -71,7 +72,7 @@ function addResult(career, event, match, side, teamAScore, teamBScore, names) {
   });
 }
 
-export function buildHallOfFame({ events = [], eventPlayers = [], matches = [], matchPlayers = [] } = {}) {
+export function buildHallOfFame({ events = [], eventPlayers = [], matches = [], matchPlayers = [], currentRatings = [] } = {}) {
   const eventById = new Map(events.map((event) => [String(event.id), event]));
   const eventPlayerById = new Map(eventPlayers.map((player) => [String(player.id), player]));
   const rowsByMatch = new Map();
@@ -128,8 +129,10 @@ export function buildHallOfFame({ events = [], eventPlayers = [], matches = [], 
     }
   }
 
+  const ratingByPlayer = new Map(currentRatings.filter((row) => row.player_id).map((row) => [String(row.player_id), Number(row.current_rating)]));
   const players = calculatePlayerRanking([...careers.values()].map((career) => ({
     ...career,
+    gdsqRating: career.playerId ? ratingByPlayer.get(String(career.playerId)) ?? null : null,
     eventsJoined: career.eventIds.size,
     diff: career.pointsFor - career.pointsAgainst,
     eventHistory: [...career.eventHistory.values()].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))),
@@ -146,16 +149,17 @@ export function buildHallOfFame({ events = [], eventPlayers = [], matches = [], 
 }
 
 export async function loadHallOfFame(supabase, organizationId) {
-  const [events, eventPlayers, matches, matchPlayers, registeredCountResult] = await Promise.all([
+  const [events, eventPlayers, matches, matchPlayers, registeredCountResult, currentRatings] = await Promise.all([
     fetchAll(() => supabase.from('v2_events').select('id,name,event_date,start_time,end_time,status,venue_name,created_at,completed_at').eq('organization_id', organizationId).order('id')),
     fetchAll(() => supabase.from('v2_event_players').select('id,event_id,player_id,display_name,estimated_level,avatar_url,status,created_at').eq('organization_id', organizationId).neq('status', 'removed').order('id')),
     fetchAll(() => supabase.from('v2_matches').select('id,event_id,court_number,status,team_a_score,team_b_score,completed_at,created_at').eq('organization_id', organizationId).in('status', CONFIRMED).order('id')),
     fetchAll(() => supabase.from('v2_match_players').select('match_id,event_player_id,player_id,team,slot').eq('organization_id', organizationId).order('match_id')),
-    supabase.rpc('v2_public_registered_player_count', { p_organization_id: organizationId })
+    supabase.rpc('v2_public_registered_player_count', { p_organization_id: organizationId }),
+    listCurrentGdsqRatings(supabase, organizationId)
   ]);
   if (registeredCountResult.error) throw registeredCountResult.error;
   return {
-    ...buildHallOfFame({ events, eventPlayers, matches, matchPlayers }),
+    ...buildHallOfFame({ events, eventPlayers, matches, matchPlayers, currentRatings }),
     totalRegisteredPlayers: Number(registeredCountResult.data || 0)
   };
 }

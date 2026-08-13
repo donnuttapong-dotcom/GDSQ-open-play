@@ -25,7 +25,7 @@ Deno.serve(async (request) => {
   if (!url || !serviceRoleKey) return json({ ok: false, error: 'Admin service is not configured' }, 500, origin);
   const body = await request.json().catch(() => null);
   const action = String(body?.action || ''), passcode = String(body?.passcode || '');
-  if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer'].includes(action) || passcode.length < 5 || passcode.length > 128) return json({ ok: false, error: 'Invalid request' }, 400, origin);
+  if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer', 'setRating'].includes(action) || passcode.length < 5 || passcode.length > 128) return json({ ok: false, error: 'Invalid request' }, 400, origin);
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
   const token = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   const { data: authData, error: authError } = await admin.auth.getUser(token);
@@ -40,6 +40,15 @@ Deno.serve(async (request) => {
   await admin.from('v2_admin_access_attempts').insert({ ip_hash: ipHash, action, success });
   if (!success) return json({ ok: false, error: 'Invalid Admin passcode' }, 401, origin);
   if (action === 'verify') return json({ ok: true }, 200, origin);
+  if (action === 'setRating') {
+    const eventId = String(body?.eventId || ''), organizationId = String(body?.organizationId || '');
+    if (!validId(eventId) || !validId(organizationId)) return json({ ok: false, error: 'Invalid event' }, 400, origin);
+    const { data: targetEvent, error: eventError } = await admin.from('v2_events').select('id,organization_id').eq('id', eventId).eq('organization_id', organizationId).maybeSingle();
+    if (eventError || !targetEvent) return json({ ok: false, error: 'Event not found' }, 404, origin);
+    const { data: setting, error: settingError } = await admin.from('v2_gdsq_rating_settings').upsert({ event_id: eventId, organization_id: organizationId, enabled: body?.enabled === true, updated_at: new Date().toISOString() }, { onConflict: 'event_id' }).select('event_id,organization_id,enabled,updated_at').single();
+    if (settingError) return json({ ok: false, error: settingError.message || 'Could not update GDSQ Rating' }, 400, origin);
+    return json({ ok: true, enabled: setting.enabled, setting }, 200, origin);
+  }
   if (action === 'listEvents') {
     const { data: events, error: eventsError } = await admin
       .from('v2_events')
