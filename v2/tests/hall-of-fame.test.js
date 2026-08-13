@@ -24,12 +24,13 @@ const baseMatches = [
   { id: 'm2', event_id: 'e2', status: 'confirmed', team_a_score: 11, team_b_score: 9, completed_at: '2026-08-12T13:00:00Z' }
 ];
 
-const initial = buildHallOfFame({ events, eventPlayers, matches: baseMatches, matchPlayers });
+const initial = buildHallOfFame({ events, eventPlayers, matches: baseMatches, matchPlayers, currentRatings: [{ player_id: 'profile-1', current_rating: 4.375 }] });
 const don = initial.players.find((player) => player.id === 'profile-1');
 assert.equal(initial.totalRegisteredPlayers, 1);
 assert.equal(initial.totalEvents, 2);
 assert.equal(initial.totalMatches, 2);
 assert.equal(don.eventsJoined, 2, 'same profile id across events must create one career');
+assert.equal(don.gdsqRating, 4.375, 'GDSQ Rating is displayed separately from declared level');
 assert.deepEqual({ games: don.matchesPlayed, wins: don.wins, losses: don.losses, pf: don.pointsFor, pa: don.pointsAgainst }, { games: 2, wins: 1, losses: 1, pf: 20, pa: 19 });
 assert.equal(JSON.stringify(initial).includes('@'), false, 'public Hall of Fame output must not include email');
 

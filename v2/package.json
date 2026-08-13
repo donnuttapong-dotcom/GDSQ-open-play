@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node ./tests/matchmaking.test.js && node ./tests/supabase-services.test.js && node ./tests/event-history.test.js && node ./tests/archived-event-history-service.test.js && node ./tests/confirmed-history-stats.test.js && node ./tests/hall-of-fame.test.js"
+    "test": "node ./tests/matchmaking.test.js && node ./tests/supabase-services.test.js && node ./tests/event-history.test.js && node ./tests/archived-event-history-service.test.js && node ./tests/confirmed-history-stats.test.js && node ./tests/hall-of-fame.test.js && node ./tests/gdsq-rating.test.js"
   }
 }
