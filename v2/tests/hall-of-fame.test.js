@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { buildHallOfFame } from '../src/services/hallOfFameService.js';
 
 const events = [
-  { id: 'e1', name: 'Event One', event_date: '2026-08-06', status: 'deleted' },
-  { id: 'e2', name: 'Event Two', event_date: '2026-08-12', status: 'completed' }
+  { id: 'e1', name: 'Event One', event_date: '2026-08-06', status: 'deleted', hall_of_fame_processed_at: '2026-08-06T14:00:00Z' },
+  { id: 'e2', name: 'Event Two', event_date: '2026-08-12', status: 'completed', hall_of_fame_processed_at: '2026-08-12T14:00:00Z' },
+  { id: 'e-live', name: 'Live Event', event_date: '2026-08-14', status: 'live' }
 ];
 const eventPlayers = [
   { id: 'ep1', event_id: 'e1', player_id: 'profile-1', display_name: 'Don', estimated_level: 4.25 },
@@ -13,15 +14,21 @@ const eventPlayers = [
   { id: 'ep5', event_id: 'e2', player_id: 'profile-1', display_name: 'Don Updated', estimated_level: 4.5 },
   { id: 'ep6', event_id: 'e2', display_name: 'Guest D', estimated_level: 3 },
   { id: 'ep7', event_id: 'e2', display_name: 'Guest E', estimated_level: 3 },
-  { id: 'ep8', event_id: 'e2', display_name: 'Guest F', estimated_level: 3 }
+  { id: 'ep8', event_id: 'e2', display_name: 'Guest F', estimated_level: 3 },
+  { id: 'ep-live-1', event_id: 'e-live', display_name: 'Live Player', estimated_level: 3 },
+  { id: 'ep-live-2', event_id: 'e-live', display_name: 'Live Player 2', estimated_level: 3 },
+  { id: 'ep-live-3', event_id: 'e-live', display_name: 'Live Player 3', estimated_level: 3 },
+  { id: 'ep-live-4', event_id: 'e-live', display_name: 'Live Player 4', estimated_level: 3 }
 ];
 const matchPlayers = [
   ['m1','ep1','A',1],['m1','ep2','A',2],['m1','ep3','B',1],['m1','ep4','B',2],
-  ['m2','ep5','B',1],['m2','ep6','B',2],['m2','ep7','A',1],['m2','ep8','A',2]
+  ['m2','ep5','B',1],['m2','ep6','B',2],['m2','ep7','A',1],['m2','ep8','A',2],
+  ['m-live','ep-live-1','A',1],['m-live','ep-live-2','A',2],['m-live','ep-live-3','B',1],['m-live','ep-live-4','B',2]
 ].map(([match_id,event_player_id,team,slot])=>({match_id,event_player_id,team,slot}));
 const baseMatches = [
   { id: 'm1', event_id: 'e1', status: 'confirmed', team_a_score: 11, team_b_score: 8, completed_at: '2026-08-06T13:00:00Z' },
-  { id: 'm2', event_id: 'e2', status: 'confirmed', team_a_score: 11, team_b_score: 9, completed_at: '2026-08-12T13:00:00Z' }
+  { id: 'm2', event_id: 'e2', status: 'confirmed', team_a_score: 11, team_b_score: 9, completed_at: '2026-08-12T13:00:00Z' },
+  { id: 'm-live', event_id: 'e-live', status: 'confirmed', team_a_score: 11, team_b_score: 1, completed_at: '2026-08-14T13:00:00Z' }
 ];
 
 const initial = buildHallOfFame({ events, eventPlayers, matches: baseMatches, matchPlayers, currentRatings: [{ player_id: 'profile-1', current_rating: 4.375 }] });
@@ -29,6 +36,7 @@ const don = initial.players.find((player) => player.id === 'profile-1');
 assert.equal(initial.totalRegisteredPlayers, 1);
 assert.equal(initial.totalEvents, 2);
 assert.equal(initial.totalMatches, 2);
+assert.equal(initial.players.some((player) => player.displayName === 'Live Player'), false, 'live event results must not enter Hall of Fame');
 assert.equal(don.eventsJoined, 2, 'same profile id across events must create one career');
 assert.equal(don.gdsqRating, 4.375, 'GDSQ Rating is displayed separately from declared level');
 assert.deepEqual({ games: don.matchesPlayed, wins: don.wins, losses: don.losses, pf: don.pointsFor, pa: don.pointsAgainst }, { games: 2, wins: 1, losses: 1, pf: 20, pa: 19 });
