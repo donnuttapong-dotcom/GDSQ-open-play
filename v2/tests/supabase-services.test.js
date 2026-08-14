@@ -260,7 +260,7 @@ function playerServiceFake({ user = null, existingProfile = null, existingEventP
   }]]);
 }
 
-// Editing an already confirmed result uses the signed-in-only RPC, not a direct table update.
+// Historical score corrections must not use a normal player RPC.
 {
   const rpcCalls = [];
   const row = {
@@ -278,11 +278,11 @@ function playerServiceFake({ user = null, existingProfile = null, existingEventP
       return chain;
     }
   };
-  const updated = await updateConfirmedScore(supabase, row.id, { teamAScore: 11, teamBScore: 9 });
-  assert.equal(updated.status, 'confirmed');
-  assert.deepEqual(rpcCalls, [['v2_update_confirmed_match_score', {
-    p_match_id: 'confirmed-1', p_team_a_score: 11, p_team_b_score: 9
-  }]]);
+  await assert.rejects(
+    updateConfirmedScore(supabase, row.id, { teamAScore: 11, teamBScore: 9 }),
+    /authorized Admin Results Editor/
+  );
+  assert.deepEqual(rpcCalls, []);
 }
 
 console.log('v2 Supabase service tests passed');

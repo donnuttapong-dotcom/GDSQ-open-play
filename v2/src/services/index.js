@@ -315,8 +315,9 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async canEditConfirmedResults() {
-      if (!isSupabase) return true;
-      return Boolean(await getSupabaseAuthenticatedPlayer(requireSupabase(supabase)));
+      // Supabase historical edits are intentionally isolated to v2-admin-results.
+      // The normal player session must never be advertised as an editor capability.
+      return !isSupabase;
     },
 
     async updateConfirmedScore(matchId, payload) {
