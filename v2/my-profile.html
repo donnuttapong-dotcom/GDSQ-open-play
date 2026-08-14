@@ -21,7 +21,7 @@
   <script type="module">
     import { createV2Services } from './src/services/index.js?v=verified-identity-01';
     import { getSupabaseClient } from './src/services/supabaseClient.js';
-    import { loadHallOfFame } from './src/services/hallOfFameService.js?v=verified-identity-01';
+    import { loadHallOfFame } from './src/services/hallOfFameService.js?v=hof-end-event-01';
     import { listPlayerGdsqRatingHistory } from './src/services/gdsqRatingService.js?v=gdsq-rating-02';
     import { isSupportedAvatar, prepareAvatar } from './src/services/avatarImage.js?v=avatar-compress-01';
     const $=id=>document.getElementById(id),ORG='00000000-0000-4000-8000-000000000001',services=createV2Services({mode:'supabase'}),supabase=getSupabaseClient();
