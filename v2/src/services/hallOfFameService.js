@@ -73,8 +73,13 @@ function addResult(career, event, match, side, teamAScore, teamBScore, names) {
 }
 
 export function buildHallOfFame({ events = [], eventPlayers = [], matches = [], matchPlayers = [], currentRatings = [] } = {}) {
-  const eventById = new Map(events.map((event) => [String(event.id), event]));
-  const eventPlayerById = new Map(eventPlayers.map((player) => [String(player.id), player]));
+  const finalizedEventIds = new Set(events
+    .filter((event) => Boolean(event.hall_of_fame_processed_at || event.hallOfFameProcessedAt))
+    .map((event) => String(event.id)));
+  const finalizedEvents = events.filter((event) => finalizedEventIds.has(String(event.id)));
+  const eventById = new Map(finalizedEvents.map((event) => [String(event.id), event]));
+  const finalizedEventPlayers = eventPlayers.filter((player) => finalizedEventIds.has(String(player.event_id || player.eventId)));
+  const eventPlayerById = new Map(finalizedEventPlayers.map((player) => [String(player.id), player]));
   const rowsByMatch = new Map();
   for (const row of matchPlayers) {
     const list = rowsByMatch.get(String(row.match_id)) || [];
@@ -83,10 +88,11 @@ export function buildHallOfFame({ events = [], eventPlayers = [], matches = [], 
   }
   const careers = new Map();
   const confirmedMatches = matches.filter((match) => CONFIRMED.includes(String(match.status || '').toLowerCase()));
+  const finalizedMatches = confirmedMatches.filter((match) => finalizedEventIds.has(String(match.event_id || match.eventId)));
 
   // A participation belongs to the career even when the player has not yet
   // completed a match. Confirmed Match History remains the only score source.
-  for (const participant of eventPlayers) {
+  for (const participant of finalizedEventPlayers) {
     const event = eventById.get(String(participant.event_id));
     if (!event) continue;
     const identity = identityFor(participant);
@@ -101,7 +107,7 @@ export function buildHallOfFame({ events = [], eventPlayers = [], matches = [], 
     careers.set(identity, career);
   }
 
-  for (const match of confirmedMatches) {
+  for (const match of finalizedMatches) {
     const event = eventById.get(String(match.event_id));
     const teamAScore = Number(match.team_a_score);
     const teamBScore = Number(match.team_b_score);
@@ -142,15 +148,15 @@ export function buildHallOfFame({ events = [], eventPlayers = [], matches = [], 
   return {
     players,
     totalRegisteredPlayers: new Set(eventPlayers.filter((player) => player.player_id).map((player) => String(player.player_id))).size,
-    totalUnlinkedPlayers: eventPlayers.filter((player) => !player.player_id && player.status !== 'removed').length,
-    totalEvents: new Set(confirmedMatches.map((match) => String(match.event_id))).size,
-    totalMatches: confirmedMatches.length
+    totalUnlinkedPlayers: finalizedEventPlayers.filter((player) => !player.player_id && player.status !== 'removed').length,
+    totalEvents: new Set(finalizedMatches.map((match) => String(match.event_id))).size,
+    totalMatches: finalizedMatches.length
   };
 }
 
 export async function loadHallOfFame(supabase, organizationId) {
   const [events, eventPlayers, matches, matchPlayers, registeredCountResult, currentRatings] = await Promise.all([
-    fetchAll(() => supabase.from('v2_events').select('id,name,event_date,start_time,end_time,status,venue_name,created_at,completed_at').eq('organization_id', organizationId).order('id')),
+    fetchAll(() => supabase.from('v2_events').select('id,name,event_date,start_time,end_time,status,venue_name,created_at,completed_at,hall_of_fame_processed_at').eq('organization_id', organizationId).order('id')),
     fetchAll(() => supabase.from('v2_event_players').select('id,event_id,player_id,display_name,estimated_level,avatar_url,status,created_at').eq('organization_id', organizationId).neq('status', 'removed').order('id')),
     fetchAll(() => supabase.from('v2_matches').select('id,event_id,court_number,status,team_a_score,team_b_score,completed_at,created_at').eq('organization_id', organizationId).in('status', CONFIRMED).order('id')),
     fetchAll(() => supabase.from('v2_match_players').select('match_id,event_player_id,player_id,team,slot').eq('organization_id', organizationId).order('match_id')),

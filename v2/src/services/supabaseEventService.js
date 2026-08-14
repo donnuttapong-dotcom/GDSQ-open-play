@@ -16,7 +16,8 @@ function normalizeEvent(row) {
     checkinOpen: row.checkin_open,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    completedAt: row.completed_at
+    completedAt: row.completed_at,
+    hallOfFameProcessedAt: row.hall_of_fame_processed_at
   };
 }
 

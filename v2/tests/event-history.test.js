@@ -11,7 +11,7 @@ class MemoryStorage {
 globalThis.localStorage = new MemoryStorage();
 globalThis.location = { search: '' };
 
-const { listEvents, listAllEvents, getSelectedEvent, deleteEvent, restoreEvent, permanentlyDeleteEvent } = await import('../src/services/localEventStore.js');
+const { listEvents, listAllEvents, getSelectedEvent, deleteEvent, restoreEvent, permanentlyDeleteEvent, updateEventStatus } = await import('../src/services/localEventStore.js');
 const { listLocalEventMatches } = await import('../src/services/localMatchStore.js');
 const { clearLocalEventData } = await import('../src/services/localEventCleanup.js');
 const events = [
@@ -23,6 +23,13 @@ localStorage.setItem('gdsq_v2_selected_event_id', 'event-new');
 localStorage.setItem('gdsq_v2_matches:event-new', JSON.stringify([{ id: 'new-match', eventId: 'event-new', status: 'confirmed' }]));
 localStorage.setItem('gdsq_v2_matches:event-old', JSON.stringify([{ id: 'old-match', eventId: 'event-old', status: 'confirmed' }]));
 localStorage.setItem('gdsq_v2_event_players:event-new', JSON.stringify([{ id: 'new-player', eventId: 'event-new' }]));
+
+const finalized = updateEventStatus('event-old', 'completed');
+assert.ok(finalized.hallOfFameProcessedAt, 'ending an event creates a local HOF finalization marker');
+const processedAt = finalized.hallOfFameProcessedAt;
+updateEventStatus('event-old', 'live');
+const reopened = updateEventStatus('event-old', 'completed');
+assert.equal(reopened.hallOfFameProcessedAt, processedAt, 'reopen/end must not duplicate or replace the marker');
 
 deleteEvent('event-new');
 assert.deepEqual(listEvents().map((event) => event.id), ['event-old']);
