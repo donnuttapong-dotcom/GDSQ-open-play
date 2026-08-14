@@ -64,7 +64,9 @@ function normalizeEvent(input) {
     startTime: input.startTime || '16:00',
     endTime: input.endTime || '18:00',
     createdAt: input.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    completedAt: input.completedAt || null,
+    hallOfFameProcessedAt: input.hallOfFameProcessedAt || null
   };
 }
 
@@ -113,7 +115,20 @@ export function createEvent(input) {
 
 export function updateEventStatus(eventId, status) {
   const events = listAllEvents();
-  const next = events.map((event) => event.id === eventId ? { ...event, status, updatedAt: new Date().toISOString() } : event);
+  const completed = ['completed', 'ended', 'closed', 'finished'].includes(String(status || '').toLowerCase());
+  const next = events.map((event) => {
+    if (event.id !== eventId) return event;
+    const now = new Date().toISOString();
+    return {
+      ...event,
+      status,
+      completedAt: completed ? (event.completedAt || now) : event.completedAt || null,
+      // This local-mode marker mirrors the production trigger and is
+      // intentionally retained when an ended event is reopened.
+      hallOfFameProcessedAt: completed ? (event.hallOfFameProcessedAt || event.completedAt || now) : event.hallOfFameProcessedAt || null,
+      updatedAt: now
+    };
+  });
   localStorage.setItem(EVENTS_KEY, JSON.stringify(next));
   return next.find((event) => event.id === eventId) || null;
 }
