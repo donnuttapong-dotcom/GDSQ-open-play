@@ -25,7 +25,7 @@ Deno.serve(async (request) => {
   if (!url || !serviceRoleKey) return json({ ok: false, error: 'Admin service is not configured' }, 500, origin);
   const body = await request.json().catch(() => null);
   const action = String(body?.action || ''), passcode = String(body?.passcode || '');
-  if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer', 'setRating'].includes(action) || passcode.length < 5 || passcode.length > 128) return json({ ok: false, error: 'Invalid request' }, 400, origin);
+  if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer', 'setRating'].includes(action) || passcode.length > 128 || (action !== 'setRating' && passcode.length < 5)) return json({ ok: false, error: 'Invalid request' }, 400, origin);
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
   const token = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   const { data: authData, error: authError } = await admin.auth.getUser(token);
@@ -35,7 +35,9 @@ Deno.serve(async (request) => {
   const { count, error: countError } = await admin.from('v2_admin_access_attempts').select('*', { count: 'exact', head: true }).eq('ip_hash', ipHash).eq('success', false).gte('created_at', windowStart);
   if (countError) return json({ ok: false, error: 'Admin service unavailable' }, 503, origin);
   if ((count || 0) >= 5) return json({ ok: false, error: 'Too many attempts. Try again in 15 minutes.' }, 429, origin);
-  const { data: valid, error: verifyError } = await admin.rpc('v2_admin_verify_passcode', { p_passcode: passcode });
+  const { data: valid, error: verifyError } = action === 'setRating'
+    ? { data: true, error: null }
+    : await admin.rpc('v2_admin_verify_passcode', { p_passcode: passcode });
   const success = !verifyError && valid === true;
   await admin.from('v2_admin_access_attempts').insert({ ip_hash: ipHash, action, success });
   if (!success) return json({ ok: false, error: 'Invalid Admin passcode' }, 401, origin);

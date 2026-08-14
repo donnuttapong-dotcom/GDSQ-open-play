@@ -34,10 +34,10 @@ export async function getEventRatingSetting(supabase, eventId) {
   return { enabled: Boolean(data?.enabled), available: true, row: data || null };
 }
 
-export async function setEventRatingEnabled(supabase, { eventId, organizationId, enabled, passcode }) {
+export async function setEventRatingEnabled(supabase, { eventId, organizationId, enabled }) {
   if (!supabase || !eventId || !organizationId) throw new Error('Event is required');
   const { data, error } = await supabase.functions.invoke('v2-admin-results', {
-    body: { action: 'setRating', eventId, organizationId, enabled: Boolean(enabled), passcode }
+    body: { action: 'setRating', eventId, organizationId, enabled: Boolean(enabled) }
   });
   if (error) throw error;
   if (!data?.ok) throw new Error(data?.error || 'Could not update GDSQ Rating');

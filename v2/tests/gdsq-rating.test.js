@@ -37,11 +37,12 @@ function queryResult(value) { return Promise.resolve(value); }
       }
     }
   };
-  const setting = await setEventRatingEnabled(supabase, { eventId: 'event-1', organizationId: 'org-1', enabled: true, passcode: 'secret' });
+  const setting = await setEventRatingEnabled(supabase, { eventId: 'event-1', organizationId: 'org-1', enabled: true });
   assert.equal(setting.enabled, true);
   assert.equal(calls.length, 1);
   assert.equal(calls[0].name, 'v2-admin-results');
   assert.equal(calls[0].options.body.enabled, true);
+  assert.equal(calls[0].options.body.passcode, undefined);
 }
 
 {
