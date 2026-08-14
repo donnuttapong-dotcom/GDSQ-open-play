@@ -231,14 +231,8 @@ function validConfirmedScore(payload = {}) {
 }
 
 export async function updateConfirmedScore(supabase, matchId, payload) {
-  const score = validConfirmedScore(payload);
-  const { error } = await supabase.rpc('v2_update_confirmed_match_score', {
-    p_match_id: matchId,
-    p_team_a_score: score.teamAScore,
-    p_team_b_score: score.teamBScore
-  });
-  if (error) throw error;
-  return fetchMatch(supabase, matchId);
+  validConfirmedScore(payload);
+  throw new Error('Historical score corrections must use the authorized Admin Results Editor.');
 }
 
 export async function isAdminPasscodeConfigured(supabase) {
@@ -254,8 +248,6 @@ export async function setAdminPasscode(supabase, passcode) {
 }
 
 export async function updateConfirmedScoreWithPasscode(supabase, matchId, payload) {
-  const score = validConfirmedScore(payload);
-  const { error } = await supabase.rpc('v2_update_confirmed_match_score_with_passcode', { p_match_id: matchId, p_team_a_score: score.teamAScore, p_team_b_score: score.teamBScore, p_passcode: payload.passcode });
-  if (error) throw error;
-  return fetchMatch(supabase, matchId);
+  validConfirmedScore(payload);
+  throw new Error('Historical score corrections must use the authorized Admin Results Editor.');
 }
