@@ -24,4 +24,16 @@ assert.equal(ranking.reduce((sum, player) => sum + player.wins, 0), 2);
 assert.equal(ranking.reduce((sum, player) => sum + player.losses, 0), 2);
 assert.equal(ranking.reduce((sum, player) => sum + player.pointsFor, 0), ranking.reduce((sum, player) => sum + player.pointsAgainst, 0));
 
+// Editing a confirmed score changes derived history, while deleting it removes
+// only that match from the calculation. Stored player totals remain irrelevant.
+const edited = buildEventHistoryStats(players, [
+  { ...matches[0], teamAScore: 8, teamBScore: 11 },
+  matches[1],
+  matches[2]
+]);
+const editedDon = edited.find((player) => player.id === 'p1');
+assert.deepEqual({ games: editedDon.matchesPlayed, wins: editedDon.wins, losses: editedDon.losses, pf: editedDon.pointsFor, pa: editedDon.pointsAgainst }, { games: 1, wins: 0, losses: 1, pf: 8, pa: 11 });
+const deleted = buildEventHistoryStats(players, [matches[1], matches[2]]);
+assert.equal(deleted.find((player) => player.id === 'p1').matchesPlayed, 0);
+
 console.log('v2 confirmed history stats tests passed');
