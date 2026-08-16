@@ -1,306 +1,230 @@
-import { generateSmartQueueMatch, normalizeSmartQueueModes, SMART_QUEUE_MODES } from '../logic/smartQueue/smartQueueEngine.js';
+import { SMART_QUEUE_MODES, generateSmartQueueMatch, normalizeSmartQueueModes } from '../logic/smartQueue/smartQueueEngine.js';
 import { createSmartQueueStore } from '../services/smartQueueService.js';
 
-function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
-}
+const MODE_LABELS = { social: 'SOCIAL', balanced: 'BALANCED', challenge: 'CHALLENGE' };
 
-function itemId(value) {
-  return String(typeof value === 'string' ? value : value?.id || value?.eventPlayerId || value?.event_player_id || '');
+function playerId(player) {
+  return String(player?.id || player?.eventPlayerId || player?.event_player_id || '');
 }
 
 function matchPlayerIds(match) {
-  return [...(match?.teamA || match?.team_a || []), ...(match?.teamB || match?.team_b || [])].map(itemId).filter(Boolean);
+  return [...(match?.teamA || match?.team_a || []), ...(match?.teamB || match?.team_b || [])]
+    .map((item) => playerId(typeof item === 'string' ? { id: item } : item))
+    .filter(Boolean);
 }
 
-function statusOf(value) {
-  return String(value || '').toLowerCase();
+function isActiveMatch(match) {
+  return ['preview', 'assigned', 'playing', 'pending_score'].includes(String(match?.status || '').toLowerCase());
 }
 
-function modeLabel(mode) {
-  return ({ social: 'SOCIAL', balanced: 'BALANCED', challenge: 'CHALLENGE' })[mode] || mode;
+function text(language, english, thai) {
+  return language() === 'en' ? english : thai;
 }
 
-export function createSmartQueueUi({ root, services, supabase, getEvent, getPlayers, getMatches, getCourtCount, reloadCore, showMessage }) {
-  let adminPasscode = '';
-  const requestAdminPasscode = () => {
-    if (adminPasscode) return adminPasscode;
-    adminPasscode = window.prompt(localStorage.getItem('gdsq_v2_ui_lang') === 'en' ? 'Enter Admin passcode for Smart Queue' : 'กรอกรหัส Admin สำหรับ Smart Queue') || '';
-    return adminPasscode;
-  };
-  const store = createSmartQueueStore({ supabase, mode: services.mode, getAdminPasscode: requestAdminPasscode });
-  let state = { enabled: false, schemaAvailable: null, preferences: [], matches: [] };
+export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, getMatches, getCourtCount, reloadCore, showMessage }) {
+  let state = { preferences: [], schemaAvailable: true };
+  let joinModes = [];
+  let editorPlayerId = '';
   let busy = false;
-
+  let adminPasscode = '';
   const language = () => localStorage.getItem('gdsq_v2_ui_lang') === 'en' ? 'en' : 'th';
-  const copy = (en, th) => language() === 'en' ? en : th;
-  const event = () => getEvent?.() || null;
+  const event = () => getEvent?.();
   const players = () => getPlayers?.() || [];
   const matches = () => getMatches?.() || [];
-  const preferenceMap = () => new Map(state.preferences.map((row) => [String(row.eventPlayerId), row]));
-  const playerById = (id) => players().find((player) => String(player.id) === String(id));
-  const playerName = (player) => player?.displayName || player?.display_name || player?.nickname || player?.name || 'Player';
-  const playerLevel = (player) => Number(player?.estimatedLevel ?? player?.estimated_level ?? player?.level ?? 0).toFixed(2);
+  const isSmartEvent = () => String(event()?.matchingMode || event()?.matching_mode || 'standard') === 'smart_queue';
   const organizationId = () => event()?.organizationId || event()?.organization_id || '00000000-0000-4000-8000-000000000001';
-  const currentMeta = () => new Map(state.matches.map((row) => [String(row.matchId), row]));
-  const activeStatuses = new Set(['preview', 'assigned', 'playing', 'pending_score']);
+  const store = createSmartQueueStore({
+    supabase,
+    mode: services.mode,
+    getAdminPasscode: async () => {
+      if (adminPasscode) return adminPasscode;
+      adminPasscode = prompt(text(language, 'Enter organizer passcode', 'กรอกรหัสผู้จัด')) || '';
+      return adminPasscode;
+    }
+  });
 
-  function activeMatches() {
-    return matches().filter((match) => activeStatuses.has(statusOf(match.status)));
+  function preferenceFor(id) {
+    return state.preferences.find((row) => String(row.eventPlayerId) === String(id)) || {
+      eventPlayerId: id,
+      modes: [],
+      preferredMode: null,
+      status: 'rest'
+    };
   }
 
-  function courtNumber(match) {
-    return Number(match?.courtNumber || match?.court_number || String(match?.courtId || match?.courtName || '').match(/\d+/)?.[0]) || 0;
+  function modeBadges(modes = []) {
+    return normalizeSmartQueueModes(modes).map((mode) => `<span class="smart-pref-badge ${mode}">${MODE_LABELS[mode]}</span>`).join('');
   }
 
-  function availableCourts() {
-    const used = new Set(activeMatches().map(courtNumber));
-    return Array.from({ length: Math.max(1, Math.min(10, Number(getCourtCount?.() || event()?.courtCount || event()?.court_count || 4))) }, (_, index) => index + 1)
-      .filter((number) => !used.has(number));
+  function displayStatus(player) {
+    if (!isSmartEvent()) return null;
+    const id = playerId(player);
+    const active = matches().find((match) => isActiveMatch(match) && matchPlayerIds(match).includes(id));
+    if (active && String(active.status).toLowerCase() === 'playing') return 'playing';
+    if (preferenceFor(id).status === 'rest') return 'rest';
+    return 'waiting';
   }
 
-  function smartMatches() {
-    const meta = currentMeta();
-    return matches().filter((match) => meta.has(String(match.id))).map((match) => ({ match, meta: meta.get(String(match.id)) }));
+  function joinPreferenceMarkup() {
+    if (!isSmartEvent()) return '';
+    return `<section class="smart-pref-panel mt-3" id="smartJoinPreference"><div class="flex items-center justify-between gap-2"><div><div class="smart-pref-title">${text(language, 'PLAY PREFERENCE', 'รูปแบบเกมที่เล่นได้')}</div><p class="mini mt-1">${text(language, 'Pick one or more. You can change this later.', 'เลือกได้มากกว่า 1 แบบ และแก้ได้ภายหลัง')}</p></div><span class="smart-pref-badge">SMART QUEUE</span></div><div class="smart-pref-modes">${SMART_QUEUE_MODES.map((mode) => `<button type="button" class="smart-pref-mode ${joinModes.includes(mode) ? 'is-on' : ''}" data-sq-join-mode="${mode}" aria-pressed="${joinModes.includes(mode)}">${MODE_LABELS[mode]}</button>`).join('')}<button type="button" class="smart-pref-mode ${joinModes.length === SMART_QUEUE_MODES.length ? 'is-on' : ''}" data-sq-join-any aria-pressed="${joinModes.length === SMART_QUEUE_MODES.length}">ANY</button></div></section>`;
   }
 
-  async function savePreference(playerId, patch, updatedBy = 'admin') {
-    const current = preferenceMap().get(String(playerId));
-    const modes = normalizeSmartQueueModes(patch.modes ?? current?.modes ?? []);
-    const status = patch.status || current?.status || 'rest';
+  function smartMatchMarkup() {
+    if (!isSmartEvent()) return '';
+    const available = players().filter((player) => displayStatus(player) === 'waiting').length;
+    const courtCount = Number(getCourtCount?.() || 0);
+    return `<div class="cut card p-4 smart-match-control"><div class="flex items-start justify-between gap-3"><div><div class="smart-pref-title">SMART MATCH</div><h3 class="font-black text-cyan-300 mt-1">${text(language, 'Next match recommendation', 'แนะนำแมตช์ถัดไป')}</h3><p class="mini mt-1">${text(language, `${available} waiting · ${courtCount} courts`, `รอเล่น ${available} คน · ${courtCount} คอร์ท`)}</p></div><span class="smart-pref-badge">SMART QUEUE</span></div><button id="generateSmartMatchBtn" class="cut bg-lime p-4 font-black text-black w-full mt-3" ${available < 4 ? 'disabled' : ''}>${text(language, 'GENERATE SMART MATCH', 'สร้าง Smart Match')}</button><p class="mini mt-2">${text(language, 'The recommendation uses preferences, level, waiting time, fairness, and recent pairings.', 'ระบบพิจารณารูปแบบที่เลือก ระดับ เวลารอ ความสมดุล และคู่ที่เพิ่งเล่น')}</p></div>`;
+  }
+
+  function editorMarkup() {
+    const player = players().find((item) => playerId(item) === editorPlayerId);
+    if (!player) return '';
+    const pref = preferenceFor(editorPlayerId);
+    const modes = normalizeSmartQueueModes(pref.modes);
+    return `<dialog id="smartPreferenceDialog" class="cut card smart-pref-dialog p-5"><form method="dialog" class="flex justify-between gap-3"><div><div class="smart-pref-title">SMART QUEUE</div><h2 class="text-xl font-black mt-1">${String(player.displayName || player.nickname || player.name || 'Player')}</h2><p class="mini mt-1">${text(language, 'Update game preference', 'แก้ไขรูปแบบเกม')}</p></div><button class="cut btn bg-white/5 px-3 py-2" value="cancel">${text(language, 'Close', 'ปิด')}</button></form><div class="smart-pref-modes mt-4">${SMART_QUEUE_MODES.map((mode) => `<button type="button" class="smart-pref-mode ${modes.includes(mode) ? 'is-on' : ''}" data-sq-editor-mode="${mode}" aria-pressed="${modes.includes(mode)}">${MODE_LABELS[mode]}</button>`).join('')}<button type="button" class="smart-pref-mode ${modes.length === SMART_QUEUE_MODES.length ? 'is-on' : ''}" data-sq-editor-any>ANY</button></div><div class="grid grid-cols-2 gap-2 mt-4"><button type="button" class="smart-pref-rest ${pref.status !== 'rest' ? 'is-on' : ''}" data-sq-editor-status="ready">${text(language, 'WAITING', 'รอเล่น')}</button><button type="button" class="smart-pref-rest ${pref.status === 'rest' ? 'is-on' : ''}" data-sq-editor-status="rest">${text(language, 'REST', 'พัก')}</button></div><p class="mini mt-3">${text(language, 'Status does not change the normal V2 player status.', 'สถานะนี้ไม่เปลี่ยน Player Status หลักของ V2')}</p></dialog>`;
+  }
+
+  function renderEditor() {
+    document.getElementById('smartPreferenceDialog')?.remove();
+    if (!editorPlayerId || !isSmartEvent()) return;
+    document.body.insertAdjacentHTML('beforeend', editorMarkup());
+    const dialog = document.getElementById('smartPreferenceDialog');
+    dialog?.showModal?.();
+    dialog?.addEventListener('close', () => { editorPlayerId = ''; });
+  }
+
+  async function refresh({ silent = false } = {}) {
+    if (!isSmartEvent() || !event()?.id) {
+      state = { preferences: [], schemaAvailable: true };
+      joinModes = [];
+      return state;
+    }
+    try {
+      state = await store.load(event().id);
+      return state;
+    } catch (error) {
+      console.error('Smart Queue preferences failed to load', error);
+      if (!silent) showMessage?.(text(language, `Smart Queue could not load: ${error.message}`, `โหลด Smart Queue ไม่สำเร็จ: ${error.message}`));
+      return state;
+    }
+  }
+
+  async function savePreference(id, patch, updatedBy = 'admin') {
+    if (!isSmartEvent() || !event()?.id) return null;
+    const current = preferenceFor(id);
+    const modes = normalizeSmartQueueModes(patch.modes ?? current.modes);
+    const status = patch.status || current.status || 'ready';
     const result = await store.savePreference({
       eventId: event().id,
       organizationId: organizationId(),
-      eventPlayerId: playerId,
+      eventPlayerId: id,
       modes,
-      preferredMode: patch.preferredMode ?? current?.preferredMode,
+      preferredMode: patch.preferredMode ?? current.preferredMode ?? modes[0] ?? null,
       status,
-      readySince: status === 'ready' ? patch.readySince || current?.readySince : null,
+      readySince: status === 'ready' ? current.readySince || new Date().toISOString() : null,
       updatedBy
     });
-    state.preferences = [...state.preferences.filter((row) => String(row.eventPlayerId) !== String(playerId)), result];
+    state.preferences = [...state.preferences.filter((row) => String(row.eventPlayerId) !== String(id)), result];
     return result;
   }
 
-  async function setPlayersStatus(playerIds, status) {
-    await Promise.all(playerIds.map((id) => savePreference(id, { status, readySince: status === 'ready' ? new Date().toISOString() : null }, 'system')));
+  async function registerJoinedPlayer(player) {
+    if (!isSmartEvent() || !player?.id) return;
+    const modes = normalizeSmartQueueModes(joinModes);
+    if (!modes.length) throw new Error(text(language, 'Choose at least one play preference for this Smart Queue event.', 'เลือกอย่างน้อย 1 รูปแบบเกมสำหรับ Smart Queue ก่อนเข้าคิว'));
+    await savePreference(player.id, { modes, preferredMode: modes[0], status: 'ready' }, 'player');
+    joinModes = [];
   }
 
-  async function reconcile() {
-    const prefs = preferenceMap();
-    for (const { match, meta } of smartMatches()) {
-      const status = statusOf(match.status);
-      const expected = status === 'playing' || status === 'pending_score' ? 'playing'
-        : status === 'confirmed' || status === 'completed' ? 'confirmed'
-          : status === 'cancelled' || status === 'deleted' ? 'cancelled'
-            : 'match_ready';
-      if (meta.state !== expected) {
-        const updated = await store.setMatchState(meta, expected);
-        state.matches = state.matches.map((row) => String(row.matchId) === String(updated.matchId) ? updated : row);
-      }
-      if (expected === 'confirmed' || expected === 'cancelled') {
-        const stale = matchPlayerIds(match).filter((id) => ['playing', 'match_ready'].includes(prefs.get(id)?.status));
-        if (stale.length) await setPlayersStatus(stale, 'ready');
-      }
-    }
-  }
-
-  function queueCounts() {
-    const prefs = preferenceMap();
-    const active = new Set(activeMatches().flatMap(matchPlayerIds));
-    return Object.fromEntries(SMART_QUEUE_MODES.map((mode) => [mode, players().filter((player) => {
-      const preference = prefs.get(String(player.id));
-      return preference?.status === 'ready' && preference.modes.includes(mode) && !active.has(String(player.id));
-    }).length]));
-  }
-
-  function renderHeader() {
-    return `<div class="smart-queue-head"><div><div class="smart-queue-kicker">EXPERIMENTAL MODULE</div><h2>GDSQ SMART QUEUE</h2><p class="mini mt-1">${copy('Optional match grouping by level, preferences, waiting fairness, and variety.', 'ระบบทดลองจัดกลุ่มจากระดับ โหมดที่รับได้ เวลารอ และความหลากหลาย')}</p></div><div class="smart-queue-actions"><button class="smart-queue-toggle ${state.enabled ? 'bg-lime text-black' : 'btn bg-white/5'}" data-sq-toggle type="button" aria-pressed="${state.enabled}">${state.enabled ? 'ON' : 'OFF'}</button><button class="btn bg-white/5" data-sq-refresh type="button">${copy('REFRESH', 'รีเฟรช')}</button></div></div>`;
-  }
-
-  function renderModeCounts() {
-    const counts = queueCounts();
-    return `<div class="smart-queue-mode-counts">${SMART_QUEUE_MODES.map((mode) => `<div class="smart-queue-mode-count"><span class="smart-queue-${mode} font-black">${modeLabel(mode)}</span><b>${counts[mode]}</b><span class="mini">${copy('eligible', 'พร้อมในโหมดนี้')}</span></div>`).join('')}</div>`;
-  }
-
-  function renderCourts() {
-    const meta = currentMeta();
-    const activeByCourt = new Map(activeMatches().map((match) => [courtNumber(match), { match, meta: meta.get(String(match.id)) }]));
-    const count = Math.max(1, Math.min(10, Number(getCourtCount?.() || event()?.courtCount || event()?.court_count || 4)));
-    return `<div class="smart-queue-courts">${Array.from({ length: count }, (_, index) => index + 1).map((number) => {
-      const active = activeByCourt.get(number);
-      const mode = active?.meta?.playMode;
-      return `<div class="smart-queue-court ${active ? 'is-playing' : 'is-available'}"><b>${copy('COURT', 'คอร์ท')} ${number}</b><div class="mini mt-1">${active ? `${statusOf(active.match.status).toUpperCase()}${mode ? ` · ${modeLabel(mode)}` : ''}` : copy('AVAILABLE', 'ว่าง')}</div></div>`;
-    }).join('')}</div>`;
-  }
-
-  function teamNames(team) {
-    return team.map((id) => playerName(playerById(itemId(id)))).join(' + ');
-  }
-
-  function renderSmartMatch(match, meta) {
-    const status = statusOf(match.status);
-    const canStart = status === 'preview';
-    const canScore = status === 'playing' || status === 'pending_score';
-    return `<div class="smart-queue-match"><div class="flex justify-between gap-3"><div><b>${copy('COURT', 'คอร์ท')} ${courtNumber(match)}</b><div class="smart-queue-${meta.playMode} text-xs font-black mt-1">${modeLabel(meta.playMode)}</div></div><span class="pill ${canStart ? 'pill-draft' : canScore ? 'pill-playing' : 'pill-ended'}">${status.toUpperCase()}</span></div><div class="smart-queue-versus"><div class="smart-queue-team"><span class="mini">TEAM A</span><b>${escapeHtml(teamNames(match.teamA || []))}</b></div><span class="font-black text-center">VS</span><div class="smart-queue-team"><span class="mini">TEAM B</span><b>${escapeHtml(teamNames(match.teamB || []))}</b></div></div>${canScore ? `<div class="smart-queue-score"><input type="number" min="0" max="99" inputmode="numeric" placeholder="A" data-sq-score-a="${match.id}"><input type="number" min="0" max="99" inputmode="numeric" placeholder="B" data-sq-score-b="${match.id}"></div>` : ''}<div class="smart-queue-actions mt-3">${canStart ? `<button class="bg-orange-400 text-black" data-sq-start="${match.id}">${copy('START MATCH', 'เริ่มแมตช์')}</button><button class="btn bg-white/5" data-sq-cancel="${match.id}">${copy('CANCEL', 'ยกเลิก')}</button>` : ''}${canScore ? `<button class="bg-lime text-black" data-sq-confirm="${match.id}">${copy('CONFIRM RESULT', 'ยืนยันผล')}</button>` : ''}</div></div>`;
-  }
-
-  function renderNextMatches() {
-    const rows = smartMatches().filter(({ match }) => activeStatuses.has(statusOf(match.status)));
-    if (!rows.length) return `<div class="smart-queue-disabled"><b>${copy('No Smart Queue match is ready.', 'ยังไม่มีแมตช์ Smart Queue')}</b><p class="mini mt-2">${copy('Generate one when at least four compatible players and a court are available.', 'สร้างได้เมื่อมีผู้เล่นที่เข้ากันอย่างน้อย 4 คนและมีคอร์ทว่าง')}</p><button class="smart-queue-status bg-lime text-black mt-4" data-sq-generate ${state.enabled ? '' : 'disabled'}>${copy('GENERATE MATCH READY', 'สร้าง MATCH READY')}</button></div>`;
-    return `<div class="smart-queue-next">${rows.map(({ match, meta }) => renderSmartMatch(match, meta)).join('')}</div>`;
-  }
-
-  function playerControls(player) {
-    const preference = preferenceMap().get(String(player.id)) || { modes: [], preferredMode: null, status: 'rest' };
-    const modes = normalizeSmartQueueModes(preference.modes);
-    const preferredOptions = modes.map((mode) => `<option value="${mode}" ${preference.preferredMode === mode ? 'selected' : ''}>${modeLabel(mode)}</option>`).join('');
-    const avatar = player.avatarUrl || player.avatar_url;
-    return `<div class="smart-queue-player"><div class="smart-queue-player-main">${avatar ? `<img src="${escapeHtml(avatar)}" alt="${escapeHtml(playerName(player))}">` : '<div class="smart-queue-avatar"></div>'}<div class="min-w-0"><b class="block truncate">${escapeHtml(playerName(player))}</b><span class="mini">Level ${playerLevel(player)} · ${String(preference.status || 'rest').toUpperCase()}</span></div></div><div class="smart-queue-player-controls"><div class="smart-queue-modes">${SMART_QUEUE_MODES.map((mode) => `<button class="smart-queue-mode ${modes.includes(mode) ? 'is-on' : ''}" data-sq-mode="${mode}" data-player-id="${player.id}" aria-pressed="${modes.includes(mode)}">${modeLabel(mode)}</button>`).join('')}<button class="smart-queue-mode ${modes.length === 3 ? 'is-on' : ''}" data-sq-any data-player-id="${player.id}">ANY GAME</button></div><div class="smart-queue-statuses"><button class="smart-queue-status ${preference.status === 'ready' ? 'is-on' : ''}" data-sq-status="ready" data-player-id="${player.id}">READY</button><button class="smart-queue-status ${preference.status === 'rest' ? 'is-on' : ''}" data-sq-status="rest" data-player-id="${player.id}">REST</button><select class="smart-queue-preferred" data-sq-preferred data-player-id="${player.id}" ${modes.length ? '' : 'disabled'}><option value="">${copy('Preferred mode', 'โหมดที่ต้องการ')}</option>${preferredOptions}</select></div></div></div>`;
-  }
-
-  function render() {
-    if (!root) return;
-    const navigationButton = document.getElementById('tabBtn-smart-queue');
-    if (navigationButton) navigationButton.textContent = copy('Smart Queue', 'สมาร์ตคิว');
-    if (!event()) {
-      root.innerHTML = `${renderHeader()}<div class="smart-queue-disabled">${copy('Select an event first.', 'กรุณาเลือกอีเว้นท์ก่อน')}</div>`;
-      return;
-    }
-    if (state.schemaAvailable === false) {
-      root.innerHTML = `${renderHeader()}<div class="smart-queue-disabled smart-queue-warning"><b>${copy('Smart Queue database migration is not installed yet.', 'ยังไม่ได้ติดตั้งฐานข้อมูล Smart Queue')}</b><p class="mini mt-2">${copy('The existing V2 system is unaffected and Smart Queue remains OFF.', 'ระบบ V2 เดิมยังทำงานปกติ และ Smart Queue ยังคงปิดอยู่')}</p></div>`;
-      return;
-    }
-    const playerRows = players().filter((player) => !['removed', 'deleted'].includes(statusOf(player.status)));
-    root.innerHTML = `${renderHeader()}${state.enabled ? `<div class="smart-queue-grid"><div class="smart-queue-panel"><h3>${copy('NEXT MATCH', 'แมตช์ถัดไป')}</h3>${renderNextMatches()}</div><div class="grid gap-3"><div class="smart-queue-panel"><h3>${copy('QUEUE', 'คิว')}</h3>${renderModeCounts()}</div><div class="smart-queue-panel"><h3>${copy('COURTS', 'คอร์ท')}</h3>${renderCourts()}</div></div></div><div class="smart-queue-panel"><div class="flex justify-between gap-3 items-end"><div><h3>${copy('PLAYER PREFERENCES', 'โหมดการเล่นของผู้เล่น')}</h3><p class="mini mt-1">${copy('Admin and player update the same Smart Queue record.', 'Admin และผู้เล่นแก้ข้อมูล Smart Queue ชุดเดียวกัน')}</p></div><span class="pill pill-draft">${playerRows.length} PLAYERS</span></div><div class="smart-queue-player-list">${playerRows.map(playerControls).join('') || `<div class="mini">${copy('No players.', 'ยังไม่มีผู้เล่น')}</div>`}</div></div>` : `<div class="smart-queue-disabled"><b>${copy('Smart Queue is OFF', 'Smart Queue ปิดอยู่')}</b><p class="mini mt-2">${copy('Auto Match, Manual Match, and the existing Queue continue unchanged.', 'Auto Match, Manual Match และ Queue เดิมทำงานเหมือนเดิม')}</p></div>`}`;
-  }
-
-  async function refresh({ silent = false, force = false } = {}) {
-    if ((!force && busy) || !event()) {
-      render();
-      return;
-    }
+  async function generateSmartMatch() {
+    if (!isSmartEvent() || busy) return;
+    const courtNumbers = new Set(matches().filter(isActiveMatch).map((match) => Number(match.courtNumber || match.court_number)));
+    const court = Array.from({ length: Number(getCourtCount?.() || 0) }, (_, index) => index + 1).find((number) => !courtNumbers.has(number));
+    if (!court) return showMessage?.(text(language, 'No court is available. Finish or cancel an active match first.', 'ไม่มีคอร์ทว่าง กรุณาจบหรือยกเลิกแมตช์ที่กำลังเล่นก่อน'));
+    const result = generateSmartQueueMatch({ players: players(), preferences: state.preferences, matches: matches() });
+    if (!result.match) return showMessage?.(text(language, 'No compatible group of four is ready yet.', 'ยังไม่พบผู้เล่น 4 คนที่เหมาะสมในตอนนี้'));
     busy = true;
     try {
-      state = await store.load(event().id);
-      if (state.schemaAvailable && state.enabled) await reconcile();
-      render();
-    } catch (error) {
-      console.error('Smart Queue refresh failed', error);
-      if (!silent) showMessage?.(copy(`Smart Queue failed: ${error.message}`, `Smart Queue มีปัญหา: ${error.message}`));
+      await services.createMatchPreview({
+        eventId: event().id,
+        organizationId: organizationId(),
+        courtId: `court-${court}`,
+        courtNumber: court,
+        courtName: `Court ${court}`,
+        teamA: result.match.teamA,
+        teamB: result.match.teamB,
+        matchMode: `smart_queue_${result.match.mode}`,
+        fairnessScore: result.match.score,
+        idempotencyKey: `smart-queue:${event().id}:${court}:${result.match.playerIds.slice().sort().join('-')}:${Date.now()}`
+      });
+      await reloadCore?.();
+      await refresh({ silent: true });
+      showMessage?.(text(language, 'Smart Match preview is ready.', 'สร้างพรีวิว Smart Match แล้ว'));
     } finally {
       busy = false;
     }
   }
 
-  async function toggleEnabled() {
-    if (!event() || state.schemaAvailable === false) return;
-    state.enabled = await store.setEnabled({ eventId: event().id, organizationId: organizationId(), enabled: !state.enabled });
-    showMessage?.(state.enabled ? copy('Smart Queue enabled.', 'เปิด Smart Queue แล้ว') : copy('Smart Queue disabled. Existing V2 is unchanged.', 'ปิด Smart Queue แล้ว ระบบ V2 เดิมไม่เปลี่ยน'));
-    await refresh({ silent: true, force: true });
-  }
-
-  async function toggleMode(playerId, mode, any = false) {
-    const current = preferenceMap().get(String(playerId));
-    let modes = normalizeSmartQueueModes(current?.modes || []);
-    modes = any ? SMART_QUEUE_MODES.slice() : modes.includes(mode) ? modes.filter((value) => value !== mode) : [...modes, mode];
-    await savePreference(playerId, { modes, preferredMode: modes.includes(current?.preferredMode) ? current.preferredMode : modes[0], status: current?.status || 'ready' });
-    render();
-  }
-
-  async function generateMatchReady() {
-    if (!state.enabled || !event()) return;
-    const court = availableCourts()[0];
-    if (!court) return showMessage?.(copy('No court is available.', 'ไม่มีคอร์ทว่าง'));
-    const result = generateSmartQueueMatch({ players: players(), preferences: state.preferences, matches: matches() });
-    if (!result.match) return showMessage?.(copy('No compatible group of four is ready yet.', 'ยังไม่พบผู้เล่น 4 คนที่โหมดและระดับเข้ากัน'));
-    const idempotencyKey = `smart-queue:${event().id}:${court}:${result.match.playerIds.slice().sort().join('-')}:${Date.now()}`;
-    const preview = await services.createMatchPreview({
-      eventId: event().id,
-      organizationId: organizationId(),
-      courtId: `court-${court}`,
-      courtNumber: court,
-      courtName: `Court ${court}`,
-      teamA: result.match.teamA,
-      teamB: result.match.teamB,
-      matchMode: `smart_queue_${result.match.mode}`,
-      fairnessScore: result.match.score,
-      idempotencyKey
-    });
-    await store.recordMatch({ matchId: preview.id, eventId: event().id, organizationId: organizationId(), courtNumber: court, playMode: result.match.mode, state: 'match_ready' });
-    await setPlayersStatus(result.match.playerIds, 'match_ready');
-    await reloadCore?.();
-    await refresh({ silent: true, force: true });
-    showMessage?.(copy('Smart Queue MATCH READY created.', 'สร้าง Smart Queue MATCH READY แล้ว'));
-  }
-
-  async function start(matchId) {
-    const meta = currentMeta().get(String(matchId));
-    const match = matches().find((row) => String(row.id) === String(matchId));
-    if (!meta || !match) return;
-    await services.startMatch(matchId, { eventId: event().id });
-    await setPlayersStatus(matchPlayerIds(match), 'playing');
-    await store.setMatchState(meta, 'playing');
-    await reloadCore?.();
-    await refresh({ silent: true, force: true });
-  }
-
-  async function cancel(matchId) {
-    const meta = currentMeta().get(String(matchId));
-    const match = matches().find((row) => String(row.id) === String(matchId));
-    if (!meta || !match) return;
-    await services.cancelMatch(matchId, { eventId: event().id, reason: 'smart_queue_cancelled' });
-    await setPlayersStatus(matchPlayerIds(match), 'ready');
-    await store.setMatchState(meta, 'cancelled');
-    await reloadCore?.();
-    await refresh({ silent: true, force: true });
-  }
-
-  async function confirm(matchId) {
-    const meta = currentMeta().get(String(matchId));
-    const match = matches().find((row) => String(row.id) === String(matchId));
-    const scoreA = Number(root.querySelector(`[data-sq-score-a="${matchId}"]`)?.value);
-    const scoreB = Number(root.querySelector(`[data-sq-score-b="${matchId}"]`)?.value);
-    if (!Number.isInteger(scoreA) || !Number.isInteger(scoreB) || scoreA < 0 || scoreB < 0 || scoreA > 99 || scoreB > 99 || scoreA === scoreB) return showMessage?.(copy('Enter different whole-number scores from 0 to 99.', 'กรอกคะแนนจำนวนเต็ม 0-99 และคะแนนต้องไม่เท่ากัน'));
-    await services.confirmScore(matchId, { eventId: event().id, teamAScore: scoreA, teamBScore: scoreB });
-    await setPlayersStatus(matchPlayerIds(match), 'ready');
-    await store.setMatchState(meta, 'confirmed');
-    await reloadCore?.();
-    await refresh({ silent: true, force: true });
-    showMessage?.(copy('Result confirmed through existing Match History.', 'ยืนยันผลผ่าน Match History เดิมแล้ว'));
-  }
-
-  root?.addEventListener('click', (eventObject) => {
-    const target = eventObject.target.closest('[data-sq-toggle],[data-sq-refresh],[data-sq-generate],[data-sq-mode],[data-sq-any],[data-sq-status],[data-sq-start],[data-sq-cancel],[data-sq-confirm]');
+  document.addEventListener('click', (eventObject) => {
+    const target = eventObject.target.closest('[data-sq-join-mode],[data-sq-join-any],[data-sq-edit],[data-sq-editor-mode],[data-sq-editor-any],[data-sq-editor-status],#generateSmartMatchBtn');
     if (!target || busy) return;
-    const task = target.hasAttribute('data-sq-toggle') ? toggleEnabled()
-      : target.hasAttribute('data-sq-refresh') ? refresh()
-        : target.hasAttribute('data-sq-generate') ? generateMatchReady()
-          : target.hasAttribute('data-sq-mode') ? toggleMode(target.dataset.playerId, target.dataset.sqMode)
-            : target.hasAttribute('data-sq-any') ? toggleMode(target.dataset.playerId, '', true)
-              : target.hasAttribute('data-sq-status') ? savePreference(target.dataset.playerId, { status: target.dataset.sqStatus }).then(render)
-                : target.hasAttribute('data-sq-start') ? start(target.dataset.sqStart)
-                  : target.hasAttribute('data-sq-cancel') ? cancel(target.dataset.sqCancel)
-                    : confirm(target.dataset.sqConfirm);
+    if (target.id === 'generateSmartMatchBtn') {
+      generateSmartMatch().catch((error) => showMessage?.(error.message));
+      return;
+    }
+    if (target.dataset.sqJoinMode) {
+      const mode = target.dataset.sqJoinMode;
+      joinModes = joinModes.includes(mode) ? joinModes.filter((value) => value !== mode) : [...joinModes, mode];
+      document.getElementById('smartJoinPreference')?.replaceWith(document.createRange().createContextualFragment(joinPreferenceMarkup()));
+      return;
+    }
+    if (target.hasAttribute('data-sq-join-any')) {
+      joinModes = joinModes.length === SMART_QUEUE_MODES.length ? [] : SMART_QUEUE_MODES.slice();
+      document.getElementById('smartJoinPreference')?.replaceWith(document.createRange().createContextualFragment(joinPreferenceMarkup()));
+      return;
+    }
+    if (target.dataset.sqEdit) {
+      editorPlayerId = target.dataset.sqEdit;
+      renderEditor();
+      return;
+    }
+    if (!editorPlayerId) return;
+    const current = preferenceFor(editorPlayerId);
+    let patch = null;
+    if (target.dataset.sqEditorMode) {
+      const mode = target.dataset.sqEditorMode;
+      const modes = current.modes.includes(mode) ? current.modes.filter((value) => value !== mode) : [...current.modes, mode];
+      patch = { modes, preferredMode: modes.includes(current.preferredMode) ? current.preferredMode : modes[0] };
+    } else if (target.hasAttribute('data-sq-editor-any')) {
+      const modes = SMART_QUEUE_MODES.slice();
+      patch = { modes, preferredMode: modes[0] || null };
+    } else if (target.dataset.sqEditorStatus) {
+      patch = { status: target.dataset.sqEditorStatus };
+    }
+    if (!patch) return;
     busy = true;
-    Promise.resolve(task).catch((error) => {
-      console.error('Smart Queue action failed', error);
-      if (/passcode|401|unauthorized/i.test(String(error?.message || ''))) adminPasscode = '';
-      showMessage?.(copy(`Smart Queue action failed: ${error.message}`, `Smart Queue ทำรายการไม่สำเร็จ: ${error.message}`));
+    savePreference(editorPlayerId, patch).then(() => {
+      renderEditor();
+      window.dispatchEvent(new CustomEvent('gdsq-smart-queue-change'));
+    }).catch((error) => {
+      if (/passcode|unauthorized|401/i.test(String(error?.message || ''))) adminPasscode = '';
+      showMessage?.(error.message);
     }).finally(() => { busy = false; });
   });
 
-  root?.addEventListener('change', (eventObject) => {
-    const select = eventObject.target.closest('[data-sq-preferred]');
-    if (!select || busy) return;
-    busy = true;
-    savePreference(select.dataset.playerId, { preferredMode: select.value }).then(render).catch((error) => showMessage?.(error.message)).finally(() => { busy = false; });
-  });
-
-  window.addEventListener('gdsq-language-change', render);
-  setInterval(() => {
-    if (!root?.classList.contains('hidden')) refresh({ silent: true });
-  }, 8000);
-
-  return { refresh, render };
+  return {
+    refresh,
+    isSmartEvent,
+    joinPreferenceMarkup,
+    smartMatchMarkup,
+    hasJoinPreference: () => joinModes.length > 0,
+    registerJoinedPlayer,
+    modeBadges,
+    displayStatus,
+    preferenceFor,
+    isSmartMatch: (match) => String(match?.matchMode || match?.match_type || '').startsWith('smart_queue_'),
+    matchMode: (match) => String(match?.matchMode || match?.match_type || '').replace(/^smart_queue_/, ''),
+    editorButton: (player) => isSmartEvent() ? `<button type="button" class="cut smart-pref-edit" data-sq-edit="${playerId(player)}">${text(language, 'Edit', 'แก้ไข')}</button>` : ''
+  };
 }
