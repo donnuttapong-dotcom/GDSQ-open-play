@@ -59,6 +59,7 @@ function normalizeEvent(input) {
     name: input.name || 'Untitled Open Play',
     venueName: input.venueName || input.venue || 'Venue',
     courtCount: Number(input.courtCount || input.courts || 1),
+    matchingMode: input.matchingMode || input.matching_mode || 'standard',
     status: input.status || 'draft',
     eventDate: input.eventDate || input.date || new Date().toISOString().slice(0, 10),
     startTime: input.startTime || '16:00',
