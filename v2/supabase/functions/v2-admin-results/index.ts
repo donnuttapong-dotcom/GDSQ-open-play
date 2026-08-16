@@ -25,7 +25,7 @@ Deno.serve(async (request) => {
   if (!url || !serviceRoleKey) return json({ ok: false, error: 'Admin service is not configured' }, 500, origin);
   const body = await request.json().catch(() => null);
   const action = String(body?.action || ''), passcode = String(body?.passcode || '');
-  if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer', 'setRating'].includes(action) || passcode.length > 128 || (action !== 'setRating' && passcode.length < 5)) return json({ ok: false, error: 'Invalid request' }, 400, origin);
+  if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer', 'setRating', 'smartQueueSetEnabled', 'smartQueueSavePreference', 'smartQueueRecordMatch'].includes(action) || passcode.length > 128 || (action !== 'setRating' && passcode.length < 5)) return json({ ok: false, error: 'Invalid request' }, 400, origin);
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
   const token = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   const { data: authData, error: authError } = await admin.auth.getUser(token);
@@ -50,6 +50,38 @@ Deno.serve(async (request) => {
     const { data: setting, error: settingError } = await admin.from('v2_gdsq_rating_settings').upsert({ event_id: eventId, organization_id: organizationId, enabled: body?.enabled === true, updated_at: new Date().toISOString() }, { onConflict: 'event_id' }).select('event_id,organization_id,enabled,updated_at').single();
     if (settingError) return json({ ok: false, error: settingError.message || 'Could not update GDSQ Rating' }, 400, origin);
     return json({ ok: true, enabled: setting.enabled, setting }, 200, origin);
+  }
+  if (action === 'smartQueueSetEnabled') {
+    const eventId = String(body?.eventId || ''), organizationId = String(body?.organizationId || '');
+    if (!validId(eventId) || !validId(organizationId)) return json({ ok: false, error: 'Invalid event' }, 400, origin);
+    const { data: targetEvent, error: eventError } = await admin.from('v2_events').select('id').eq('id', eventId).eq('organization_id', organizationId).maybeSingle();
+    if (eventError || !targetEvent) return json({ ok: false, error: 'Event not found' }, 404, origin);
+    const { data: setting, error } = await admin.from('v2_smart_queue_settings').upsert({ event_id: eventId, organization_id: organizationId, enabled: body?.enabled === true, updated_by: 'admin', updated_at: new Date().toISOString() }, { onConflict: 'event_id' }).select('*').single();
+    if (error) return json({ ok: false, error: error.message || 'Could not update Smart Queue' }, 400, origin);
+    return json({ ok: true, setting }, 200, origin);
+  }
+  if (action === 'smartQueueSavePreference') {
+    const eventId = String(body?.eventId || ''), organizationId = String(body?.organizationId || ''), eventPlayerId = String(body?.eventPlayerId || '');
+    const allowedModes = ['social', 'balanced', 'challenge'];
+    const modes = [...new Set(Array.isArray(body?.modes) ? body.modes.map(String).filter((mode: string) => allowedModes.includes(mode)) : [])];
+    const preferredMode = modes.includes(String(body?.preferredMode || '')) ? String(body.preferredMode) : modes[0] || null;
+    const status = String(body?.status || 'rest');
+    if (!validId(eventId) || !validId(organizationId) || !validId(eventPlayerId) || !['ready', 'match_ready', 'playing', 'rest'].includes(status)) return json({ ok: false, error: 'Invalid Smart Queue preference' }, 400, origin);
+    const { data: targetPlayer, error: playerError } = await admin.from('v2_event_players').select('id').eq('id', eventPlayerId).eq('event_id', eventId).eq('organization_id', organizationId).maybeSingle();
+    if (playerError || !targetPlayer) return json({ ok: false, error: 'Event player not found' }, 404, origin);
+    const { data: preference, error } = await admin.from('v2_smart_queue_preferences').upsert({ event_player_id: eventPlayerId, event_id: eventId, organization_id: organizationId, modes, preferred_mode: preferredMode, queue_status: status, ready_since: status === 'ready' ? String(body?.readySince || new Date().toISOString()) : null, updated_by: String(body?.updatedBy || 'admin') === 'system' ? 'system' : 'admin', updated_at: new Date().toISOString() }, { onConflict: 'event_player_id' }).select('*').single();
+    if (error) return json({ ok: false, error: error.message || 'Could not update Smart Queue preference' }, 400, origin);
+    return json({ ok: true, preference }, 200, origin);
+  }
+  if (action === 'smartQueueRecordMatch') {
+    const matchId = String(body?.matchId || ''), eventId = String(body?.eventId || ''), organizationId = String(body?.organizationId || '');
+    const courtNumber = Number(body?.courtNumber), playMode = String(body?.playMode || ''), state = String(body?.state || 'match_ready');
+    if (!validId(matchId) || !validId(eventId) || !validId(organizationId) || !Number.isInteger(courtNumber) || courtNumber < 1 || courtNumber > 10 || !['social', 'balanced', 'challenge'].includes(playMode) || !['match_ready', 'playing', 'confirmed', 'cancelled'].includes(state)) return json({ ok: false, error: 'Invalid Smart Queue match' }, 400, origin);
+    const { data: targetMatch, error: matchError } = await admin.from('v2_matches').select('id').eq('id', matchId).eq('event_id', eventId).eq('organization_id', organizationId).maybeSingle();
+    if (matchError || !targetMatch) return json({ ok: false, error: 'Match not found' }, 404, origin);
+    const { data: match, error } = await admin.from('v2_smart_queue_matches').upsert({ match_id: matchId, event_id: eventId, organization_id: organizationId, court_number: courtNumber, play_mode: playMode, queue_state: state, updated_at: new Date().toISOString() }, { onConflict: 'match_id' }).select('*').single();
+    if (error) return json({ ok: false, error: error.message || 'Could not update Smart Queue match' }, 400, origin);
+    return json({ ok: true, match }, 200, origin);
   }
   if (action === 'listEvents') {
     const { data: events, error: eventsError } = await admin
