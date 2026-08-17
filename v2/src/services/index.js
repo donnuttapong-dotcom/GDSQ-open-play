@@ -201,6 +201,12 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
       return checkInLocalPlayer(payload);
     },
 
+    async addTestPlayers(payload) {
+      if (!isSupabase || !isTestEventId(payload.eventId)) throw new Error('Batch Test players are available only inside a Test event.');
+      const result = await test('addTestPlayers', payload);
+      return result.players || [];
+    },
+
     async findPlayerProfileByEmail(email) {
       if (isSupabase) return findSupabasePlayerProfileByEmail(requireSupabase(supabase), organizationId, email);
       return findLocalPlayerProfileByEmail(email);

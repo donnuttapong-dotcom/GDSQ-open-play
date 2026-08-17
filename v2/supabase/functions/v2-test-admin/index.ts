@@ -3,10 +3,16 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 const url = Deno.env.get('SUPABASE_URL') || '';
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const origins = new Set(['https://donnuttapong-dotcom.github.io', 'https://gdsq-open-play-live.vercel.app', 'https://gdsq-open-play-v2-preview.vercel.app', 'http://127.0.0.1:4175', 'http://localhost:4175']);
-const allowedActions = new Set(['createEvent', 'authorize', 'getEvent', 'listPlayers', 'listMatches', 'listPreferences', 'exit', 'endTest', 'checkInPlayer', 'setPlayerStatus', 'updatePlayerLevel', 'removePlayer', 'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore', 'savePreference', 'resetMatches', 'resetQueue', 'resetEvent', 'deleteEvent']);
+const allowedActions = new Set(['createEvent', 'authorize', 'getEvent', 'listPlayers', 'listMatches', 'listPreferences', 'exit', 'endTest', 'checkInPlayer', 'addTestPlayers', 'setPlayerStatus', 'updatePlayerLevel', 'removePlayer', 'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore', 'savePreference', 'resetMatches', 'resetQueue', 'resetEvent', 'deleteEvent']);
 const activeStatuses = ['preview', 'assigned', 'playing', 'pending_score'];
 
-function cors(origin: string | null) { return { 'Access-Control-Allow-Origin': origin && origins.has(origin) ? origin : 'https://donnuttapong-dotcom.github.io', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Content-Type': 'application/json' }; }
+// Vercel gives every deployment a unique URL. Restrict it to this project's
+// deployment naming pattern instead of rejecting a valid preview before it
+// can reach the Test Admin capability checks below.
+function allowedOrigin(origin: string | null) {
+  return Boolean(origin && (origins.has(origin) || /^https:\/\/gdsq-open-play-v2-preview-[a-z0-9-]+-don-s-projects6\.vercel\.app$/i.test(origin)));
+}
+function cors(origin: string | null) { return { 'Access-Control-Allow-Origin': allowedOrigin(origin) ? String(origin) : 'https://donnuttapong-dotcom.github.io', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Content-Type': 'application/json' }; }
 function json(body: Record<string, unknown>, status = 200, origin: string | null = null) { return new Response(JSON.stringify(body), { status, headers: cors(origin) }); }
 function validId(value: unknown) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '')); }
 function playerId(value: unknown) { return typeof value === 'string' || typeof value === 'number' ? String(value) : String((value as Record<string, unknown>)?.id || (value as Record<string, unknown>)?.playerId || (value as Record<string, unknown>)?.player_id || (value as Record<string, unknown>)?.eventPlayerId || (value as Record<string, unknown>)?.event_player_id || ''); }
@@ -31,7 +37,7 @@ function normalizeMatch(match: Record<string, unknown>) {
 Deno.serve(async (request) => {
   const origin = request.headers.get('origin');
   if (request.method === 'OPTIONS') return new Response('ok', { headers: cors(origin) });
-  if (request.method !== 'POST' || (origin && !origins.has(origin))) return json({ ok: false, error: 'Not allowed' }, 403, origin);
+  if (request.method !== 'POST' || (origin && !allowedOrigin(origin))) return json({ ok: false, error: 'Not allowed' }, 403, origin);
   if (!url || !serviceRoleKey) return json({ ok: false, error: 'Test Admin service is not configured' }, 500, origin);
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   const action = String(body?.action || '');
@@ -116,6 +122,38 @@ Deno.serve(async (request) => {
       if (existing) return json({ ok: false, error: 'Test player name already exists in this event' }, 409, origin);
       const { data, error } = await admin.from('v2_test_event_players').insert({ organization_id: scope.organizationId, event_id: scope.eventId, display_name: displayName, estimated_level: normalizeLevel(body.level), status: 'ready', queue_joined_at: new Date().toISOString() }).select('*').single();
       if (error) throw error; return json({ ok: true, player: data }, 200, origin);
+    }
+    if (action === 'addTestPlayers') {
+      const requested = Array.isArray(body.players) ? body.players : [];
+      if (!requested.length || requested.length > 24) return json({ ok: false, error: 'Add between 1 and 24 test players' }, 400, origin);
+      const names = requested.map((row) => String((row as Record<string, unknown>)?.displayName || '').trim());
+      const normalizedNames = names.map((name) => name.toLowerCase());
+      if (names.some((name) => !name || name.length > 50) || new Set(normalizedNames).size !== names.length) return json({ ok: false, error: 'Test player names must be unique' }, 400, origin);
+      const { data: existing, error: existingError } = await admin.from('v2_test_event_players').select('display_name').eq('event_id', scope.eventId).neq('status', 'removed');
+      if (existingError) throw existingError;
+      const existingNames = new Set((existing || []).map((row) => String(row.display_name || '').trim().toLowerCase()));
+      if (normalizedNames.some((name) => existingNames.has(name))) return json({ ok: false, error: 'A Test player name already exists in this event' }, 409, origin);
+      const now = new Date().toISOString();
+      const { data: created, error: createError } = await admin.from('v2_test_event_players').insert(requested.map((row, index) => ({
+        organization_id: scope.organizationId,
+        event_id: scope.eventId,
+        display_name: names[index],
+        estimated_level: normalizeLevel((row as Record<string, unknown>)?.level),
+        status: 'ready',
+        queue_joined_at: now
+      }))).select('*');
+      if (createError || !created) throw createError || new Error('Could not add Test players');
+      const preferences = Array.isArray(body.preferences) ? body.preferences : [];
+      if (preferences.length) {
+        const rows = created.map((player, index) => {
+          const source = preferences[index] as Record<string, unknown> || {};
+          const modes = [...new Set(Array.isArray(source.modes) ? source.modes.map(String).filter((mode) => ['social', 'balanced', 'challenge'].includes(mode)) : [])];
+          return { event_player_id: player.id, event_id: scope.eventId, organization_id: scope.organizationId, modes, preferred_mode: modes.includes(String(source.preferredMode || '')) ? String(source.preferredMode) : modes[0] || null, queue_status: 'ready', ready_since: now, updated_by: 'admin', updated_at: now };
+        });
+        const { error: preferenceError } = await admin.from('v2_test_smart_queue_preferences').upsert(rows, { onConflict: 'event_player_id' });
+        if (preferenceError) throw preferenceError;
+      }
+      return json({ ok: true, players: created }, 200, origin);
     }
     if (action === 'setPlayerStatus' || action === 'updatePlayerLevel' || action === 'removePlayer') {
       const id = String(body.playerId || ''); if (!validId(id)) return json({ ok: false, error: 'Invalid test player' }, 400, origin);
