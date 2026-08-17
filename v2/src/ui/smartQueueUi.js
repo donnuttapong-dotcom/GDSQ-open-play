@@ -118,6 +118,13 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
     }
   }
 
+  // Test Organizer state is loaded in one protected request. Reuse its
+  // preference payload instead of issuing a second read just to repaint Queue.
+  function hydratePreferences(preferences = []) {
+    state = { preferences: (preferences || []).map(normalizePreference), schemaAvailable: true };
+    return state;
+  }
+
   async function savePreference(id, patch, updatedBy = 'admin') {
     if (!isSmartEvent() || !event()?.id) return null;
     const current = preferenceFor(id);
@@ -170,7 +177,9 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
         idempotencyKey: `smart-queue:${event().id}:${court}:${result.match.playerIds.slice().sort().join('-')}:${Date.now()}`
       });
       await reloadCore?.();
-      await refresh({ silent: true });
+      // Test reloadCore hydrates preferences with its single Organizer-state
+      // response, so a second preference fetch would only add latency.
+      if (String(event()?.environment || 'live') !== 'test') await refresh({ silent: true });
       showMessage?.(text(language, 'Smart Match preview is ready.', 'สร้างพรีวิว Smart Match แล้ว'));
     } finally {
       busy = false;
@@ -226,6 +235,7 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
 
   return {
     refresh,
+    hydratePreferences,
     isSmartEvent,
     joinPreferenceMarkup,
     smartMatchMarkup,

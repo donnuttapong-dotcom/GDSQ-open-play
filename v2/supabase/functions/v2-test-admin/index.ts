@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 const url = Deno.env.get('SUPABASE_URL') || '';
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const origins = new Set(['https://donnuttapong-dotcom.github.io', 'https://gdsq-open-play-live.vercel.app', 'https://gdsq-open-play-v2-preview.vercel.app', 'http://127.0.0.1:4175', 'http://localhost:4175']);
-const allowedActions = new Set(['createEvent', 'authorize', 'getEvent', 'listPlayers', 'listMatches', 'listPreferences', 'exit', 'endTest', 'checkInPlayer', 'addTestPlayers', 'setPlayerStatus', 'updatePlayerLevel', 'removePlayer', 'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore', 'savePreference', 'resetMatches', 'resetQueue', 'resetEvent', 'deleteEvent']);
+const allowedActions = new Set(['createEvent', 'authorize', 'getOrganizerState', 'getEvent', 'listPlayers', 'listMatches', 'listPreferences', 'exit', 'endTest', 'checkInPlayer', 'addTestPlayers', 'setPlayerStatus', 'updatePlayerLevel', 'removePlayer', 'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore', 'savePreference', 'resetMatches', 'resetQueue', 'resetEvent', 'deleteEvent']);
 const activeStatuses = ['preview', 'assigned', 'playing', 'pending_score'];
 
 // Vercel gives every deployment a unique URL. Restrict it to this project's
@@ -68,9 +68,11 @@ Deno.serve(async (request) => {
     const claims = await verifyToken(String(body.capability || ''));
     const eventId = String(body.eventId || '');
     if (!claims || claims.environment !== 'test' || !validId(eventId) || claims.eventId !== eventId || Number(claims.exp || 0) < Date.now()) throw new Error('Test Admin session expired. Enter the passcode again.');
-    const { data: session, error } = await admin.from('v2_test_admin_sessions').select('id,event_id,organization_id,expires_at,revoked_at,event:v2_test_events!inner(id,environment)').eq('id', claims.sid).eq('event_id', eventId).maybeSingle();
+    const { data: session, error } = await admin.from('v2_test_admin_sessions').select('id,event_id,organization_id,expires_at,revoked_at,last_used_at,event:v2_test_events!inner(id,environment)').eq('id', claims.sid).eq('event_id', eventId).maybeSingle();
     if (error || !session || session.revoked_at || new Date(session.expires_at).getTime() < Date.now() || session.event?.environment !== 'test') throw new Error('Test Admin session is not valid.');
-    await admin.from('v2_test_admin_sessions').update({ last_used_at: new Date().toISOString() }).eq('id', session.id);
+    // Reads are authorized on every request, but do not create a database write
+    // for every poll. Activity is only recorded at most once every five minutes.
+    if (!session.last_used_at || Date.now() - new Date(session.last_used_at).getTime() >= 5 * 60 * 1000) await admin.from('v2_test_admin_sessions').update({ last_used_at: new Date().toISOString() }).eq('id', session.id);
     return { eventId, organizationId: session.organization_id };
   }
 
@@ -110,6 +112,17 @@ Deno.serve(async (request) => {
 
     const scope = await requireSession();
     if (action === 'exit') { await admin.from('v2_test_admin_sessions').update({ revoked_at: new Date().toISOString() }).eq('event_id', scope.eventId).is('revoked_at', null); return json({ ok: true }, 200, origin); }
+    if (action === 'getOrganizerState') {
+      const [eventResult, playersResult, matchesResult, preferencesResult] = await Promise.all([
+        admin.from('v2_test_events').select('*').eq('id', scope.eventId).single(),
+        admin.from('v2_test_event_players').select('*').eq('event_id', scope.eventId).neq('status', 'removed').order('queue_joined_at'),
+        admin.from('v2_test_matches').select('*, players:v2_test_match_players(*)').eq('event_id', scope.eventId).order('created_at', { ascending: false }),
+        admin.from('v2_test_smart_queue_preferences').select('*').eq('event_id', scope.eventId)
+      ]);
+      const stateError = eventResult.error || playersResult.error || matchesResult.error || preferencesResult.error;
+      if (stateError) throw stateError;
+      return json({ ok: true, event: eventResult.data, players: playersResult.data || [], matches: (matchesResult.data || []).map(normalizeMatch), preferences: preferencesResult.data || [] }, 200, origin);
+    }
     if (action === 'getEvent') { const { data: event, error } = await admin.from('v2_test_events').select('*').eq('id', scope.eventId).single(); if (error) throw error; return json({ ok: true, event }, 200, origin); }
     if (action === 'listPlayers') { const { data: players, error } = await admin.from('v2_test_event_players').select('*').eq('event_id', scope.eventId).neq('status', 'removed').order('queue_joined_at'); if (error) throw error; return json({ ok: true, players: players || [] }, 200, origin); }
     if (action === 'listMatches') { const { data: matches, error } = await admin.from('v2_test_matches').select('*, players:v2_test_match_players(*)').eq('event_id', scope.eventId).order('created_at', { ascending: false }); if (error) throw error; return json({ ok: true, matches: (matches || []).map(normalizeMatch) }, 200, origin); }

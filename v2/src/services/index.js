@@ -61,15 +61,23 @@ async function setSupabasePlayersStatusSafely(supabase, players, status) {
 export function createV2Services({ supabase = getSupabaseClient(), organizationId = '00000000-0000-4000-8000-000000000001', mode = getServiceMode() } = {}) {
   const isSupabase = mode === SERVICE_MODES.SUPABASE;
   const environments = new Map();
+  let cachedTestEvents = [], testEventsCacheUntil = 0;
   const rememberEvents = (rows = []) => rows.map((row) => {
     environments.set(String(row.id), row.environment || 'live');
     return row;
   });
   const isTestEventId = (eventId) => environments.get(String(eventId)) === 'test';
   const test = (action, payload = {}) => invokeTestAdmin(requireSupabase(supabase), action, { ...payload, organizationId: payload.organizationId || organizationId });
-  const testEvents = async () => Promise.all(knownTestEventIds().map(async (eventId) => {
-    try { return (await test('getEvent', { eventId })).event; } catch { return null; }
-  })).then((rows) => rows.filter(Boolean));
+  const testEvents = async ({ force = false } = {}) => {
+    if (!force && Date.now() < testEventsCacheUntil) return cachedTestEvents;
+    const rows = (await Promise.all(knownTestEventIds().map(async (eventId) => {
+      try { return (await test('getEvent', { eventId })).event; } catch { return null; }
+    }))).filter(Boolean);
+    cachedTestEvents = rows;
+    testEventsCacheUntil = Date.now() + 30_000;
+    return rows;
+  };
+  const invalidateTestEvents = () => { cachedTestEvents = []; testEventsCacheUntil = 0; };
 
   return {
     mode,
@@ -128,6 +136,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async createEvent(payload) {
       if (isSupabase && payload.environment === 'test') {
         const result = await createTestEvent(requireSupabase(supabase), { ...payload, organizationId: payload.organizationId || organizationId, passcode: payload.testPasscode });
+        invalidateTestEvents();
         return rememberEvents([result.event])[0];
       }
       if (isSupabase) return rememberEvents([await createSupabaseEvent(requireSupabase(supabase), { ...payload, organizationId: payload.organizationId || organizationId })])[0];
@@ -144,7 +153,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async deleteEvent(eventId) {
-      if (isSupabase && isTestEventId(eventId)) return test('deleteEvent', { eventId });
+      if (isSupabase && isTestEventId(eventId)) { const result = await test('deleteEvent', { eventId }); invalidateTestEvents(); return result; }
       if (isSupabase) return deleteSupabaseEvent(requireSupabase(supabase), eventId);
       return deleteLocalEvent(eventId);
     },
@@ -304,6 +313,13 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
       return [...localMatches, ...seedHistory];
     },
 
+    async getTestOrganizerState(eventId) {
+      if (!isSupabase || !isTestEventId(eventId)) throw new Error('Test Organizer state is available only inside a Test event.');
+      const result = await test('getOrganizerState', { eventId });
+      rememberEvents([result.event]);
+      return { ...result, matches: (result.matches || []).map(normalizeSharedMatch) };
+    },
+
     async createMatchPreview(payload) {
       if (isSupabase && isTestEventId(payload.eventId)) {
         const result = await test('createMatchPreview', payload);
@@ -380,6 +396,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async authorizeTestAdmin(eventId, passcode) {
       const result = await authorizeTestAdmin(requireSupabase(supabase), eventId, passcode);
       rememberEvents([result.event]);
+      invalidateTestEvents();
       return result.event;
     },
     async exitTestAdmin(eventId) { return exitTestAdmin(requireSupabase(supabase), eventId); },
