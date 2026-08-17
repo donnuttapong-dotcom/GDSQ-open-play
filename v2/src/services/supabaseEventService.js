@@ -13,6 +13,7 @@ function normalizeEvent(row) {
     endTime: row.end_time,
     maxPlayers: row.max_players,
     courtCount: row.court_count,
+    matchingMode: row.matching_mode || 'standard',
     checkinOpen: row.checkin_open,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -88,6 +89,7 @@ export async function createEvent(supabase, payload) {
       status: payload.status || 'draft',
       max_players: payload.maxPlayers || null,
       court_count: Number(payload.courtCount || payload.courts || 1),
+      matching_mode: payload.matchingMode === 'smart_queue' ? 'smart_queue' : 'standard',
       checkin_open: payload.checkinOpen !== false
     })
     .select('*, venue:v2_venues(*)')
