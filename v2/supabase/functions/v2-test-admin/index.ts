@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
 const url = Deno.env.get('SUPABASE_URL') || '';
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-const origins = new Set(['https://donnuttapong-dotcom.github.io', 'https://gdsq-open-play-live.vercel.app', 'http://127.0.0.1:4175', 'http://localhost:4175']);
+const origins = new Set(['https://donnuttapong-dotcom.github.io', 'https://gdsq-open-play-live.vercel.app', 'https://gdsq-open-play-v2-preview.vercel.app', 'http://127.0.0.1:4175', 'http://localhost:4175']);
 const allowedActions = new Set(['createEvent', 'authorize', 'getEvent', 'listPlayers', 'listMatches', 'listPreferences', 'exit', 'endTest', 'checkInPlayer', 'setPlayerStatus', 'updatePlayerLevel', 'removePlayer', 'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore', 'savePreference', 'resetMatches', 'resetQueue', 'resetEvent', 'deleteEvent']);
 
 function cors(origin: string | null) {

@@ -476,7 +476,7 @@ $('refreshEventsBtn').addEventListener('click',e=>runProtectedAction('refresh-ev
 window.addEventListener('storage',e=>{if(e.key&&e.key.startsWith('gdsq_v2_'))refreshCurrentSilently();});
 window.addEventListener('gdsq-smart-queue-change',renderAll);
 window.addEventListener('online',refreshOperationalChecks);window.addEventListener('offline',()=>{connectionHealth='offline';qrHealth='offline';renderPreEventChecklist();showMessage(actionText('offline'),{persistent:true});});
-document.querySelectorAll('input[name="newEventEnvironment"]').forEach(input=>input.addEventListener('change',()=>$('newTestModeHelp')?.classList.toggle('hidden',document.querySelector('input[name="newEventEnvironment"]:checked')?.value!=='test'));
+document.querySelectorAll('input[name="newEventEnvironment"]').forEach(input=>input.addEventListener('change',()=>$('newTestModeHelp')?.classList.toggle('hidden',document.querySelector('input[name="newEventEnvironment"]:checked')?.value!=='test')));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshCurrentSilently();});
 setInterval(updateLiveTimers,1000);
 setInterval(()=>{if(services.mode==='supabase'&&['stats','manage'].includes(currentTab)&&!isEditingControl())refreshCurrentSilently();},3000);
