@@ -49,8 +49,8 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
     };
   }
 
-  function preferenceFor(id) {
-    return state.preferences.find((row) => String(row.eventPlayerId) === String(id)) || {
+  function preferenceFor(id, context = null) {
+    return context?.preferencesById?.get(String(id)) || state.preferences.find((row) => String(row.eventPlayerId) === String(id)) || {
       eventPlayerId: id,
       modes: [],
       preferredMode: null,
@@ -62,9 +62,22 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
     return normalizeSmartQueueModes(modes).map((mode) => `<span class="smart-pref-badge ${mode}">${MODE_LABELS[mode]}</span>`).join('');
   }
 
-  function displayStatus(player) {
+  function createRenderContext(sourcePlayers = players(), sourceMatches = matches()) {
+    const preferencesById = new Map(state.preferences.map((row) => [String(row.eventPlayerId), row]));
+    const activePlayerIds = new Set();
+    sourceMatches.filter(isActiveMatch).forEach((match) => matchPlayerIds(match).forEach((id) => activePlayerIds.add(String(id))));
+    const statusById = new Map(sourcePlayers.map((player) => {
+      const id = playerId(player);
+      const status = activePlayerIds.has(id) ? 'playing' : (preferencesById.get(id)?.status === 'rest' ? 'rest' : 'waiting');
+      return [id, status];
+    }));
+    return { preferencesById, statusById, waitingCount: [...statusById.values()].filter((status) => status === 'waiting').length };
+  }
+
+  function displayStatus(player, context = null) {
     if (!isSmartEvent()) return null;
     const id = playerId(player);
+    if (context?.statusById) return context.statusById.get(id) || 'waiting';
     const active = matches().find((match) => isActiveMatch(match) && matchPlayerIds(match).includes(id));
     if (active) return 'playing';
     if (preferenceFor(id).status === 'rest') return 'rest';
@@ -76,9 +89,9 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
     return `<section class="smart-pref-panel mt-3" id="smartJoinPreference"><div class="flex items-center justify-between gap-2"><div><div class="smart-pref-title">${text(language, 'PLAY PREFERENCE', 'รูปแบบเกมที่เล่นได้')}</div><p class="mini mt-1">${text(language, 'Pick one or more. You can change this later.', 'เลือกได้มากกว่า 1 แบบ และแก้ได้ภายหลัง')}</p></div><span class="smart-pref-badge">SMART QUEUE</span></div><div class="smart-pref-modes">${SMART_QUEUE_MODES.map((mode) => `<button type="button" class="smart-pref-mode ${joinModes.includes(mode) ? 'is-on' : ''}" data-sq-join-mode="${mode}" aria-pressed="${joinModes.includes(mode)}">${MODE_LABELS[mode]}</button>`).join('')}<button type="button" class="smart-pref-mode ${joinModes.length === SMART_QUEUE_MODES.length ? 'is-on' : ''}" data-sq-join-any aria-pressed="${joinModes.length === SMART_QUEUE_MODES.length}">ANY</button></div></section>`;
   }
 
-  function smartMatchMarkup() {
+  function smartMatchMarkup(context = null) {
     if (!isSmartEvent()) return '';
-    const available = players().filter((player) => displayStatus(player) === 'waiting').length;
+    const available = context?.waitingCount ?? players().filter((player) => displayStatus(player) === 'waiting').length;
     const courtCount = Number(getCourtCount?.() || 0);
     return `<div class="cut card p-4 smart-match-control"><div class="flex items-start justify-between gap-3"><div><div class="smart-pref-title">SMART MATCH</div><h3 class="font-black text-cyan-300 mt-1">${text(language, 'Next match recommendation', 'แนะนำแมตช์ถัดไป')}</h3><p class="mini mt-1">${text(language, `${available} waiting · ${courtCount} courts`, `รอเล่น ${available} คน · ${courtCount} คอร์ท`)}</p></div><span class="smart-pref-badge">SMART QUEUE</span></div><button id="generateSmartMatchBtn" class="cut bg-lime p-4 font-black text-black w-full mt-3" ${available < 4 ? 'disabled' : ''}>${text(language, 'GENERATE SMART MATCH', 'สร้าง Smart Match')}</button><p class="mini mt-2">${text(language, 'The recommendation uses preferences, level, waiting time, fairness, and recent pairings.', 'ระบบพิจารณารูปแบบที่เลือก ระดับ เวลารอ ความสมดุล และคู่ที่เพิ่งเล่น')}</p></div>`;
   }
@@ -176,7 +189,7 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
         fairnessScore: result.match.score,
         idempotencyKey: `smart-queue:${event().id}:${court}:${result.match.playerIds.slice().sort().join('-')}:${Date.now()}`
       });
-      await reloadCore?.();
+      await reloadCore?.({ render: 'organizer-matches' });
       // Test reloadCore hydrates preferences with its single Organizer-state
       // response, so a second preference fetch would only add latency.
       if (String(event()?.environment || 'live') !== 'test') await refresh({ silent: true });
@@ -242,6 +255,7 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
     hasJoinPreference: () => joinModes.length > 0,
     registerJoinedPlayer,
     modeBadges,
+    createRenderContext,
     displayStatus,
     preferenceFor,
     isSmartMatch: (match) => String(match?.matchMode || match?.match_type || '').startsWith('smart_queue_'),

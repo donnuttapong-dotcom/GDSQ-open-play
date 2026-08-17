@@ -21,13 +21,20 @@ export function knownTestEventIds() {
     .filter(Boolean);
 }
 
+function requestError(data, fallback = 'Test Admin request failed') {
+  const error = new Error(data?.error || fallback);
+  error.code = data?.code || 'TEST_ADMIN_REQUEST_FAILED';
+  error.status = Number(data?.status || 0) || 0;
+  return error;
+}
+
 export async function invokeTestAdmin(supabase, action, payload = {}) {
   const eventId = payload.eventId || payload.event_id || '';
   const body = { action, ...payload };
   if (!['createEvent', 'authorize'].includes(action)) body.capability = getTestAdminSession(eventId);
   const { data, error } = await supabase.functions.invoke('v2-test-admin', { body });
-  if (error) throw error;
-  if (!data?.ok) throw new Error(data?.error || 'Test Admin request failed');
+  if (error) throw requestError({ error: 'Could not reach Test Admin. Check your connection and try again.', code: 'NETWORK_UNAVAILABLE' });
+  if (!data?.ok) throw requestError(data);
   if (data.capability && data.event?.id) localStorage.setItem(key(data.event.id), data.capability);
   if (action === 'exit' && eventId) clearTestAdminSession(eventId);
   return data;

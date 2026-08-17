@@ -14,6 +14,16 @@ function allowedOrigin(origin: string | null) {
 }
 function cors(origin: string | null) { return { 'Access-Control-Allow-Origin': allowedOrigin(origin) ? String(origin) : 'https://donnuttapong-dotcom.github.io', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Content-Type': 'application/json' }; }
 function json(body: Record<string, unknown>, status = 200, origin: string | null = null) { return new Response(JSON.stringify(body), { status, headers: cors(origin) }); }
+function classifiedError(error: unknown) {
+  const message = error instanceof Error ? error.message : String((error as Record<string, unknown>)?.message || 'Test Admin request failed');
+  const normalized = message.toLowerCase();
+  if (/session|passcode|unauthorized|not valid/.test(normalized)) return { status: 401, code: 'SESSION_EXPIRED', error: 'Test Admin session expired. Enter the passcode again.' };
+  if (/not allowed|forbidden|permission/.test(normalized)) return { status: 403, code: 'ORIGIN_NOT_ALLOWED', error: 'This site is not permitted to use Test Admin.' };
+  if (/not found|no rows/.test(normalized)) return { status: 404, code: 'RESOURCE_NOT_FOUND', error: 'The requested Test data could not be found.' };
+  if (/changed in another session|conflict|already confirmed/.test(normalized)) return { status: 409, code: 'MATCH_STALE', error: 'This match changed in another session. Refresh and try again.' };
+  if (/invalid|required|must |too many attempts|score/.test(normalized)) return { status: 400, code: 'VALIDATION_FAILED', error: message };
+  return { status: 500, code: 'UNEXPECTED_ERROR', error: 'Test Admin could not complete that request. Please try again.' };
+}
 function validId(value: unknown) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '')); }
 function playerId(value: unknown) { return typeof value === 'string' || typeof value === 'number' ? String(value) : String((value as Record<string, unknown>)?.id || (value as Record<string, unknown>)?.playerId || (value as Record<string, unknown>)?.player_id || (value as Record<string, unknown>)?.eventPlayerId || (value as Record<string, unknown>)?.event_player_id || ''); }
 function matchIds(body: Record<string, unknown>) { return { teamA: (Array.isArray(body.teamA) ? body.teamA : []).map(playerId).filter(Boolean), teamB: (Array.isArray(body.teamB) ? body.teamB : []).map(playerId).filter(Boolean) }; }
@@ -35,6 +45,7 @@ function normalizeMatch(match: Record<string, unknown>) {
 }
 
 Deno.serve(async (request) => {
+  const startedAt = Date.now();
   const origin = request.headers.get('origin');
   if (request.method === 'OPTIONS') return new Response('ok', { headers: cors(origin) });
   if (request.method !== 'POST' || (origin && !allowedOrigin(origin))) return json({ ok: false, error: 'Not allowed' }, 403, origin);
@@ -229,7 +240,8 @@ Deno.serve(async (request) => {
     }
     return json({ ok: true }, 200, origin);
   } catch (error) {
-    console.error('v2-test-admin', error);
-    return json({ ok: false, error: error instanceof Error ? error.message : String((error as Record<string, unknown>)?.message || 'Test Admin request failed') }, 400, origin);
+    const detail = classifiedError(error);
+    console.error('v2-test-admin', { action, eventId: String(body?.eventId || ''), status: detail.status, code: detail.code, durationMs: Date.now() - startedAt });
+    return json({ ok: false, error: detail.error, code: detail.code, status: detail.status }, detail.status, origin);
   }
 });
