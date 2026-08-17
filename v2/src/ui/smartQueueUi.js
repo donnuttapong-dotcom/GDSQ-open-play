@@ -43,6 +43,17 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
     }
   });
 
+  function normalizePreference(row = {}) {
+    return {
+      ...row,
+      eventPlayerId: row.eventPlayerId || row.event_player_id,
+      preferredMode: row.preferredMode || row.preferred_mode || null,
+      readySince: row.readySince || row.ready_since || null,
+      status: row.status || row.queue_status || 'rest',
+      modes: normalizeSmartQueueModes(row.modes)
+    };
+  }
+
   function preferenceFor(id) {
     return state.preferences.find((row) => String(row.eventPlayerId) === String(id)) || {
       eventPlayerId: id,
@@ -101,7 +112,9 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
       return state;
     }
     try {
-      state = await store.load(event().id);
+      state = String(event()?.environment || 'live') === 'test'
+        ? { preferences: (await services.listTestSmartPreferences(event().id)).map(normalizePreference), schemaAvailable: true }
+        : await store.load(event().id);
       return state;
     } catch (error) {
       console.error('Smart Queue preferences failed to load', error);
@@ -115,7 +128,7 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
     const current = preferenceFor(id);
     const modes = normalizeSmartQueueModes(patch.modes ?? current.modes);
     const status = patch.status || current.status || 'ready';
-    const result = await store.savePreference({
+    const payload = {
       eventId: event().id,
       organizationId: organizationId(),
       eventPlayerId: id,
@@ -124,7 +137,10 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
       status,
       readySince: status === 'ready' ? current.readySince || new Date().toISOString() : null,
       updatedBy
-    });
+    };
+    const testEvent = String(event()?.environment || 'live') === 'test';
+    const saved = testEvent ? await services.saveTestSmartPreference(payload) : await store.savePreference(payload);
+    const result = normalizePreference(saved?.preference || saved);
     state.preferences = [...state.preferences.filter((row) => String(row.eventPlayerId) !== String(id)), result];
     return result;
   }
