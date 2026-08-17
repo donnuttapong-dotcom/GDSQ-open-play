@@ -60,6 +60,7 @@ function normalizeEvent(input) {
     venueName: input.venueName || input.venue || 'Venue',
     courtCount: Number(input.courtCount || input.courts || 1),
     matchingMode: input.matchingMode || input.matching_mode || 'standard',
+    environment: input.environment === 'test' ? 'test' : 'live',
     status: input.status || 'draft',
     eventDate: input.eventDate || input.date || new Date().toISOString().slice(0, 10),
     startTime: input.startTime || '16:00',
@@ -126,7 +127,7 @@ export function updateEventStatus(eventId, status) {
       completedAt: completed ? (event.completedAt || now) : event.completedAt || null,
       // This local-mode marker mirrors the production trigger and is
       // intentionally retained when an ended event is reopened.
-      hallOfFameProcessedAt: completed ? (event.hallOfFameProcessedAt || event.completedAt || now) : event.hallOfFameProcessedAt || null,
+      hallOfFameProcessedAt: event.environment === 'test' ? null : (completed ? (event.hallOfFameProcessedAt || event.completedAt || now) : event.hallOfFameProcessedAt || null),
       updatedAt: now
     };
   });
