@@ -146,13 +146,14 @@ function playerServiceFake({ user = null, existingProfile = null, existingEventP
   const supabase = {
     rpc(name, payload) {
       calls.push([name, payload]);
-      return result({ data: { event_player_id: 'ep-instant', player_profile_id: 'profile-instant', display_name: 'Walk In', already_joined: false, email_verified: false }, error: null });
+      return result({ data: { event_player_id: 'ep-instant', player_profile_id: 'profile-instant', display_name: 'Walk In', already_joined: false, email_verified: false, smart_queue_preference_capability: 'capability-token' }, error: null });
     }
   };
   const joined = await joinInstantPlayerEvent(supabase, { eventId: 'event-1', displayName: ' Walk In ', email: ' WALKIN@OUTLOOK.COM ', level: 3.75 });
   assert.equal(joined.eventPlayerId, 'ep-instant');
   assert.equal(joined.emailVerified, false);
-  assert.deepEqual(calls, [['v2_join_instant_player_event', { p_event_id: 'event-1', p_display_name: 'Walk In', p_email: 'walkin@outlook.com', p_level: 3.75 }]]);
+  assert.equal(joined.smartQueueCapability, 'capability-token');
+  assert.deepEqual(calls, [['v2_join_instant_player_event_with_smart_queue_session', { p_event_id: 'event-1', p_display_name: 'Walk In', p_email: 'walkin@outlook.com', p_level: 3.75 }]]);
 }
 
 // Profile edits and historical claims use their owner-scoped RPCs.

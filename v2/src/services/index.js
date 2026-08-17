@@ -2,6 +2,8 @@ import './bilingualUi.js?v=v2-bilingual-02';
 import './shareLinksUi.js';
 import { getServiceMode, SERVICE_MODES } from './serviceMode.js';
 import { getSupabaseClient } from './supabaseClient.js';
+import { isTestEnvironment, getTestAdminSession, knownTestEventIds, createTestEvent, authorizeTestAdmin, exitTestAdmin, invokeTestAdmin } from './testAdminService.js';
+import { matchPlayerIds as normalizedMatchPlayerIds, normalizeMatch as normalizeSharedMatch } from './matchModel.js';
 import {
   listEvents as listLocalEvents,
   getSelectedEvent,
@@ -46,9 +48,7 @@ function requestedEventId() {
 }
 
 function matchPlayerIds(match) {
-  return [...(match.teamA || match.team_a || []), ...(match.teamB || match.team_b || [])]
-    .map((item) => (typeof item === 'string' ? item : item?.id || item?.playerId || item?.eventPlayerId))
-    .filter(Boolean);
+  return normalizedMatchPlayerIds(match);
 }
 
 async function setSupabasePlayersStatusSafely(supabase, players, status) {
@@ -60,17 +60,35 @@ async function setSupabasePlayersStatusSafely(supabase, players, status) {
 
 export function createV2Services({ supabase = getSupabaseClient(), organizationId = '00000000-0000-4000-8000-000000000001', mode = getServiceMode() } = {}) {
   const isSupabase = mode === SERVICE_MODES.SUPABASE;
+  const environments = new Map();
+  let cachedTestEvents = [], testEventsCacheUntil = 0;
+  const rememberEvents = (rows = []) => rows.map((row) => {
+    environments.set(String(row.id), row.environment || 'live');
+    return row;
+  });
+  const isTestEventId = (eventId) => environments.get(String(eventId)) === 'test';
+  const test = (action, payload = {}) => invokeTestAdmin(requireSupabase(supabase), action, { ...payload, organizationId: payload.organizationId || organizationId });
+  const testEvents = async ({ force = false } = {}) => {
+    if (!force && Date.now() < testEventsCacheUntil) return cachedTestEvents;
+    const rows = (await Promise.all(knownTestEventIds().map(async (eventId) => {
+      try { return (await test('getEvent', { eventId })).event; } catch { return null; }
+    }))).filter(Boolean);
+    cachedTestEvents = rows;
+    testEventsCacheUntil = Date.now() + 30_000;
+    return rows;
+  };
+  const invalidateTestEvents = () => { cachedTestEvents = []; testEventsCacheUntil = 0; };
 
   return {
     mode,
 
     async listEvents() {
-      if (isSupabase) return listSupabaseEvents(requireSupabase(supabase), organizationId);
+      if (isSupabase) return rememberEvents([...(await listSupabaseEvents(requireSupabase(supabase), organizationId)), ...(await testEvents())]);
       return listLocalEvents();
     },
 
     async listStatsEvents() {
-      if (isSupabase) return listSupabaseStatsEvents(requireSupabase(supabase), organizationId);
+      if (isSupabase) return rememberEvents([...(await listSupabaseStatsEvents(requireSupabase(supabase), organizationId)), ...(await testEvents())]);
       return listAllLocalEvents().sort((a, b) => String(b.eventDate || b.createdAt || '').localeCompare(String(a.eventDate || a.createdAt || '')));
     },
 
@@ -82,7 +100,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async getCurrentEvent() {
       const eventId = requestedEventId();
       if (isSupabase) {
-        const events = await listSupabaseEvents(requireSupabase(supabase), organizationId);
+        const events = rememberEvents([...(await listSupabaseEvents(requireSupabase(supabase), organizationId)), ...(await testEvents())]);
         localStorage.setItem('gdsq_v2_events', JSON.stringify(events));
         const selected = eventId ? events.find((event) => String(event.id) === String(eventId)) : null;
         const current = selected || events.find((event) => event.status === 'live') || events[0] || null;
@@ -97,7 +115,13 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async getEventById(eventId) {
-      if (isSupabase) return getSupabaseEventById(requireSupabase(supabase), organizationId, eventId);
+      if (isSupabase && (isTestEventId(eventId) || Boolean(getTestAdminSession(eventId)))) {
+        try { return rememberEvents([(await test('getEvent', { eventId })).event])[0]; } catch { return null; }
+      }
+      if (isSupabase) {
+        const result = await getSupabaseEventById(requireSupabase(supabase), organizationId, eventId);
+        return rememberEvents(result ? [result] : [])[0] || null;
+      }
       return listAllLocalEvents().find((event) => String(event.id) === String(eventId)) || null;
     },
 
@@ -110,16 +134,27 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async createEvent(payload) {
-      if (isSupabase) return createSupabaseEvent(requireSupabase(supabase), { ...payload, organizationId: payload.organizationId || organizationId });
+      if (isSupabase && payload.environment === 'test') {
+        const result = await createTestEvent(requireSupabase(supabase), { ...payload, organizationId: payload.organizationId || organizationId, passcode: payload.testPasscode });
+        invalidateTestEvents();
+        return rememberEvents([result.event])[0];
+      }
+      if (isSupabase) return rememberEvents([await createSupabaseEvent(requireSupabase(supabase), { ...payload, organizationId: payload.organizationId || organizationId })])[0];
       return createLocalEvent(payload);
     },
 
     async updateEventStatus(eventId, status) {
+      if (isSupabase && isTestEventId(eventId)) {
+        const result = await test('endTest', { eventId, status });
+        invalidateTestEvents();
+        return rememberEvents([result.event])[0];
+      }
       if (isSupabase) return updateSupabaseEventStatus(requireSupabase(supabase), eventId, status);
       return updateLocalEventStatus(eventId, status);
     },
 
     async deleteEvent(eventId) {
+      if (isSupabase && isTestEventId(eventId)) { const result = await test('deleteEvent', { eventId }); invalidateTestEvents(); return result; }
       if (isSupabase) return deleteSupabaseEvent(requireSupabase(supabase), eventId);
       return deleteLocalEvent(eventId);
     },
@@ -151,6 +186,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async listEventPlayers(eventId) {
+      if (isSupabase && isTestEventId(eventId)) return (await test('listPlayers', { eventId })).players || [];
       if (isSupabase) return listSupabaseEventPlayers(requireSupabase(supabase), eventId);
       const checkedInPlayers = listLocalEventPlayers(eventId);
       const localMatches = listLocalEventMatches(eventId);
@@ -167,8 +203,18 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async checkInPlayer(payload) {
+      if (isSupabase && isTestEventId(payload.eventId)) {
+        const result = await test('checkInPlayer', payload);
+        return result.player;
+      }
       if (isSupabase) return checkInSupabasePlayer(requireSupabase(supabase), { ...payload, organizationId: payload.organizationId || organizationId });
       return checkInLocalPlayer(payload);
+    },
+
+    async addTestPlayers(payload) {
+      if (!isSupabase || !isTestEventId(payload.eventId)) throw new Error('Batch Test players are available only inside a Test event.');
+      const result = await test('addTestPlayers', payload);
+      return result.players || [];
     },
 
     async findPlayerProfileByEmail(email) {
@@ -217,6 +263,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async setPlayerStatus(eventId, playerId, status) {
+      if (isSupabase && isTestEventId(eventId)) return test('setPlayerStatus', { eventId, playerId, status });
       if (isSupabase) {
         await updateSupabaseEventPlayerStatus(requireSupabase(supabase), playerId, status);
         return this.listEventPlayers(eventId);
@@ -226,6 +273,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async updatePlayerLevel(eventId, playerId, level) {
+      if (isSupabase && isTestEventId(eventId)) return test('updatePlayerLevel', { eventId, playerId, level });
       if (isSupabase) {
         await updateSupabaseEventPlayerLevel(requireSupabase(supabase), playerId, level);
         return this.listEventPlayers(eventId);
@@ -236,6 +284,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async removePlayer(eventId, playerId) {
+      if (isSupabase && isTestEventId(eventId)) return test('removePlayer', { eventId, playerId });
       if (isSupabase) {
         await updateSupabaseEventPlayerStatus(requireSupabase(supabase), playerId, 'removed');
         return this.listEventPlayers(eventId);
@@ -245,6 +294,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async forceAllPlayersReady(eventId) {
+      if (isSupabase && isTestEventId(eventId)) return test('resetQueue', { eventId });
       if (isSupabase) {
         const players = await this.listEventPlayers(eventId);
         await Promise.all(players.map((player) => updateSupabaseEventPlayerStatus(requireSupabase(supabase), player.id, 'ready')));
@@ -256,6 +306,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async listEventMatches(eventId) {
+      if (isSupabase && isTestEventId(eventId)) return ((await test('listMatches', { eventId })).matches || []).map(normalizeSharedMatch);
       if (isSupabase) return listSupabaseEventMatches(requireSupabase(supabase), eventId);
       const localMatches = listLocalEventMatches(eventId);
       if (!isDemoEvent(eventId)) return localMatches;
@@ -263,17 +314,36 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
       return [...localMatches, ...seedHistory];
     },
 
+    async getTestOrganizerState(eventId) {
+      if (!isSupabase || !isTestEventId(eventId)) throw new Error('Test Organizer state is available only inside a Test event.');
+      const result = await test('getOrganizerState', { eventId });
+      rememberEvents([result.event]);
+      return { ...result, matches: (result.matches || []).map(normalizeSharedMatch) };
+    },
+
     async createMatchPreview(payload) {
+      if (isSupabase && isTestEventId(payload.eventId)) {
+        const result = await test('createMatchPreview', payload);
+        return normalizeSharedMatch(result.match);
+      }
       if (isSupabase) return createSupabaseMatchPreview(requireSupabase(supabase), { ...payload, organizationId: payload.organizationId || organizationId });
       return createLocalMatchPreview(payload);
     },
 
     async updateMatchPreview(matchId, payload) {
+      if (isSupabase && isTestEventId(payload.eventId)) {
+        const result = await test('updateMatchPreview', { ...payload, matchId });
+        return normalizeSharedMatch(result.match);
+      }
       if (isSupabase) return updateSupabaseMatchPreview(requireSupabase(supabase), matchId, { ...payload, organizationId: payload.organizationId || organizationId });
       return updateLocalMatchPreview(payload.eventId, matchId, payload);
     },
 
     async startMatch(matchId, payload = {}) {
+      if (isSupabase && isTestEventId(payload.eventId)) {
+        const result = await test('startMatch', { ...payload, matchId });
+        return normalizeSharedMatch(result.match);
+      }
       if (isSupabase) {
         const match = await startSupabaseMatch(requireSupabase(supabase), matchId);
         const playerStatusWarning = await setSupabasePlayersStatusSafely(requireSupabase(supabase), matchPlayerIds(match), 'playing');
@@ -285,6 +355,10 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async cancelMatch(matchId, payload = {}) {
+      if (isSupabase && isTestEventId(payload.eventId)) {
+        const result = await test('cancelMatch', { ...payload, matchId });
+        return normalizeSharedMatch(result.match);
+      }
       if (isSupabase) {
         const match = await cancelSupabaseMatch(requireSupabase(supabase), matchId, payload);
         const playerStatusWarning = await setSupabasePlayersStatusSafely(requireSupabase(supabase), matchPlayerIds(match), 'ready');
@@ -301,6 +375,10 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async confirmScore(matchId, payload) {
+      if (isSupabase && isTestEventId(payload.eventId)) {
+        const result = await test('confirmScore', { ...payload, matchId });
+        return normalizeSharedMatch(result.match);
+      }
       if (isSupabase) {
         const match = await confirmSupabaseScore(requireSupabase(supabase), matchId, payload);
         const playerUpdates = await Promise.allSettled(
@@ -313,6 +391,21 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
       applyLocalMatchResult(payload.eventId, match);
       return match;
     },
+
+    isTestEvent(event) { return isTestEnvironment(event); },
+    hasTestAdminSession(eventId) { return Boolean(getTestAdminSession(eventId)); },
+    async authorizeTestAdmin(eventId, passcode) {
+      const result = await authorizeTestAdmin(requireSupabase(supabase), eventId, passcode);
+      rememberEvents([result.event]);
+      invalidateTestEvents();
+      return result.event;
+    },
+    async exitTestAdmin(eventId) { return exitTestAdmin(requireSupabase(supabase), eventId); },
+    async saveTestSmartPreference(payload) { return test('savePreference', payload); },
+    async listTestSmartPreferences(eventId) { return (await test('listPreferences', { eventId })).preferences || []; },
+    async resetTestMatches(eventId) { return test('resetMatches', { eventId }); },
+    async resetTestQueue(eventId) { return test('resetQueue', { eventId }); },
+    async resetTestEvent(eventId) { return test('resetEvent', { eventId }); },
 
     async canEditConfirmedResults() {
       // Supabase historical edits are intentionally isolated to v2-admin-results.
