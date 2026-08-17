@@ -1,6 +1,8 @@
 // Supabase player service for GDSQ Open Play v2 shared mode.
 // Use v2_ tables only.
 
+import { joinCanonicalPlayer } from './playerIdentityService.js';
+
 const AVATAR_BUCKET = 'v2-player-avatars';
 
 function normalizeLevel(level) {
@@ -144,6 +146,11 @@ export async function listEventPlayers(supabase, eventId) {
 }
 
 export async function checkInPlayer(supabase, payload) {
+  // New browser paths use the isolated capability-backed identity service.
+  // Keeping the legacy direct path below protects older deployments and tests.
+  if (supabase?.functions?.invoke && payload.useCanonicalIdentity !== false) {
+    return joinCanonicalPlayer(supabase, payload);
+  }
   const name = String(payload.displayName || payload.name || '').trim();
   if (!name) throw new Error('Player name is required');
   const level = normalizeLevel(payload.estimatedLevel || payload.level);
@@ -271,6 +278,17 @@ export async function joinVerifiedPlayerEvent(supabase, payload) {
 }
 
 export async function joinInstantPlayerEvent(supabase, payload) {
+  if (supabase?.functions?.invoke) {
+    return joinCanonicalPlayer(supabase, payload).then((player) => ({
+      eventPlayerId: player.id,
+      playerProfileId: player.playerId,
+      displayName: player.displayName,
+      avatarUrl: player.avatarUrl,
+      alreadyJoined: Boolean(player.duplicate),
+      emailVerified: false,
+      smartQueueCapability: player.smartQueueCapability || ''
+    }));
+  }
   const { data, error } = await supabase.rpc('v2_join_instant_player_event_with_smart_queue_session', {
     p_event_id: payload.eventId,
     p_display_name: String(payload.displayName || '').trim(),

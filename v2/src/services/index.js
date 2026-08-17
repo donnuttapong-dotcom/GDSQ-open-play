@@ -24,6 +24,7 @@ import { listLocalEventMatches, createLocalMatchPreview, updateLocalMatchPreview
 import { clearLocalEventData } from './localEventCleanup.js';
 import { listEvents as listSupabaseEvents, listStatsEvents as listSupabaseStatsEvents, getEventById as getSupabaseEventById, listArchivedEventsForDate as listArchivedSupabaseEventsForDate, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus, deleteEvent as deleteSupabaseEvent } from './supabaseEventService.js?v=event-history-01';
 import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer, updateEventPlayerStatus as updateSupabaseEventPlayerStatus, updateEventPlayerLevel as updateSupabaseEventPlayerLevel, findPlayerProfileByEmail as findSupabasePlayerProfileByEmail, getAuthenticatedPlayer as getSupabaseAuthenticatedPlayer, sendPlayerSignInLink as sendSupabasePlayerSignInLink, signOutPlayer as signOutSupabasePlayer, joinVerifiedPlayerEvent as joinSupabaseVerifiedPlayerEvent, joinInstantPlayerEvent as joinSupabaseInstantPlayerEvent, updateMyPlayerProfile as updateSupabaseMyPlayerProfile, requestPlayerProfileClaim as requestSupabasePlayerProfileClaim, listMyPlayerProfileClaims as listSupabaseMyPlayerProfileClaims } from './supabasePlayerService.js?v=instant-registration-01';
+import { getOwnPlayerProfile as getSupabaseOwnPlayerProfile, updateOwnPlayerProfile as updateSupabaseOwnPlayerProfile, rememberedPlayerIdentity } from './playerIdentityService.js';
 import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, updateMatchPreview as updateSupabaseMatchPreview, startMatch as startSupabaseMatch, cancelMatch as cancelSupabaseMatch, confirmScore as confirmSupabaseScore, updateConfirmedScore as updateSupabaseConfirmedScore, isAdminPasscodeConfigured as isSupabaseAdminPasscodeConfigured, setAdminPasscode as setSupabaseAdminPasscode, updateConfirmedScoreWithPasscode as updateSupabaseConfirmedScoreWithPasscode } from './supabaseMatchService.js';
 
 const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
@@ -250,6 +251,20 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async updateMyPlayerProfile(payload) {
       if (!isSupabase) throw new Error('Profile editing requires Supabase mode.');
       return updateSupabaseMyPlayerProfile(requireSupabase(supabase), payload);
+    },
+
+    async getMyIdentityProfile(payload = {}) {
+      if (!isSupabase) return null;
+      return getSupabaseOwnPlayerProfile(requireSupabase(supabase), payload);
+    },
+
+    async updateMyIdentityProfile(payload) {
+      if (!isSupabase) throw new Error('Profile editing requires Supabase mode.');
+      return updateSupabaseOwnPlayerProfile(requireSupabase(supabase), payload);
+    },
+
+    rememberedPlayerIdentity() {
+      return rememberedPlayerIdentity();
     },
 
     async requestPlayerProfileClaim(eventPlayerId) {
