@@ -6,6 +6,7 @@ const staticOrigins = new Set([
   'https://donnuttapong-dotcom.github.io',
   'https://gdsq-open-play-live.vercel.app',
   'https://gdsq-open-play-v2-preview.vercel.app',
+  'https://gdsq-open-play-v2-preview-39xrb50cf-don-s-projects6.vercel.app',
   'http://127.0.0.1:4173', 'http://127.0.0.1:4174', 'http://127.0.0.1:4175',
   'http://localhost:4173', 'http://localhost:4174', 'http://localhost:4175'
 ]);
