@@ -1,16 +1,11 @@
 import { SMART_QUEUE_MODES, generateSmartQueueMatch, normalizeSmartQueueModes } from '../logic/smartQueue/smartQueueEngine.js';
 import { createSmartQueueStore } from '../services/smartQueueService.js';
+import { matchPlayerIds as normalizedMatchPlayerIds, playerId } from '../services/matchModel.js';
 
 const MODE_LABELS = { social: 'SOCIAL', balanced: 'BALANCED', challenge: 'CHALLENGE' };
 
-function playerId(player) {
-  return String(player?.id || player?.eventPlayerId || player?.event_player_id || '');
-}
-
 function matchPlayerIds(match) {
-  return [...(match?.teamA || match?.team_a || []), ...(match?.teamB || match?.team_b || [])]
-    .map((item) => playerId(typeof item === 'string' ? { id: item } : item))
-    .filter(Boolean);
+  return normalizedMatchPlayerIds(match);
 }
 
 function isActiveMatch(match) {
@@ -71,7 +66,7 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
     if (!isSmartEvent()) return null;
     const id = playerId(player);
     const active = matches().find((match) => isActiveMatch(match) && matchPlayerIds(match).includes(id));
-    if (active && String(active.status).toLowerCase() === 'playing') return 'playing';
+    if (active) return 'playing';
     if (preferenceFor(id).status === 'rest') return 'rest';
     return 'waiting';
   }

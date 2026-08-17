@@ -4,6 +4,7 @@ const SETTINGS_TABLE = 'v2_smart_queue_settings';
 const PREFERENCES_TABLE = 'v2_smart_queue_preferences';
 const MATCHES_TABLE = 'v2_smart_queue_matches';
 const LOCAL_KEY = 'gdsq_v2_smart_queue';
+const INSTANT_CAPABILITY_PREFIX = 'gdsq_v2_smart_queue_capability:';
 
 function nowIso() {
   return new Date().toISOString();
@@ -82,6 +83,22 @@ export function createSmartQueueStore({ supabase = null, mode = 'mock', getAdmin
     return data;
   }
 
+  function instantCapability(eventId, eventPlayerId) {
+    if (!localStorageAvailable()) return '';
+    return localStorage.getItem(`${INSTANT_CAPABILITY_PREFIX}${eventId}:${eventPlayerId}`) || '';
+  }
+
+  async function playerCapabilityCall(payload) {
+    const capability = instantCapability(payload.eventId, payload.eventPlayerId);
+    if (!capability) return null;
+    const { data, error } = await supabase.functions.invoke('v2-smart-queue-player', {
+      body: { action: 'saveOwnPreference', capability, ...payload }
+    });
+    if (error) throw error;
+    if (!data?.ok) throw new Error(data?.error || 'Could not save Smart Queue preference');
+    return normalizePreference(data.preference);
+  }
+
   return {
     async load(eventId) {
       if (!eventId) return { enabled: false, schemaAvailable: shared ? null : true, preferences: [], matches: [] };
@@ -150,8 +167,10 @@ export function createSmartQueueStore({ supabase = null, mode = 'mock', getAdmin
         return normalizePreference(data.preference);
       }
       const { data, error } = await supabase.from(PREFERENCES_TABLE).upsert(row, { onConflict: 'event_player_id' }).select('*').single();
-      if (error) throw error;
-      return normalizePreference(data);
+      if (!error) return normalizePreference(data);
+      const capabilitySaved = await playerCapabilityCall({ eventId, eventPlayerId, modes: normalizedModes, preferredMode: safePreferred, status });
+      if (capabilitySaved) return capabilitySaved;
+      throw error;
     },
 
     async recordMatch({ matchId, eventId, organizationId, courtNumber, playMode, state = 'match_ready' }) {

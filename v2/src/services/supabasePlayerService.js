@@ -271,7 +271,7 @@ export async function joinVerifiedPlayerEvent(supabase, payload) {
 }
 
 export async function joinInstantPlayerEvent(supabase, payload) {
-  const { data, error } = await supabase.rpc('v2_join_instant_player_event', {
+  const { data, error } = await supabase.rpc('v2_join_instant_player_event_with_smart_queue_session', {
     p_event_id: payload.eventId,
     p_display_name: String(payload.displayName || '').trim(),
     p_email: normalizeEmail(payload.email),
@@ -284,7 +284,8 @@ export async function joinInstantPlayerEvent(supabase, payload) {
     displayName: data?.display_name,
     avatarUrl: data?.avatar_url || '',
     alreadyJoined: Boolean(data?.already_joined),
-    emailVerified: Boolean(data?.email_verified)
+    emailVerified: Boolean(data?.email_verified),
+    smartQueueCapability: data?.smart_queue_preference_capability || ''
   };
 }
 

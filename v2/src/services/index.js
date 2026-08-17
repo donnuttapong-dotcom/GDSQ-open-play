@@ -3,6 +3,7 @@ import './shareLinksUi.js';
 import { getServiceMode, SERVICE_MODES } from './serviceMode.js';
 import { getSupabaseClient } from './supabaseClient.js';
 import { isTestEnvironment, getTestAdminSession, knownTestEventIds, createTestEvent, authorizeTestAdmin, exitTestAdmin, invokeTestAdmin } from './testAdminService.js';
+import { matchPlayerIds as normalizedMatchPlayerIds, normalizeMatch as normalizeSharedMatch } from './matchModel.js';
 import {
   listEvents as listLocalEvents,
   getSelectedEvent,
@@ -47,9 +48,7 @@ function requestedEventId() {
 }
 
 function matchPlayerIds(match) {
-  return [...(match.teamA || match.team_a || []), ...(match.teamB || match.team_b || [])]
-    .map((item) => (typeof item === 'string' ? item : item?.id || item?.playerId || item?.eventPlayerId))
-    .filter(Boolean);
+  return normalizedMatchPlayerIds(match);
 }
 
 async function setSupabasePlayersStatusSafely(supabase, players, status) {
@@ -291,7 +290,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async listEventMatches(eventId) {
-      if (isSupabase && isTestEventId(eventId)) return (await test('listMatches', { eventId })).matches || [];
+      if (isSupabase && isTestEventId(eventId)) return ((await test('listMatches', { eventId })).matches || []).map(normalizeSharedMatch);
       if (isSupabase) return listSupabaseEventMatches(requireSupabase(supabase), eventId);
       const localMatches = listLocalEventMatches(eventId);
       if (!isDemoEvent(eventId)) return localMatches;
@@ -302,7 +301,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async createMatchPreview(payload) {
       if (isSupabase && isTestEventId(payload.eventId)) {
         const result = await test('createMatchPreview', payload);
-        return result.match;
+        return normalizeSharedMatch(result.match);
       }
       if (isSupabase) return createSupabaseMatchPreview(requireSupabase(supabase), { ...payload, organizationId: payload.organizationId || organizationId });
       return createLocalMatchPreview(payload);
@@ -311,7 +310,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async updateMatchPreview(matchId, payload) {
       if (isSupabase && isTestEventId(payload.eventId)) {
         const result = await test('updateMatchPreview', { ...payload, matchId });
-        return result.match;
+        return normalizeSharedMatch(result.match);
       }
       if (isSupabase) return updateSupabaseMatchPreview(requireSupabase(supabase), matchId, { ...payload, organizationId: payload.organizationId || organizationId });
       return updateLocalMatchPreview(payload.eventId, matchId, payload);
@@ -320,7 +319,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async startMatch(matchId, payload = {}) {
       if (isSupabase && isTestEventId(payload.eventId)) {
         const result = await test('startMatch', { ...payload, matchId });
-        return result.match;
+        return normalizeSharedMatch(result.match);
       }
       if (isSupabase) {
         const match = await startSupabaseMatch(requireSupabase(supabase), matchId);
@@ -335,7 +334,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async cancelMatch(matchId, payload = {}) {
       if (isSupabase && isTestEventId(payload.eventId)) {
         const result = await test('cancelMatch', { ...payload, matchId });
-        return result.match;
+        return normalizeSharedMatch(result.match);
       }
       if (isSupabase) {
         const match = await cancelSupabaseMatch(requireSupabase(supabase), matchId, payload);
@@ -355,7 +354,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async confirmScore(matchId, payload) {
       if (isSupabase && isTestEventId(payload.eventId)) {
         const result = await test('confirmScore', { ...payload, matchId });
-        return result.match;
+        return normalizeSharedMatch(result.match);
       }
       if (isSupabase) {
         const match = await confirmSupabaseScore(requireSupabase(supabase), matchId, payload);

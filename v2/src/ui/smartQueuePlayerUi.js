@@ -21,7 +21,7 @@ export function createSmartQueuePlayerUi({ services, supabase, getEvent, getPlay
   const current = () => state.preferences.find((row) => String(row.eventPlayerId) === String(player()?.id));
 
   function render() {
-    if (!state.enabled || state.schemaAvailable === false || !event() || !player()) {
+    if (!(state.enabled || String(event()?.matchingMode || event()?.matching_mode || '') === 'smart_queue') || state.schemaAvailable === false || !event() || !player()) {
       root.classList.add('hidden');
       return;
     }
