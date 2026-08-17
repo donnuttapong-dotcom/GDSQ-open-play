@@ -146,6 +146,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async updateEventStatus(eventId, status) {
       if (isSupabase && isTestEventId(eventId)) {
         const result = await test('endTest', { eventId, status });
+        invalidateTestEvents();
         return rememberEvents([result.event])[0];
       }
       if (isSupabase) return updateSupabaseEventStatus(requireSupabase(supabase), eventId, status);
