@@ -25,7 +25,7 @@ Deno.serve(async (request) => {
   if (!url || !serviceRoleKey) return json({ ok: false, error: 'Admin service is not configured' }, 500, origin);
   const body = await request.json().catch(() => null);
   const action = String(body?.action || ''), passcode = String(body?.passcode || '');
-  if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer', 'setRating', 'smartQueueSetEnabled', 'smartQueueSavePreference', 'smartQueueRecordMatch'].includes(action) || passcode.length > 128 || (action !== 'setRating' && passcode.length < 5)) return json({ ok: false, error: 'Invalid request' }, 400, origin);
+  if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer', 'setRating', 'smartQueueSetEnabled', 'smartQueueSavePreference', 'smartQueueRecordMatch', 'updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer'].includes(action) || passcode.length > 128 || (action !== 'setRating' && passcode.length < 5)) return json({ ok: false, error: 'Invalid request' }, 400, origin);
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
   const token = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   const { data: authData, error: authError } = await admin.auth.getUser(token);
@@ -82,6 +82,21 @@ Deno.serve(async (request) => {
     const { data: match, error } = await admin.from('v2_smart_queue_matches').upsert({ match_id: matchId, event_id: eventId, organization_id: organizationId, court_number: courtNumber, play_mode: playMode, queue_state: state, updated_at: new Date().toISOString() }, { onConflict: 'match_id' }).select('*').single();
     if (error) return json({ ok: false, error: error.message || 'Could not update Smart Queue match' }, 400, origin);
     return json({ ok: true, match }, 200, origin);
+  }
+  if (['updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer'].includes(action)) {
+    const eventId = String(body?.eventId || ''), organizationId = String(body?.organizationId || ''), eventPlayerId = String(body?.eventPlayerId || '');
+    if (!validId(eventId) || !validId(organizationId) || !validId(eventPlayerId)) return json({ ok: false, error: 'Invalid event player request' }, 400, origin);
+    const { data: scopedPlayer, error: scopedPlayerError } = await admin.from('v2_event_players').select('id').eq('id', eventPlayerId).eq('event_id', eventId).eq('organization_id', organizationId).maybeSingle();
+    if (scopedPlayerError || !scopedPlayer) return json({ ok: false, error: 'Event player not found' }, 404, origin);
+    const rpcName = action === 'updateEventPlayerStatus' ? 'v2_admin_update_event_player_status' : action === 'updateEventPlayerLevel' ? 'v2_admin_update_event_player_level' : 'v2_admin_remove_event_player';
+    const rpcPayload = action === 'updateEventPlayerStatus'
+      ? { p_event_id: eventId, p_event_player_id: eventPlayerId, p_status: String(body?.status || ''), p_ip_hash: ipHash }
+      : action === 'updateEventPlayerLevel'
+        ? { p_event_id: eventId, p_event_player_id: eventPlayerId, p_level: Number(body?.level), p_ip_hash: ipHash }
+        : { p_event_id: eventId, p_event_player_id: eventPlayerId, p_ip_hash: ipHash };
+    const { error: mutationError } = await admin.rpc(rpcName, rpcPayload);
+    if (mutationError) return json({ ok: false, error: mutationError.message || 'Could not update event player' }, 400, origin);
+    return json({ ok: true }, 200, origin);
   }
   if (action === 'listEvents') {
     const { data: events, error: eventsError } = await admin

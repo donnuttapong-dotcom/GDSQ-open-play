@@ -69,6 +69,24 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
   });
   const isTestEventId = (eventId) => environments.get(String(eventId)) === 'test';
   const test = (action, payload = {}) => invokeTestAdmin(requireSupabase(supabase), action, { ...payload, organizationId: payload.organizationId || organizationId });
+  let organizerPasscode = '';
+  async function organizerAdminCall(action, payload = {}) {
+    if (!isSupabase) throw new Error('Organizer protected mutations require Supabase mode.');
+    if (!organizerPasscode && typeof sessionStorage !== 'undefined') organizerPasscode = sessionStorage.getItem('gdsq_v2_organizer_passcode') || '';
+    if (!organizerPasscode && typeof window !== 'undefined' && typeof window.prompt === 'function') organizerPasscode = window.prompt('Admin passcode / รหัส Admin')?.trim() || '';
+    if (!organizerPasscode) throw new Error('ORGANIZER_PASSCODE_REQUIRED');
+    const { data, error } = await requireSupabase(supabase).functions.invoke('v2-admin-results', { body: { action, passcode: organizerPasscode, organizationId, ...payload } });
+    if (error) throw error;
+    if (!data?.ok) {
+      if (/invalid admin passcode|authorized admin/i.test(String(data?.error || ''))) {
+        organizerPasscode = '';
+        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('gdsq_v2_organizer_passcode');
+      }
+      throw new Error(data?.error || 'Organizer mutation failed');
+    }
+    if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('gdsq_v2_organizer_passcode', organizerPasscode);
+    return data;
+  }
   const testEvents = async ({ force = false } = {}) => {
     if (!force && Date.now() < testEventsCacheUntil) return cachedTestEvents;
     const rows = (await Promise.all(knownTestEventIds().map(async (eventId) => {
@@ -156,7 +174,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
 
     async deleteEvent(eventId) {
       if (isSupabase && isTestEventId(eventId)) { const result = await test('deleteEvent', { eventId }); invalidateTestEvents(); return result; }
-      if (isSupabase) return deleteSupabaseEvent(requireSupabase(supabase), eventId);
+      if (isSupabase) { await organizerAdminCall('archiveEvent', { eventId }); return { archivedId: eventId }; }
       return deleteLocalEvent(eventId);
     },
 
@@ -280,7 +298,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async setPlayerStatus(eventId, playerId, status) {
       if (isSupabase && isTestEventId(eventId)) return test('setPlayerStatus', { eventId, playerId, status });
       if (isSupabase) {
-        await updateSupabaseEventPlayerStatus(requireSupabase(supabase), playerId, status);
+        await organizerAdminCall('updateEventPlayerStatus', { eventId, eventPlayerId: playerId, status });
         return this.listEventPlayers(eventId);
       }
       setLocalPlayerStatus(eventId, [playerId], status);
@@ -290,7 +308,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async updatePlayerLevel(eventId, playerId, level) {
       if (isSupabase && isTestEventId(eventId)) return test('updatePlayerLevel', { eventId, playerId, level });
       if (isSupabase) {
-        await updateSupabaseEventPlayerLevel(requireSupabase(supabase), playerId, level);
+        await organizerAdminCall('updateEventPlayerLevel', { eventId, eventPlayerId: playerId, level });
         return this.listEventPlayers(eventId);
       }
       updateLocalEventPlayerLevel(eventId, playerId, level);
@@ -301,7 +319,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     async removePlayer(eventId, playerId) {
       if (isSupabase && isTestEventId(eventId)) return test('removePlayer', { eventId, playerId });
       if (isSupabase) {
-        await updateSupabaseEventPlayerStatus(requireSupabase(supabase), playerId, 'removed');
+        await organizerAdminCall('removeEventPlayer', { eventId, eventPlayerId: playerId });
         return this.listEventPlayers(eventId);
       }
       setLocalPlayerStatus(eventId, [playerId], 'removed');
