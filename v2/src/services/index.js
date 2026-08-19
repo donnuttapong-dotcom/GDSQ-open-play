@@ -158,7 +158,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
         invalidateTestEvents();
         return rememberEvents([result.event])[0];
       }
-      if (isSupabase) return rememberEvents([await createSupabaseEvent(requireSupabase(supabase), { ...payload, organizationId: payload.organizationId || organizationId })])[0];
+      if (isSupabase) { const result = await organizerAdminCall('createEvent', { ...payload, organizationId: payload.organizationId || organizationId }); return rememberEvents([result.event])[0]; }
       return createLocalEvent(payload);
     },
 
@@ -168,7 +168,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
         invalidateTestEvents();
         return rememberEvents([result.event])[0];
       }
-      if (isSupabase) return updateSupabaseEventStatus(requireSupabase(supabase), eventId, status);
+      if (isSupabase) { const result = await organizerAdminCall('setEventStatus', { eventId, status }); return rememberEvents([result.event])[0]; }
       return updateLocalEventStatus(eventId, status);
     },
 
@@ -359,7 +359,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
         const result = await test('createMatchPreview', payload);
         return normalizeSharedMatch(result.match);
       }
-      if (isSupabase) return createSupabaseMatchPreview(requireSupabase(supabase), { ...payload, organizationId: payload.organizationId || organizationId });
+      if (isSupabase) { const result = await organizerAdminCall('createMatchPreview', { ...payload, organizationId: payload.organizationId || organizationId }); return normalizeSharedMatch(result.match); }
       return createLocalMatchPreview(payload);
     },
 
@@ -368,7 +368,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
         const result = await test('updateMatchPreview', { ...payload, matchId });
         return normalizeSharedMatch(result.match);
       }
-      if (isSupabase) return updateSupabaseMatchPreview(requireSupabase(supabase), matchId, { ...payload, organizationId: payload.organizationId || organizationId });
+      if (isSupabase) { const result = await organizerAdminCall('updateMatchPreview', { ...payload, matchId, organizationId: payload.organizationId || organizationId }); return normalizeSharedMatch(result.match); }
       return updateLocalMatchPreview(payload.eventId, matchId, payload);
     },
 
@@ -377,11 +377,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
         const result = await test('startMatch', { ...payload, matchId });
         return normalizeSharedMatch(result.match);
       }
-      if (isSupabase) {
-        const match = await startSupabaseMatch(requireSupabase(supabase), matchId);
-        const playerStatusWarning = await setSupabasePlayersStatusSafely(requireSupabase(supabase), matchPlayerIds(match), 'playing');
-        return { ...match, playerStatusWarning };
-      }
+      if (isSupabase) { const result = await organizerAdminCall('startMatch', { ...payload, matchId }); return normalizeSharedMatch(result.match); }
       const match = startLocalMatch(payload.eventId, matchId);
       setLocalPlayerStatus(payload.eventId, matchPlayerIds(match), 'playing');
       return match;
@@ -392,11 +388,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
         const result = await test('cancelMatch', { ...payload, matchId });
         return normalizeSharedMatch(result.match);
       }
-      if (isSupabase) {
-        const match = await cancelSupabaseMatch(requireSupabase(supabase), matchId, payload);
-        const playerStatusWarning = await setSupabasePlayersStatusSafely(requireSupabase(supabase), matchPlayerIds(match), 'ready');
-        return { ...match, playerStatusWarning };
-      }
+      if (isSupabase) { const result = await organizerAdminCall('cancelMatch', { ...payload, matchId }); return normalizeSharedMatch(result.match); }
       const match = cancelLocalMatch(payload.eventId, matchId, {
         reason: payload.reason || 'cancelled_by_organizer',
         teamAScore: payload.teamAScore,
@@ -412,14 +404,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
         const result = await test('confirmScore', { ...payload, matchId });
         return normalizeSharedMatch(result.match);
       }
-      if (isSupabase) {
-        const match = await confirmSupabaseScore(requireSupabase(supabase), matchId, payload);
-        const playerUpdates = await Promise.allSettled(
-          matchPlayerIds(match).map((id) => updateSupabaseEventPlayerStatus(requireSupabase(supabase), id, 'ready'))
-        );
-        const playerStatusWarning = playerUpdates.some((result) => result.status === 'rejected');
-        return { ...match, playerStatusWarning };
-      }
+      if (isSupabase) { const result = await organizerAdminCall('confirmScore', { ...payload, matchId }); return normalizeSharedMatch(result.match); }
       const match = confirmLocalScore(payload.eventId, matchId, payload);
       applyLocalMatchResult(payload.eventId, match);
       return match;
