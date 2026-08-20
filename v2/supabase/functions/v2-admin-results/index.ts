@@ -293,7 +293,17 @@ Deno.serve(async (request) => {
       if (restoreError) return json({ ok: false, error: restoreError.message || 'Could not restore event' }, 400, origin);
       return json({ ok: true }, 200, origin);
     }
-    const { error: deleteEventError } = await admin.rpc('v2_admin_permanently_delete_event', { p_event_id: eventId, p_confirmation: 'ADMIN_CONFIRMED', p_ip_hash: ipHash });
+    if (body?.confirmation !== 'ADMIN_CONFIRMED') return json({ ok: false, error: 'Permanent delete confirmation does not match' }, 400, origin);
+    const { data: targetEvent, error: targetEventError } = await admin
+      .from('v2_events')
+      .select('id,status,hall_of_fame_processed_at')
+      .eq('id', eventId)
+      .maybeSingle();
+    if (targetEventError || !targetEvent) return json({ ok: false, error: 'Event not found' }, 404, origin);
+    const archived = ['deleted', 'archived'].includes(String(targetEvent.status || '').toLowerCase());
+    if (!archived && targetEvent.hall_of_fame_processed_at) return json({ ok: false, error: 'Finalized event must be archived before permanent deletion' }, 409, origin);
+    const deleteRpc = archived ? 'v2_admin_permanently_delete_event' : 'v2_admin_permanently_delete_unfinalized_event';
+    const { error: deleteEventError } = await admin.rpc(deleteRpc, { p_event_id: eventId, p_confirmation: 'ADMIN_CONFIRMED', p_ip_hash: ipHash });
     if (deleteEventError) return json({ ok: false, error: deleteEventError.message || 'Could not permanently delete event' }, 400, origin);
     return json({ ok: true }, 200, origin);
   }
