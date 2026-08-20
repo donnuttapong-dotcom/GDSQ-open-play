@@ -299,7 +299,7 @@ export function generateMatches({ players = [], courts = [], history = [], rules
   const mergedRules = { ...DEFAULT_MATCHMAKING_RULES, ...rules };
   const historyStats = buildMatchHistoryStats(history);
   const courtList = courts.length ? courts : [{ id: 'court-1', name: 'Court 1' }];
-  const eligiblePlayers = players.filter((player) => player && !['playing', 'left', 'removed'].includes(normalizeStatus(player)));
+  const eligiblePlayers = players.filter((player) => player && ['ready', 'checked_in'].includes(normalizeStatus(player)));
   const proposedRestingPlayers = mergedRules.enforceAutoRest ? eligiblePlayers.filter((player) => shouldRest(player, historyStats, mergedRules)) : [];
   const proposedRestingIds = new Set(proposedRestingPlayers.map(playerId));
   const restedAvailablePlayers = eligiblePlayers.filter((player) => !proposedRestingIds.has(playerId(player)));

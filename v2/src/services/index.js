@@ -30,6 +30,33 @@ import { getOwnPlayerProfile as getSupabaseOwnPlayerProfile, updateOwnPlayerProf
 import { listEventMatches as listSupabaseEventMatches, createMatchPreview as createSupabaseMatchPreview, updateMatchPreview as updateSupabaseMatchPreview, startMatch as startSupabaseMatch, cancelMatch as cancelSupabaseMatch, confirmScore as confirmSupabaseScore, updateConfirmedScore as updateSupabaseConfirmedScore, isAdminPasscodeConfigured as isSupabaseAdminPasscodeConfigured, setAdminPasscode as setSupabaseAdminPasscode, updateConfirmedScoreWithPasscode as updateSupabaseConfirmedScoreWithPasscode } from './supabaseMatchService.js';
 
 const SELECTED_EVENT_KEY = 'gdsq_v2_selected_event_id';
+const ORGANIZER_EVENT_TOKENS_KEY = 'gdsq_v2_event_organizer_tokens';
+
+function organizerEventTokens() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(ORGANIZER_EVENT_TOKENS_KEY) || '{}');
+    return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+  } catch {
+    return {};
+  }
+}
+
+function organizerEventToken(eventId) {
+  return String(organizerEventTokens()[String(eventId || '')] || '');
+}
+
+function rememberOrganizerEventToken(eventId, token) {
+  if (!eventId || !token) return;
+  const tokens = organizerEventTokens();
+  tokens[String(eventId)] = String(token);
+  localStorage.setItem(ORGANIZER_EVENT_TOKENS_KEY, JSON.stringify(tokens));
+}
+
+function forgetOrganizerEventToken(eventId) {
+  const tokens = organizerEventTokens();
+  delete tokens[String(eventId || '')];
+  localStorage.setItem(ORGANIZER_EVENT_TOKENS_KEY, JSON.stringify(tokens));
+}
 
 function requireSupabase(supabase) {
   if (!supabase) throw new Error('Supabase client is required in supabase mode.');
@@ -78,15 +105,9 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
   async function organizerAdminCall(action, payload = {}) {
     if (!isSupabase) throw new Error('Organizer mutations require Supabase mode.');
     const client = requireSupabase(supabase);
-    const protectedAction = action === 'archiveEvent';
-    let passcode = '';
-    if (protectedAction) {
-      const { data: sessionData } = await client.auth.getSession();
-      if (!sessionData?.session) throw Object.assign(new Error('Sign in with an authorized Admin account first'), { code: 'ORGANIZER_SIGN_IN_REQUIRED' });
-      passcode = sessionStorage.getItem('gdsq_v2_organizer_passcode') || window.prompt('Admin passcode / รหัส Admin')?.trim() || '';
-      if (!passcode) throw new Error('ORGANIZER_PASSCODE_REQUIRED');
-    }
-    const { data, error } = await client.functions.invoke('v2-admin-results', { body: { action, ...(passcode ? { passcode } : {}), organizationId, ...payload } });
+    const eventId = String(payload.eventId || '');
+    const organizerToken = ['endEventAndSaveResults', 'deleteEvent'].includes(action) ? organizerEventToken(eventId) : '';
+    const { data, error } = await client.functions.invoke('v2-admin-results', { body: { action, organizationId, ...payload, ...(organizerToken ? { organizerToken } : {}) } });
     if (error) {
       throw await normalizeEdgeFunctionError(error, 'Organizer mutation failed');
     }
@@ -94,7 +115,6 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
       const detail = String(data?.error || '');
       throw new Error(detail || 'Organizer mutation failed');
     }
-    if (passcode) sessionStorage.setItem('gdsq_v2_organizer_passcode', passcode);
     return data;
   }
   const testEvents = async ({ force = false } = {}) => {
@@ -110,6 +130,10 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
 
   return {
     mode,
+
+    hasOrganizerDeviceControl(eventId) {
+      return !isSupabase || Boolean(organizerEventToken(eventId));
+    },
 
     async listEvents() {
       if (isSupabase) return rememberEvents([...(await listSupabaseEvents(requireSupabase(supabase), organizationId)), ...(await testEvents())]);
@@ -172,7 +196,11 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
         invalidateTestEvents();
         return rememberEvents([result.event])[0];
       }
-      if (isSupabase) { const result = await organizerAdminCall('createEvent', { ...payload, organizationId: payload.organizationId || organizationId }); return rememberEvents([result.event])[0]; }
+      if (isSupabase) {
+        const result = await organizerAdminCall('createEvent', { ...payload, organizationId: payload.organizationId || organizationId });
+        rememberOrganizerEventToken(result.event?.id, result.organizerToken);
+        return rememberEvents([result.event])[0];
+      }
       return createLocalEvent(payload);
     },
 
@@ -186,9 +214,31 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
       return updateLocalEventStatus(eventId, status);
     },
 
-    async deleteEvent(eventId) {
+    async endEventAndSaveResults(eventId) {
+      if (isSupabase && isTestEventId(eventId)) {
+        const result = await test('endTest', { eventId, status: 'completed' });
+        invalidateTestEvents();
+        return { event: rememberEvents([result.event])[0], result: { testMode: true } };
+      }
+      if (isSupabase) {
+        if (!organizerEventToken(eventId)) {
+          const legacyResult = await organizerAdminCall('setEventStatus', { eventId, status: 'completed' });
+          return { event: rememberEvents([legacyResult.event])[0], result: { alreadyProcessed: false, legacyDeviceFallback: true } };
+        }
+        const result = await organizerAdminCall('endEventAndSaveResults', { eventId });
+        return { event: rememberEvents([result.event])[0], result: result.result || {} };
+      }
+      const completed = updateLocalEventStatus(eventId, 'completed');
+      return { event: completed, result: { alreadyProcessed: false } };
+    },
+
+    async deleteEvent(eventId, { finalized = false } = {}) {
       if (isSupabase && isTestEventId(eventId)) { const result = await test('deleteEvent', { eventId }); invalidateTestEvents(); return result; }
-      if (isSupabase) { await organizerAdminCall('archiveEvent', { eventId }); return { archivedId: eventId }; }
+      if (isSupabase) {
+        const result = await organizerAdminCall('deleteEvent', { eventId, confirmation: finalized ? 'DELETE_FINALIZED_EVENT' : 'DELETE_EVENT' });
+        forgetOrganizerEventToken(eventId);
+        return result.result || { eventId, deleted: true, wasFinalized: finalized };
+      }
       return deleteLocalEvent(eventId);
     },
 

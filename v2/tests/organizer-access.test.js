@@ -12,6 +12,11 @@ assert.ok(organizerActionsMatch, 'Open Organizer action allowlist must exist');
 const organizerActions = new Set(
   [...organizerActionsMatch[1].matchAll(/'([^']+)'/g)].map((match) => match[1])
 );
+const deviceActionsMatch = edgeSource.match(/const organizerDeviceActions = new Set\(\[([\s\S]*?)\]\);/);
+assert.ok(deviceActionsMatch, 'Device-bound Organizer action allowlist must exist');
+const deviceActions = new Set(
+  [...deviceActionsMatch[1].matchAll(/'([^']+)'/g)].map((match) => match[1])
+);
 const passcodeOnlyMatch = edgeSource.match(/const passcodeOnlyAdminResultsActions = new Set\(\[([\s\S]*?)\]\);/);
 assert.ok(passcodeOnlyMatch, 'Passcode-only Admin Results action allowlist must exist');
 const passcodeOnlyActions = new Set(
@@ -20,6 +25,10 @@ const passcodeOnlyActions = new Set(
 
 for (const action of ['createEvent', 'setEventStatus', 'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore', 'updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer']) {
   assert.ok(organizerActions.has(action), `${action} must work without Admin credentials`);
+}
+for (const action of ['endEventAndSaveResults', 'deleteEvent']) {
+  assert.equal(organizerActions.has(action), false, `${action} must not be open to an arbitrary browser`);
+  assert.ok(deviceActions.has(action), `${action} must use the event's device-bound Organizer key`);
 }
 
 for (const action of ['verify', 'listEvents', 'updateScore', 'updatePlayers', 'deleteMatch', 'restoreEvent', 'permanentlyDeleteEvent']) {
@@ -33,10 +42,15 @@ for (const action of ['listMembers', 'getMember', 'listClaims', 'reviewClaim', '
 
 assert.match(edgeSource, /if \(!passcodeOnlyAdminResultsActions\.has\(action\)\) \{[\s\S]*?admin\.auth\.getUser\(token\)/);
 assert.match(edgeSource, /requireLiveEvent[\s\S]*?hall_of_fame_processed_at/, 'Open live actions must reject completed or Hall-finalized events');
+assert.match(edgeSource, /v2_event_organizer_keys[\s\S]*?token_hash/, 'Destructive event actions must verify the hashed Organizer device key');
 
 const organizerCallMatch = serviceSource.match(/async function organizerAdminCall\([\s\S]*?\n  \}/);
 assert.ok(organizerCallMatch, 'Organizer service call must exist');
-assert.match(organizerCallMatch[0], /protectedAction = action === 'archiveEvent'/, 'Only archive from the live service remains credential protected');
+assert.doesNotMatch(organizerCallMatch[0], /getSession|window\.prompt|passcode/, 'Live Organizer actions must not hide an auth or passcode prompt');
+assert.match(serviceSource, /organizerAdminCall\('endEventAndSaveResults'/, 'End Event must use the explicit atomic results-save action');
+assert.match(serviceSource, /organizerAdminCall\('deleteEvent'/, 'Organizer delete must use the state-aware delete action');
+assert.match(serviceSource, /rememberOrganizerEventToken\(result\.event\?\.id, result\.organizerToken\)/, 'Create Event must remember its Organizer key on the same device');
+assert.match(serviceSource, /!organizerEventToken\(eventId\)[\s\S]*?setEventStatus[\s\S]*?status: 'completed'/, 'Transition events without a saved key must retain the guarded legacy finalization path');
 assert.ok(!organizerActions.has('updateScore') && passcodeOnlyActions.has('updateScore'), 'Historical score editing must remain passcode protected');
 assert.doesNotMatch(adminResultsSource, /sendSignInLink|signInWithOtp|Admin email|อีเมล Admin/, 'Admin Results must not require email sign-in');
 assert.doesNotMatch(adminResultsSource.match(/async function openEditor\([\s\S]*?\n    \}/)?.[0] || '', /currentUser|getUser/, 'Opening Admin Results must verify only the passcode');

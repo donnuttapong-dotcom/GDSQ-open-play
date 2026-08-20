@@ -10,6 +10,7 @@ const openOrganizerActions = new Set([
   'updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer',
   'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore'
 ]);
+const organizerDeviceActions = new Set(['endEventAndSaveResults', 'deleteEvent']);
 const passcodeOnlyAdminResultsActions = new Set([
   'verify', 'listEvents',
   'updateScore', 'updatePlayers', 'deleteMatch',
@@ -28,6 +29,7 @@ function json(body: Record<string, unknown>, status = 200, origin: string | null
 async function hash(value: string) { const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)); return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join(''); }
 function clientIp(request: Request) { return (request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip') || 'unknown').split(',')[0].trim(); }
 function validId(value: unknown) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '')); }
+function randomToken() { const bytes = crypto.getRandomValues(new Uint8Array(32)); return Array.from(bytes).map((byte) => byte.toString(16).padStart(2, '0')).join(''); }
 
 Deno.serve(async (request) => {
   const origin = request.headers.get('origin');
@@ -36,10 +38,32 @@ Deno.serve(async (request) => {
   if (!url || !serviceRoleKey) return json({ ok: false, error: 'Admin service is not configured' }, 500, origin);
   const body = await request.json().catch(() => null);
   const action = String(body?.action || ''), passcode = String(body?.passcode || '');
-  if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listLegacyCandidates', 'linkLegacyHistory', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer', 'setRating', 'smartQueueSetEnabled', 'smartQueueSavePreference', 'smartQueueRecordMatch', 'updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer', 'createEvent', 'setEventStatus', 'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore'].includes(action) || passcode.length > 128 || (!openOrganizerActions.has(action) && passcode.length < 5)) return json({ ok: false, error: 'Invalid request' }, 400, origin);
+  if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listLegacyCandidates', 'linkLegacyHistory', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer', 'setRating', 'smartQueueSetEnabled', 'smartQueueSavePreference', 'smartQueueRecordMatch', 'updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer', 'createEvent', 'setEventStatus', 'endEventAndSaveResults', 'deleteEvent', 'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore'].includes(action) || passcode.length > 128 || (!openOrganizerActions.has(action) && !organizerDeviceActions.has(action) && passcode.length < 5)) return json({ ok: false, error: 'Invalid request' }, 400, origin);
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
   const ipHash = await hash(clientIp(request));
-  if (!openOrganizerActions.has(action)) {
+  let organizerDeviceAuthorized = false;
+  if (organizerDeviceActions.has(action)) {
+    const eventId = String(body?.eventId || ''), organizationId = String(body?.organizationId || '');
+    const organizerToken = String(body?.organizerToken || '');
+    if (!validId(eventId) || !validId(organizationId) || !/^[0-9a-f]{64}$/i.test(organizerToken)) {
+      return json({ ok: false, code: 'ORGANIZER_DEVICE_KEY_REQUIRED', error: 'This event can only be completed or deleted from its Organizer device' }, 403, origin);
+    }
+    const tokenHash = await hash(organizerToken);
+    const { data: deviceKey, error: deviceKeyError } = await admin
+      .from('v2_event_organizer_keys')
+      .select('event_id')
+      .eq('event_id', eventId)
+      .eq('organization_id', organizationId)
+      .eq('token_hash', tokenHash)
+      .is('revoked_at', null)
+      .maybeSingle();
+    if (deviceKeyError || !deviceKey) {
+      return json({ ok: false, code: 'ORGANIZER_DEVICE_KEY_INVALID', error: 'Organizer device key is missing or invalid' }, 403, origin);
+    }
+    organizerDeviceAuthorized = true;
+    await admin.from('v2_event_organizer_keys').update({ last_used_at: new Date().toISOString() }).eq('event_id', eventId);
+  }
+  if (!openOrganizerActions.has(action) && !organizerDeviceAuthorized) {
     if (!passcodeOnlyAdminResultsActions.has(action)) {
       const token = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
       const { data: authData, error: authError } = await admin.auth.getUser(token);
@@ -80,9 +104,15 @@ Deno.serve(async (request) => {
     if (!validId(organizationId) || !name || !Number.isInteger(courtCount)) return json({ ok: false, error: 'Invalid event' }, 400, origin);
     const { data: eventId, error } = await admin.rpc('v2_admin_create_event', { p_organization_id: organizationId, p_name: name, p_event_date: body?.eventDate || null, p_start_time: body?.startTime || '', p_end_time: body?.endTime || '', p_venue_name: body?.venueName || '', p_court_count: courtCount, p_matching_mode: body?.matchingMode || 'standard', p_status: status });
     if (error) return json({ ok: false, error: error.message || 'Could not create event' }, 400, origin);
+    const organizerToken = randomToken(), tokenHash = await hash(organizerToken);
+    const { error: keyError } = await admin.from('v2_event_organizer_keys').insert({ event_id: eventId, organization_id: organizationId, token_hash: tokenHash });
+    if (keyError) {
+      await admin.from('v2_events').delete().eq('id', eventId).eq('organization_id', organizationId);
+      return json({ ok: false, error: 'Could not create Organizer device key' }, 503, origin);
+    }
     const { data: event, error: eventError } = await admin.from('v2_events').select('*, venue:v2_venues(*)').eq('id', eventId).eq('organization_id', organizationId).single();
     if (eventError) return json({ ok: false, error: eventError.message || 'Could not load event' }, 400, origin);
-    return json({ ok: true, event }, 200, origin);
+    return json({ ok: true, event, organizerToken }, 200, origin);
   }
   if (action === 'setEventStatus') {
     const eventId = String(body?.eventId || ''), organizationId = String(body?.organizationId || ''), status = String(body?.status || '');
@@ -92,6 +122,32 @@ Deno.serve(async (request) => {
     const { data: event, error: eventError } = await admin.from('v2_events').select('*, venue:v2_venues(*)').eq('id', eventId).eq('organization_id', organizationId).single();
     if (eventError) return json({ ok: false, error: eventError.message || 'Could not load event' }, 400, origin);
     return json({ ok: true, event }, 200, origin);
+  }
+  if (action === 'endEventAndSaveResults') {
+    const eventId = String(body?.eventId || ''), organizationId = String(body?.organizationId || '');
+    if (!validId(eventId) || !validId(organizationId)) return json({ ok: false, error: 'Invalid event' }, 400, origin);
+    const { data: result, error } = await admin.rpc('v2_admin_end_event_and_save_results', {
+      p_event_id: eventId,
+      p_organization_id: organizationId,
+      p_ip_hash: ipHash
+    });
+    if (error) return json({ ok: false, error: error.message || 'Could not complete event' }, 409, origin);
+    const { data: event, error: eventError } = await admin.from('v2_events').select('*, venue:v2_venues(*)').eq('id', eventId).eq('organization_id', organizationId).single();
+    if (eventError) return json({ ok: false, error: eventError.message || 'Could not load completed event' }, 400, origin);
+    return json({ ok: true, result, event }, 200, origin);
+  }
+  if (action === 'deleteEvent') {
+    const eventId = String(body?.eventId || ''), organizationId = String(body?.organizationId || '');
+    const confirmation = String(body?.confirmation || '');
+    if (!validId(eventId) || !validId(organizationId) || !['DELETE_EVENT', 'DELETE_FINALIZED_EVENT'].includes(confirmation)) return json({ ok: false, error: 'Invalid event deletion request' }, 400, origin);
+    const { data: result, error } = await admin.rpc('v2_admin_delete_event_stateful', {
+      p_event_id: eventId,
+      p_organization_id: organizationId,
+      p_confirmation: confirmation,
+      p_ip_hash: ipHash
+    });
+    if (error) return json({ ok: false, error: error.message || 'Could not delete event' }, 409, origin);
+    return json({ ok: true, result }, 200, origin);
   }
   if (['createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore'].includes(action)) {
     const organizationId = String(body?.organizationId || ''), eventId = String(body?.eventId || ''), matchId = String(body?.matchId || '');
