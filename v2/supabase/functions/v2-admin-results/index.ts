@@ -10,6 +10,11 @@ const openOrganizerActions = new Set([
   'updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer',
   'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore'
 ]);
+const passcodeOnlyAdminResultsActions = new Set([
+  'verify', 'listEvents', 'listClaims', 'reviewClaim',
+  'updateScore', 'updatePlayers', 'deleteMatch',
+  'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer'
+]);
 
 function cors(origin: string | null) {
   return {
@@ -35,10 +40,12 @@ Deno.serve(async (request) => {
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
   const ipHash = await hash(clientIp(request));
   if (!openOrganizerActions.has(action)) {
-    const token = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-    const { data: authData, error: authError } = await admin.auth.getUser(token);
-    const adminEmail = String(authData?.user?.email || '').trim().toLowerCase();
-    if (authError || !authData?.user || !allowedAdminEmails.has(adminEmail)) return json({ ok: false, error: 'Sign in with an authorized Admin account first' }, 403, origin);
+    if (!passcodeOnlyAdminResultsActions.has(action)) {
+      const token = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+      const { data: authData, error: authError } = await admin.auth.getUser(token);
+      const adminEmail = String(authData?.user?.email || '').trim().toLowerCase();
+      if (authError || !authData?.user || !allowedAdminEmails.has(adminEmail)) return json({ ok: false, error: 'Sign in with an authorized Admin account first' }, 403, origin);
+    }
     const windowStart = new Date(Date.now() - 15 * 60 * 1000).toISOString();
     const { count, error: countError } = await admin.from('v2_admin_access_attempts').select('*', { count: 'exact', head: true }).eq('ip_hash', ipHash).eq('success', false).gte('created_at', windowStart);
     if (countError) return json({ ok: false, error: 'Admin service unavailable' }, 503, origin);
