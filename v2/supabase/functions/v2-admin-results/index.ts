@@ -26,7 +26,7 @@ Deno.serve(async (request) => {
   if (!url || !serviceRoleKey) return json({ ok: false, error: 'Admin service is not configured' }, 500, origin);
   const body = await request.json().catch(() => null);
   const action = String(body?.action || ''), passcode = String(body?.passcode || '');
-  if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer', 'setRating', 'smartQueueSetEnabled', 'smartQueueSavePreference', 'smartQueueRecordMatch', 'updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer', 'createEvent', 'setEventStatus', 'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore'].includes(action) || passcode.length > 128 || (action !== 'setRating' && passcode.length < 5)) return json({ ok: false, error: 'Invalid request' }, 400, origin);
+  if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listLegacyCandidates', 'linkLegacyHistory', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer', 'setRating', 'smartQueueSetEnabled', 'smartQueueSavePreference', 'smartQueueRecordMatch', 'updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer', 'createEvent', 'setEventStatus', 'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore'].includes(action) || passcode.length > 128 || (action !== 'setRating' && passcode.length < 5)) return json({ ok: false, error: 'Invalid request' }, 400, origin);
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
   if (!passcodeOnlyActions.has(action)) {
     const token = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
@@ -171,7 +171,7 @@ Deno.serve(async (request) => {
     const pageSize = Math.max(1, Math.min(Number(body?.pageSize) || 25, 100));
     const search = String(body?.search || '').trim().slice(0, 80);
     if (!validId(organizationId)) return json({ ok: false, error: 'Invalid organization' }, 400, origin);
-    const { data: members, error: membersError } = await admin.rpc('v2_admin_list_members', {
+    const { data: members, error: membersError } = await admin.rpc('v2_admin_list_members_identity', {
       p_organization_id: organizationId,
       p_search: search,
       p_limit: pageSize,
@@ -186,13 +186,38 @@ Deno.serve(async (request) => {
     const matchPage = Math.max(1, Math.min(Number(body?.matchPage) || 1, 100000));
     const matchPageSize = Math.max(1, Math.min(Number(body?.matchPageSize) || 30, 100));
     if (!validId(playerId)) return json({ ok: false, error: 'Invalid member id' }, 400, origin);
-    const { data: member, error: memberError } = await admin.rpc('v2_admin_get_member_detail', {
+    const { data: member, error: memberError } = await admin.rpc('v2_admin_get_member_detail_identity', {
       p_player_id: playerId,
       p_match_limit: matchPageSize,
       p_match_offset: (matchPage - 1) * matchPageSize
     });
     if (memberError) return json({ ok: false, error: memberError.message || 'Could not load member history' }, 400, origin);
     return json({ ok: true, member, matchPage, matchPageSize }, 200, origin);
+  }
+  if (action === 'listLegacyCandidates') {
+    const playerId = String(body?.playerId || '');
+    if (!validId(playerId)) return json({ ok: false, code: 'INVALID_PLAYER_ID', error: 'Invalid member id' }, 400, origin);
+    const { data: candidates, error } = await admin.rpc('v2_admin_list_legacy_player_candidates', { p_canonical_player_id: playerId });
+    if (error) return json({ ok: false, code: 'LEGACY_CANDIDATES_FAILED', error: error.message || 'Could not load possible old history' }, 400, origin);
+    return json({ ok: true, candidates: candidates || [] }, 200, origin);
+  }
+  if (action === 'linkLegacyHistory') {
+    const playerId = String(body?.playerId || '');
+    const eventPlayerIds = Array.isArray(body?.eventPlayerIds) ? [...new Set(body.eventPlayerIds.map(String))] : [];
+    if (!validId(playerId) || !eventPlayerIds.length || eventPlayerIds.length > 100 || eventPlayerIds.some((id) => !validId(id))) {
+      return json({ ok: false, code: 'INVALID_LEGACY_LINK', error: 'Choose valid historical player records' }, 400, origin);
+    }
+    const { data: result, error } = await admin.rpc('v2_admin_link_legacy_player_history', {
+      p_canonical_player_id: playerId,
+      p_event_player_ids: eventPlayerIds,
+      p_ip_hash: ipHash,
+      p_source: 'admin_member_history'
+    });
+    if (error) {
+      const code = ['LEGACY_PLAYER_ALREADY_LINKED', 'LEGACY_PLAYER_LINK_CONFLICT'].find((item) => String(error.message || '').includes(item)) || 'LEGACY_LINK_FAILED';
+      return json({ ok: false, code, error: code }, code === 'LEGACY_LINK_FAILED' ? 400 : 409, origin);
+    }
+    return json({ ok: true, result }, 200, origin);
   }
   if (action === 'listClaims') {
     const { data: claims, error: claimsError } = await admin

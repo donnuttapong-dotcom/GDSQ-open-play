@@ -1,3 +1,5 @@
+import { normalizeEdgeFunctionError } from './edgeFunctionError.js';
+
 const CAPABILITY_PREFIX = 'gdsq_v2_player_capability:';
 const LAST_IDENTITY_KEY = 'gdsq_v2_last_identity';
 const SMART_QUEUE_CAPABILITY_PREFIX = 'gdsq_v2_smart_queue_capability:';
@@ -51,10 +53,10 @@ function errorFrom(result, fallback) {
   return error;
 }
 
-export function rememberPlayerCapability({ playerId, capability, playerCode = '' } = {}) {
+export function rememberPlayerCapability({ playerId, capability, playerCode = '', displayName = '', email = '' } = {}) {
   if (!localStorageAvailable() || !playerId || !capability) return;
   localStorage.setItem(`${CAPABILITY_PREFIX}${playerId}`, capability);
-  localStorage.setItem(LAST_IDENTITY_KEY, JSON.stringify({ playerId, playerCode, savedAt: new Date().toISOString() }));
+  localStorage.setItem(LAST_IDENTITY_KEY, JSON.stringify({ playerId, playerCode, displayName: String(displayName).trim(), email: normalizeEmail(email), savedAt: new Date().toISOString() }));
 }
 
 export function capabilityForPlayer(playerId) {
@@ -73,24 +75,35 @@ export function rememberedPlayerIdentity() {
 
 async function invoke(supabase, body) {
   const { data, error } = await supabase.functions.invoke('v2-player-identity', { body });
-  if (error) throw error;
+  if (error) throw await normalizeEdgeFunctionError(error, 'Player identity request failed');
   if (!data?.ok) throw errorFrom(data, 'Player identity request failed');
   return data;
 }
 
 export async function joinCanonicalPlayer(supabase, payload = {}) {
+  const displayName = String(payload.displayName || payload.name || '').trim();
+  const email = normalizeEmail(payload.email);
+  const remembered = rememberedPlayerIdentity();
+  const rememberedMatches = remembered
+    && String(remembered.displayName || '').trim().toLowerCase() === displayName.toLowerCase()
+    && (!email || !remembered.email || normalizeEmail(remembered.email) === email);
+  const playerId = payload.playerId || (rememberedMatches ? remembered.playerId : '');
+  const capability = payload.capability || capabilityForPlayer(playerId);
   const data = await invoke(supabase, {
     action: 'join',
     eventId: payload.eventId,
     organizationId: payload.organizationId,
-    displayName: String(payload.displayName || payload.name || '').trim(),
-    email: normalizeEmail(payload.email),
+    displayName,
+    email,
     level: normalizeLevel(payload.level || payload.estimatedLevel),
     avatarDataUrl: payload.avatarUrl || '',
-    deviceLabel: payload.deviceLabel || ''
+    deviceLabel: payload.deviceLabel || '',
+    playerId: playerId || undefined,
+    capability: capability || undefined,
+    playerCode: payload.playerCode || undefined
   });
   const profile = data.profile ? normalizeProfile(data.profile) : null;
-  if (profile && data.capability) rememberPlayerCapability({ playerId: profile.id, playerCode: profile.playerCode, capability: data.capability });
+  if (profile && data.capability) rememberPlayerCapability({ playerId: profile.id, playerCode: profile.playerCode, displayName: profile.displayName, email, capability: data.capability });
   if (localStorageAvailable() && data.smartQueueCapability && data.eventPlayer?.id) {
     localStorage.setItem(`${SMART_QUEUE_CAPABILITY_PREFIX}${data.eventPlayer.event_id || payload.eventId}:${data.eventPlayer.id}`, data.smartQueueCapability);
   }
@@ -101,6 +114,9 @@ export async function joinCanonicalPlayer(supabase, payload = {}) {
     profileFallback: false,
     guest: !profile,
     duplicate: Boolean(data.alreadyJoined),
+    alreadyJoined: Boolean(data.alreadyJoined),
+    identityState: data.identityState || '',
+    legacyCandidatesCount: Number(data.legacyCandidatesCount || 0),
     smartQueueCapability: data.smartQueueCapability || ''
   };
 }
