@@ -238,7 +238,7 @@ html,body{overflow-x:hidden}
 </main>
 <div id="playerModal" class="modal-bg hidden"><div class="cut card modal-card p-4"><div class="flex justify-between gap-3"><div><div class="mini">PLAYER STATS POPUP</div><h3 id="modalPlayerName" class="text-3xl font-black lime">Player</h3></div><button id="closePlayerModal" class="cut bg-red-500 px-3 py-2 font-black">ปิด</button></div><div id="modalPlayerBody" class="space-y-3 mt-3"></div></div></div>
 <script type="module">
-import { createV2Services } from './src/services/index.js?v=organizer-access-fix-01';
+import { createV2Services } from './src/services/index.js?v=organizer-open-live-02';
 import { normalizeMatch as normalizeSharedMatch, playerId as sharedPlayerId } from './src/services/matchModel.js?v=test-match-contract-01';
 import { modeLabel } from './src/services/serviceMode.js?v=publish-public-stats-01';
 import { generateMatches, buildMatchHistoryStats, shouldRest } from './src/logic/matchmaking/generateMatches.js';
@@ -248,7 +248,7 @@ import { isSupportedAvatar, prepareAvatar } from './src/services/avatarImage.js?
 import { getCourtAssignment } from './src/services/localCourtAssignmentStore.js';
 import { getSupabaseClient } from './src/services/supabaseClient.js';
 import { getEventRatingSetting, setEventRatingEnabled } from './src/services/gdsqRatingService.js?v=gdsq-rating-01';
-import { createSmartQueueUi } from './src/ui/smartQueueUi.js?v=smart-queue-ux-02';
+import { createSmartQueueUi } from './src/ui/smartQueueUi.js?v=organizer-open-live-02';
 const $=(id)=>document.getElementById(id);
 const dom={modeBadge:$('modeBadge'),msg:$('msg'),languageToggle:$('languageToggle'),eventList:$('eventList'),joinName:$('joinName'),joinEmail:$('joinEmail'),joinLevel:$('joinLevel'),joinAvatar:$('joinAvatar'),joinAvatarPreview:$('joinAvatarPreview'),joinAvatarHelp:$('joinAvatarHelp'),joinEventName:$('joinEventName'),joinPlayers:$('joinPlayers'),manageEventName:$('manageEventName'),eventSelect:$('eventSelect'),eventLiveBtn:$('eventLiveBtn'),eventDraftBtn:$('eventDraftBtn'),autoMode:$('autoMode'),courtsInput:$('courtsInput'),matchLimitInput:$('matchLimitInput'),gdsqRatingTitle:$('gdsqRatingTitle'),gdsqRatingHint:$('gdsqRatingHint'),gdsqRatingToggle:$('gdsqRatingToggle'),chipPlayers:$('chipPlayers'),chipReady:$('chipReady'),chipLive:$('chipLive'),chipPreview:$('chipPreview'),chipCourts:$('chipCourts'),upNextPanel:$('upNextPanel'),preEventChecklist:$('preEventChecklist'),autoPreviewStatus:$('autoPreviewStatus'),managePlayers:$('managePlayers'),manageNewPlayerName:$('manageNewPlayerName'),manageNewPlayerLevel:$('manageNewPlayerLevel'),manualCourt:$('manualCourt'),matchPanels:$('matchPanels'),statPlayers:$('statPlayers'),statCompleted:$('statCompleted'),statGames:$('statGames'),statLevel:$('statLevel'),topScore:$('topScore'),mostPlayed:$('mostPlayed'),bestDiff:$('bestDiff'),rankingTable:$('rankingTable'),matchHistory:$('matchHistory'),playerModal:$('playerModal'),modalPlayerName:$('modalPlayerName'),modalPlayerBody:$('modalPlayerBody'),newEventName:$('newEventName'),newEventDate:$('newEventDate'),newEventStart:$('newEventStart'),newEventEnd:$('newEventEnd'),newEventCourts:$('newEventCourts'),newEventVenue:$('newEventVenue'),newEventStatus:$('newEventStatus')};
 const services=createV2Services();
