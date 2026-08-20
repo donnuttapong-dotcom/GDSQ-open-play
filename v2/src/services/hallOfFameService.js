@@ -1,5 +1,6 @@
 import { calculatePlayerRanking } from '../logic/ranking/calculatePlayerRanking.js';
 import { listCurrentGdsqRatings } from './gdsqRatingService.js';
+import { resolveEventPlayerCodes } from './playerIdentityService.js';
 
 const CONFIRMED = ['confirmed', 'completed', 'done', 'finished'];
 
@@ -17,10 +18,11 @@ function eventTime(event) {
   return new Date(event?.event_date || event?.completed_at || event?.created_at || 0).getTime() || 0;
 }
 
-function emptyCareer(identity, player, event) {
+function emptyCareer(identity, player, event, playerCode = '') {
   return {
     id: identity,
     playerId: player.player_id || null,
+    playerCode,
     linked: Boolean(player.player_id),
     displayName: player.display_name || 'Unlinked Player',
     avatarUrl: player.avatar_url || '',
@@ -72,7 +74,7 @@ function addResult(career, event, match, side, teamAScore, teamBScore, names) {
   });
 }
 
-export function buildHallOfFame({ events = [], eventPlayers = [], matches = [], matchPlayers = [], currentRatings = [] } = {}) {
+export function buildHallOfFame({ events = [], eventPlayers = [], matches = [], matchPlayers = [], currentRatings = [], playerCodeByEventPlayerId = new Map() } = {}) {
   const finalizedEventIds = new Set(events
     .filter((event) => Boolean(event.hall_of_fame_processed_at || event.hallOfFameProcessedAt))
     .map((event) => String(event.id)));
@@ -96,7 +98,8 @@ export function buildHallOfFame({ events = [], eventPlayers = [], matches = [], 
     const event = eventById.get(String(participant.event_id));
     if (!event) continue;
     const identity = identityFor(participant);
-    let career = careers.get(identity) || emptyCareer(identity, participant, event);
+    let career = careers.get(identity) || emptyCareer(identity, participant, event, playerCodeByEventPlayerId.get(String(participant.id)) || '');
+    if (!career.playerCode) career.playerCode = playerCodeByEventPlayerId.get(String(participant.id)) || '';
     career.eventIds.add(event.id);
     if (eventTime(event) >= career.latestAt) {
       career.displayName = participant.display_name || career.displayName;
@@ -123,7 +126,8 @@ export function buildHallOfFame({ events = [], eventPlayers = [], matches = [], 
       if (!participant) continue;
       const identity = identityFor(participant);
       let career = careers.get(identity);
-      if (!career) career = emptyCareer(identity, participant, event);
+      if (!career) career = emptyCareer(identity, participant, event, playerCodeByEventPlayerId.get(String(participant.id)) || '');
+      if (!career.playerCode) career.playerCode = playerCodeByEventPlayerId.get(String(participant.id)) || '';
       if (eventTime(event) >= career.latestAt) {
         career.displayName = participant.display_name || career.displayName;
         career.avatarUrl = participant.avatar_url || career.avatarUrl;
@@ -164,8 +168,11 @@ export async function loadHallOfFame(supabase, organizationId) {
     listCurrentGdsqRatings(supabase, organizationId)
   ]);
   if (registeredCountResult.error) throw registeredCountResult.error;
+  const publicPlayers = await resolveEventPlayerCodes(supabase, organizationId, eventPlayers.filter((player) => player.player_id).map((player) => player.id));
+  const playerCodeByEventPlayerId = new Map(publicPlayers.map((player) => [String(player.eventPlayerId), player.playerCode]));
+  const hall = buildHallOfFame({ events, eventPlayers, matches, matchPlayers, currentRatings, playerCodeByEventPlayerId });
   return {
-    ...buildHallOfFame({ events, eventPlayers, matches, matchPlayers, currentRatings }),
+    ...hall,
     totalRegisteredPlayers: Number(registeredCountResult.data || 0)
   };
 }

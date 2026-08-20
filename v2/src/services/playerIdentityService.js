@@ -156,3 +156,22 @@ export async function resolvePlayerCode(supabase, playerCode) {
   const data = await invoke(supabase, { action: 'resolvePlayerCode', playerCode: String(playerCode || '').trim() });
   return normalizeProfile(data.profile);
 }
+
+export async function getPublicPlayerHistory(supabase, { organizationId, playerCode } = {}) {
+  const data = await invoke(supabase, {
+    action: 'getPublicPlayerHistory',
+    organizationId,
+    playerCode: String(playerCode || '').trim()
+  });
+  return data.experience;
+}
+
+export async function listOpenPlayerEvents(supabase, organizationId) {
+  const data = await invoke(supabase, { action: 'listOpenEvents', organizationId });
+  return Array.isArray(data.events) ? data.events : [];
+}
+
+export async function resolveEventPlayerCodes(supabase, organizationId, eventPlayerIds = []) {
+  const data = await invoke(supabase, { action: 'resolveEventPlayerCodes', organizationId, eventPlayerIds });
+  return Array.isArray(data.players) ? data.players : [];
+}

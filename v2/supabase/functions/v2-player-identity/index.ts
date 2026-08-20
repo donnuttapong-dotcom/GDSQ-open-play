@@ -57,6 +57,9 @@ function randomToken() {
 function publicProfile(row: Record<string, unknown>) {
   return { id: row.id, player_code: row.player_code, display_name: row.display_name, avatar_url: row.avatar_url || '', default_level: row.default_level, created_at: row.created_at };
 }
+function publicReadProfile(row: Record<string, unknown>) {
+  return { player_code: row.player_code, display_name: row.display_name, avatar_url: row.avatar_url || '', default_level: row.default_level, created_at: row.created_at };
+}
 function dataUrlFile(value: unknown) {
   const match = String(value || '').match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
   if (!match) return null;
@@ -103,7 +106,62 @@ Deno.serve(async (request) => {
       const { data, error } = await admin.from('v2_players').select('id,player_code,display_name,avatar_url,default_level,created_at').eq('player_code', playerCode).eq('status', 'active').maybeSingle();
       if (error) throw error;
       if (!data) return json({ ok: false, code: 'PLAYER_NOT_FOUND', error: 'Player not found.' }, 404, origin);
-      return json({ ok: true, profile: publicProfile(data) }, 200, origin);
+      return json({ ok: true, profile: publicReadProfile(data) }, 200, origin);
+    }
+
+    if (action === 'getPublicPlayerHistory') {
+      const playerCode = String(body.playerCode || '').trim().toUpperCase();
+      const organizationId = String(body.organizationId || '');
+      if (!validId(organizationId) || !/^GDSQ-\d{4,}$/.test(playerCode)) {
+        return json({ ok: false, code: 'INVALID_PLAYER_CODE', error: 'Invalid player code.' }, 400, origin);
+      }
+      const { data, error } = await admin.rpc('v2_public_player_experience_phase2', {
+        p_organization_id: organizationId,
+        p_player_code: playerCode,
+        p_recent_limit: 20,
+        p_event_limit: 20
+      });
+      if (error) throw error;
+      return json({ ok: true, experience: data }, 200, origin);
+    }
+
+    if (action === 'listOpenEvents') {
+      const organizationId = String(body.organizationId || '');
+      if (!validId(organizationId)) return json({ ok: false, code: 'INVALID_ORGANIZATION', error: 'Invalid organization.' }, 400, origin);
+      const { data, error } = await admin.rpc('v2_list_open_events_phase2', {
+        p_organization_id: organizationId,
+        p_limit: 20
+      });
+      if (error) throw error;
+      return json({ ok: true, events: Array.isArray(data) ? data : [] }, 200, origin);
+    }
+
+    if (action === 'resolveEventPlayerCodes') {
+      const organizationId = String(body.organizationId || '');
+      if (!validId(organizationId)) return json({ ok: false, code: 'INVALID_ORGANIZATION', error: 'Invalid organization.' }, 400, origin);
+      const requestedIds = Array.isArray(body.eventPlayerIds)
+        ? [...new Set(body.eventPlayerIds.map((value) => String(value)).filter(validId))].slice(0, 1000)
+        : [];
+      if (!requestedIds.length) return json({ ok: true, players: [] }, 200, origin);
+      const { data: participants, error } = await admin.from('v2_event_players')
+        .select('id,player_id')
+        .eq('organization_id', organizationId)
+        .in('id', requestedIds)
+        .neq('status', 'removed');
+      if (error) throw error;
+      const profileIds = [...new Set((participants || []).map((row) => row.player_id).filter(Boolean))];
+      const { data: profiles, error: profileError } = profileIds.length
+        ? await admin.from('v2_players').select('id,player_code').eq('organization_id', organizationId).eq('status', 'active').in('id', profileIds)
+        : { data: [], error: null };
+      if (profileError) throw profileError;
+      const codeByProfile = new Map((profiles || []).map((row) => [String(row.id), row.player_code]));
+      return json({
+        ok: true,
+        players: (participants || []).map((row) => ({
+          eventPlayerId: row.id,
+          playerCode: codeByProfile.get(String(row.player_id)) || ''
+        })).filter((row) => row.playerCode)
+      }, 200, origin);
     }
 
     if (action === 'getOwnProfile' || action === 'updateOwnProfile') {
@@ -135,10 +193,10 @@ Deno.serve(async (request) => {
     const email = cleanEmail(body.email);
     const level = cleanLevel(body.level);
     if (!validId(eventId) || !validId(organizationId) || displayName.length < 2 || displayName.length > 50 || !validEmail(email)) return json({ ok: false, code: 'JOIN_DETAILS_INVALID', error: 'Enter a valid name, level, and optional email.' }, 400, origin);
-    const { data: event, error: eventError } = await admin.from('v2_events').select('id,organization_id,status,checkin_open,max_players,matching_mode').eq('id', eventId).eq('organization_id', organizationId).maybeSingle();
+    const { data: event, error: eventError } = await admin.from('v2_events').select('id,organization_id,status,checkin_open,max_players,matching_mode,completed_at,archived_at,hall_of_fame_processed_at').eq('id', eventId).eq('organization_id', organizationId).maybeSingle();
     if (eventError) throw eventError;
     if (!event) return json({ ok: false, code: 'EVENT_NOT_FOUND', error: 'Event not found.' }, 404, origin);
-    if (!['live', 'open', 'active'].includes(String(event.status || '').toLowerCase()) || !event.checkin_open) return json({ ok: false, code: 'EVENT_NOT_OPEN', error: 'This event is not open for joining.' }, 409, origin);
+    if (!['live', 'open', 'active'].includes(String(event.status || '').toLowerCase()) || !event.checkin_open || event.completed_at || event.archived_at || event.hall_of_fame_processed_at) return json({ ok: false, code: 'EVENT_NOT_OPEN', error: 'This event is not open for joining.' }, 409, origin);
 
     let resolvedPlayerId: string | null = null;
     let resolutionSource: string | null = null;
