@@ -238,7 +238,7 @@ html,body{overflow-x:hidden}
 </main>
 <div id="playerModal" class="modal-bg hidden"><div class="cut card modal-card p-4"><div class="flex justify-between gap-3"><div><div class="mini">PLAYER STATS POPUP</div><h3 id="modalPlayerName" class="text-3xl font-black lime">Player</h3></div><button id="closePlayerModal" class="cut bg-red-500 px-3 py-2 font-black">ปิด</button></div><div id="modalPlayerBody" class="space-y-3 mt-3"></div></div></div>
 <script type="module">
-import { createV2Services } from './src/services/index.js?v=organizer-recovery-03';
+import { createV2Services } from './src/services/index.js?v=organizer-passcode-01';
 import { normalizeMatch as normalizeSharedMatch, playerId as sharedPlayerId } from './src/services/matchModel.js?v=test-match-contract-01';
 import { modeLabel } from './src/services/serviceMode.js?v=publish-public-stats-01';
 import { generateMatches, buildMatchHistoryStats, shouldRest } from './src/logic/matchmaking/generateMatches.js';
@@ -494,7 +494,8 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshCur
 setInterval(updateLiveTimers,1000);
 setInterval(()=>{if(services.mode==='supabase'&&['stats','manage'].includes(currentTab)&&!isEditingControl()&&!document.hidden)refreshCurrentSilently();},10000);
 initCreateEventDefaults();
-window.addEventListener('gdsq-language-change',applyStaticPageLanguage);window.addEventListener('gdsq-language-change',applySmartQueueModeLanguage);applyLanguage();
+function applyOrganizerAccessLanguage(){const en=language()==='en';$('organizerSignInLink').classList.add('hidden');$('organizerSignInHint').textContent=en?'Create an event with the existing Admin passcode. No account sign-in is required for creation.':'สร้างอีเว้นท์ได้ด้วยรหัส Admin เดิม โดยไม่ต้อง Sign in บัญชี';}
+window.addEventListener('gdsq-language-change',applyStaticPageLanguage);window.addEventListener('gdsq-language-change',applySmartQueueModeLanguage);window.addEventListener('gdsq-language-change',applyOrganizerAccessLanguage);applyLanguage();
 loadAll().then(()=>setTab(currentTab)).catch(error=>{console.error('Initial load failed',error);showMessage(actionErrorMessage(error));renderPreEventChecklist();});
 </script>
 <script type="module" src="./src/ui/courtAssignmentUi.js?v=court-assignment-01"></script>

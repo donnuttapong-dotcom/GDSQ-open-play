@@ -74,7 +74,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
   async function organizerAdminCall(action, payload = {}) {
     if (!isSupabase) throw new Error('Organizer protected mutations require Supabase mode.');
     const client = requireSupabase(supabase);
-    if (typeof client.auth?.getSession === 'function') {
+    if (action !== 'createEvent' && typeof client.auth?.getSession === 'function') {
       const { data: sessionData } = await client.auth.getSession();
       if (!sessionData?.session) {
         const signInError = new Error('Sign in with an authorized Admin account first');

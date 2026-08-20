@@ -4,6 +4,7 @@ const url = Deno.env.get('SUPABASE_URL') || '';
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const allowedOrigins = new Set(['https://donnuttapong-dotcom.github.io', 'https://gdsq-open-play-live.vercel.app', 'https://gdsq-open-play-v2-preview.vercel.app', 'https://gdsq-open-play-v2-preview-iejv9ad65-don-s-projects6.vercel.app']);
 const allowedAdminEmails = new Set((Deno.env.get('GDSQ_ADMIN_EMAILS') || 'don.nuttapong@gmail.com').split(',').map((email) => email.trim().toLowerCase()).filter(Boolean));
+const passcodeOnlyActions = new Set(['createEvent']);
 
 function cors(origin: string | null) {
   return {
@@ -27,10 +28,12 @@ Deno.serve(async (request) => {
   const action = String(body?.action || ''), passcode = String(body?.passcode || '');
   if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer', 'setRating', 'smartQueueSetEnabled', 'smartQueueSavePreference', 'smartQueueRecordMatch', 'updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer', 'createEvent', 'setEventStatus', 'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore'].includes(action) || passcode.length > 128 || (action !== 'setRating' && passcode.length < 5)) return json({ ok: false, error: 'Invalid request' }, 400, origin);
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
-  const token = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
-  const { data: authData, error: authError } = await admin.auth.getUser(token);
-  const adminEmail = String(authData?.user?.email || '').trim().toLowerCase();
-  if (authError || !authData?.user || !allowedAdminEmails.has(adminEmail)) return json({ ok: false, error: 'Sign in with an authorized Admin account first' }, 403, origin);
+  if (!passcodeOnlyActions.has(action)) {
+    const token = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+    const { data: authData, error: authError } = await admin.auth.getUser(token);
+    const adminEmail = String(authData?.user?.email || '').trim().toLowerCase();
+    if (authError || !authData?.user || !allowedAdminEmails.has(adminEmail)) return json({ ok: false, error: 'Sign in with an authorized Admin account first' }, 403, origin);
+  }
   const ipHash = await hash(clientIp(request)), windowStart = new Date(Date.now() - 15 * 60 * 1000).toISOString();
   const { count, error: countError } = await admin.from('v2_admin_access_attempts').select('*', { count: 'exact', head: true }).eq('ip_hash', ipHash).eq('success', false).gte('created_at', windowStart);
   if (countError) return json({ ok: false, error: 'Admin service unavailable' }, 503, origin);
