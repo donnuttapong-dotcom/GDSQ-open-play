@@ -78,7 +78,15 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
   async function organizerAdminCall(action, payload = {}) {
     if (!isSupabase) throw new Error('Organizer mutations require Supabase mode.');
     const client = requireSupabase(supabase);
-    const { data, error } = await client.functions.invoke('v2-admin-results', { body: { action, organizationId, ...payload } });
+    const protectedAction = action === 'archiveEvent';
+    let passcode = '';
+    if (protectedAction) {
+      const { data: sessionData } = await client.auth.getSession();
+      if (!sessionData?.session) throw Object.assign(new Error('Sign in with an authorized Admin account first'), { code: 'ORGANIZER_SIGN_IN_REQUIRED' });
+      passcode = sessionStorage.getItem('gdsq_v2_organizer_passcode') || window.prompt('Admin passcode / รหัส Admin')?.trim() || '';
+      if (!passcode) throw new Error('ORGANIZER_PASSCODE_REQUIRED');
+    }
+    const { data, error } = await client.functions.invoke('v2-admin-results', { body: { action, ...(passcode ? { passcode } : {}), organizationId, ...payload } });
     if (error) {
       throw await normalizeEdgeFunctionError(error, 'Organizer mutation failed');
     }
@@ -86,6 +94,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
       const detail = String(data?.error || '');
       throw new Error(detail || 'Organizer mutation failed');
     }
+    if (passcode) sessionStorage.setItem('gdsq_v2_organizer_passcode', passcode);
     return data;
   }
   const testEvents = async ({ force = false } = {}) => {

@@ -5,8 +5,8 @@ const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const allowedOrigins = new Set(['https://donnuttapong-dotcom.github.io', 'https://gdsq-open-play-live.vercel.app', 'https://gdsq-open-play-v2-preview.vercel.app', 'https://gdsq-open-play-v2-preview-iejv9ad65-don-s-projects6.vercel.app']);
 const allowedAdminEmails = new Set((Deno.env.get('GDSQ_ADMIN_EMAILS') || 'don.nuttapong@gmail.com').split(',').map((email) => email.trim().toLowerCase()).filter(Boolean));
 const openOrganizerActions = new Set([
-  'createEvent', 'setEventStatus', 'archiveEvent', 'setRating',
-  'smartQueueSetEnabled', 'smartQueueSavePreference', 'smartQueueRecordMatch',
+  'createEvent', 'setEventStatus',
+  'smartQueueSavePreference', 'smartQueueRecordMatch',
   'updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer',
   'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore'
 ]);
@@ -48,6 +48,15 @@ Deno.serve(async (request) => {
     await admin.from('v2_admin_access_attempts').insert({ ip_hash: ipHash, action, success });
     if (!success) return json({ ok: false, error: 'Invalid Admin passcode' }, 401, origin);
   }
+  const requireLiveEvent = async (eventId: string, organizationId: string) => {
+    const { data: liveEvent, error: liveEventError } = await admin
+      .from('v2_events')
+      .select('id,status,hall_of_fame_processed_at')
+      .eq('id', eventId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+    return !liveEventError && Boolean(liveEvent) && ['live', 'open', 'active'].includes(String(liveEvent?.status || '').toLowerCase()) && !liveEvent?.hall_of_fame_processed_at;
+  };
   if (action === 'verify') return json({ ok: true }, 200, origin);
   if (action === 'setRating') {
     const eventId = String(body?.eventId || ''), organizationId = String(body?.organizationId || '');
@@ -81,7 +90,8 @@ Deno.serve(async (request) => {
     const organizationId = String(body?.organizationId || ''), eventId = String(body?.eventId || ''), matchId = String(body?.matchId || '');
     const playerIds = [...(Array.isArray(body?.teamA) ? body.teamA : []), ...(Array.isArray(body?.teamB) ? body.teamB : [])].map((player) => String(player?.eventPlayerId || player?.event_player_id || player?.id || player || '')).filter(validId);
     let resolvedMatchId = matchId;
-    if (!validId(organizationId) || (action === 'createMatchPreview' && !validId(eventId)) || (action !== 'createMatchPreview' && !validId(matchId))) return json({ ok: false, error: 'Invalid match request' }, 400, origin);
+    if (!validId(organizationId) || !validId(eventId) || (action !== 'createMatchPreview' && !validId(matchId))) return json({ ok: false, error: 'Invalid match request' }, 400, origin);
+    if (!await requireLiveEvent(eventId, organizationId)) return json({ ok: false, error: 'Event is not LIVE' }, 409, origin);
     if (action === 'createMatchPreview') {
       const { data, error } = await admin.rpc('v2_admin_create_match_preview', { p_event_id: eventId, p_organization_id: organizationId, p_court_number: Number(body?.courtNumber), p_event_player_ids: playerIds, p_idempotency_key: body?.idempotencyKey || null, p_ip_hash: ipHash });
       if (error) return json({ ok: false, error: error.message || 'Could not create preview' }, 400, origin);
@@ -120,6 +130,7 @@ Deno.serve(async (request) => {
     const preferredMode = modes.includes(String(body?.preferredMode || '')) ? String(body.preferredMode) : modes[0] || null;
     const status = String(body?.status || 'rest');
     if (!validId(eventId) || !validId(organizationId) || !validId(eventPlayerId) || !['ready', 'match_ready', 'playing', 'rest'].includes(status)) return json({ ok: false, error: 'Invalid Smart Queue preference' }, 400, origin);
+    if (!await requireLiveEvent(eventId, organizationId)) return json({ ok: false, error: 'Event is not LIVE' }, 409, origin);
     const { data: targetPlayer, error: playerError } = await admin.from('v2_event_players').select('id').eq('id', eventPlayerId).eq('event_id', eventId).eq('organization_id', organizationId).maybeSingle();
     if (playerError || !targetPlayer) return json({ ok: false, error: 'Event player not found' }, 404, origin);
     const { data: preference, error } = await admin.from('v2_smart_queue_preferences').upsert({ event_player_id: eventPlayerId, event_id: eventId, organization_id: organizationId, modes, preferred_mode: preferredMode, queue_status: status, ready_since: status === 'ready' ? String(body?.readySince || new Date().toISOString()) : null, updated_by: String(body?.updatedBy || 'admin') === 'system' ? 'system' : 'admin', updated_at: new Date().toISOString() }, { onConflict: 'event_player_id' }).select('*').single();
@@ -130,6 +141,7 @@ Deno.serve(async (request) => {
     const matchId = String(body?.matchId || ''), eventId = String(body?.eventId || ''), organizationId = String(body?.organizationId || '');
     const courtNumber = Number(body?.courtNumber), playMode = String(body?.playMode || ''), state = String(body?.state || 'match_ready');
     if (!validId(matchId) || !validId(eventId) || !validId(organizationId) || !Number.isInteger(courtNumber) || courtNumber < 1 || courtNumber > 10 || !['social', 'balanced', 'challenge'].includes(playMode) || !['match_ready', 'playing', 'confirmed', 'cancelled'].includes(state)) return json({ ok: false, error: 'Invalid Smart Queue match' }, 400, origin);
+    if (!await requireLiveEvent(eventId, organizationId)) return json({ ok: false, error: 'Event is not LIVE' }, 409, origin);
     const { data: targetMatch, error: matchError } = await admin.from('v2_matches').select('id').eq('id', matchId).eq('event_id', eventId).eq('organization_id', organizationId).maybeSingle();
     if (matchError || !targetMatch) return json({ ok: false, error: 'Match not found' }, 404, origin);
     const { data: match, error } = await admin.from('v2_smart_queue_matches').upsert({ match_id: matchId, event_id: eventId, organization_id: organizationId, court_number: courtNumber, play_mode: playMode, queue_state: state, updated_at: new Date().toISOString() }, { onConflict: 'match_id' }).select('*').single();
@@ -139,6 +151,7 @@ Deno.serve(async (request) => {
   if (['updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer'].includes(action)) {
     const eventId = String(body?.eventId || ''), organizationId = String(body?.organizationId || ''), eventPlayerId = String(body?.eventPlayerId || '');
     if (!validId(eventId) || !validId(organizationId) || !validId(eventPlayerId)) return json({ ok: false, error: 'Invalid event player request' }, 400, origin);
+    if (!await requireLiveEvent(eventId, organizationId)) return json({ ok: false, error: 'Event is not LIVE' }, 409, origin);
     const { data: scopedPlayer, error: scopedPlayerError } = await admin.from('v2_event_players').select('id').eq('id', eventPlayerId).eq('event_id', eventId).eq('organization_id', organizationId).maybeSingle();
     if (scopedPlayerError || !scopedPlayer) return json({ ok: false, error: 'Event player not found' }, 404, origin);
     const rpcName = action === 'updateEventPlayerStatus' ? 'v2_admin_update_event_player_status' : action === 'updateEventPlayerLevel' ? 'v2_admin_update_event_player_level' : 'v2_admin_remove_event_player';

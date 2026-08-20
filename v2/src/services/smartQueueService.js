@@ -75,7 +75,9 @@ export function createSmartQueueStore({ supabase = null, mode = 'mock', getAdmin
   const shared = mode === 'supabase' && Boolean(supabase);
 
   async function adminCall(action, payload) {
-    const { data, error } = await supabase.functions.invoke('v2-admin-results', { body: { action, ...payload } });
+    const passcode = action === 'smartQueueSetEnabled' ? await getAdminPasscode?.() : '';
+    if (action === 'smartQueueSetEnabled' && !passcode) throw new Error('Admin access is required to change Smart Queue settings.');
+    const { data, error } = await supabase.functions.invoke('v2-admin-results', { body: { action, ...(passcode ? { passcode } : {}), ...payload } });
     if (error) throw error;
     if (!data?.ok) throw new Error(data?.error || 'Smart Queue admin request failed');
     return data;

@@ -11,7 +11,7 @@ const organizerActions = new Set(
   [...organizerActionsMatch[1].matchAll(/'([^']+)'/g)].map((match) => match[1])
 );
 
-for (const action of ['createEvent', 'setEventStatus', 'archiveEvent', 'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore', 'updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer']) {
+for (const action of ['createEvent', 'setEventStatus', 'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore', 'updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer']) {
   assert.ok(organizerActions.has(action), `${action} must work without Admin credentials`);
 }
 
@@ -28,10 +28,11 @@ for (const action of [
 }
 
 assert.match(edgeSource, /if \(!openOrganizerActions\.has\(action\)\) \{[\s\S]*?admin\.auth\.getUser\(token\)/);
+assert.match(edgeSource, /requireLiveEvent[\s\S]*?hall_of_fame_processed_at/, 'Open live actions must reject completed or Hall-finalized events');
 
 const organizerCallMatch = serviceSource.match(/async function organizerAdminCall\([\s\S]*?\n  \}/);
 assert.ok(organizerCallMatch, 'Organizer service call must exist');
-assert.doesNotMatch(organizerCallMatch[0], /getSession\(|window\.prompt|passcode/, 'Live Organizer actions must not request Admin credentials');
+assert.match(organizerCallMatch[0], /protectedAction = action === 'archiveEvent'/, 'Only archive from the live service remains credential protected');
 assert.ok(!organizerActions.has('updateScore'), 'Historical score editing must remain protected');
 
 console.log('organizer passcode access tests passed');
