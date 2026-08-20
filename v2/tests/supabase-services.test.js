@@ -3,6 +3,7 @@ import { checkInPlayer, findPlayerProfileByEmail, getAuthenticatedPlayer, joinVe
 import { confirmScore, updateConfirmedScore, updateMatchPreview } from '../src/services/supabaseMatchService.js';
 import { invokeTestAdmin } from '../src/services/testAdminService.js';
 import { normalizeEdgeFunctionError } from '../src/services/edgeFunctionError.js';
+import { chooseCurrentOrganizerEvent } from '../src/services/organizerEventSelection.js';
 
 function result(value) {
   return Promise.resolve(value);
@@ -17,6 +18,15 @@ function memoryStorage(seed = {}) {
     clear: { enumerable: false, value() { Object.keys(storage).forEach((key) => delete storage[key]); } }
   });
   return storage;
+}
+
+// Default Organizer loading must prefer the active event over a completed
+// event remembered by the same device. An explicit URL remains authoritative.
+{
+  const completed = { id: 'event-old', status: 'completed' };
+  const live = { id: 'event-live', status: 'live' };
+  assert.equal(chooseCurrentOrganizerEvent([completed, live], { selectedEventId: completed.id }).id, live.id);
+  assert.equal(chooseCurrentOrganizerEvent([completed, live], { explicitEventId: completed.id, selectedEventId: live.id }).id, completed.id);
 }
 
 function playerServiceFake({ user = null, existingProfile = null, existingEventPlayer = null } = {}) {

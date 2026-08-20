@@ -4,6 +4,7 @@ import { getServiceMode, SERVICE_MODES } from './serviceMode.js';
 import { getSupabaseClient } from './supabaseClient.js';
 import { isTestEnvironment, getTestAdminSession, knownTestEventIds, createTestEvent, authorizeTestAdmin, exitTestAdmin, invokeTestAdmin } from './testAdminService.js';
 import { normalizeEdgeFunctionError } from './edgeFunctionError.js';
+import { chooseCurrentOrganizerEvent } from './organizerEventSelection.js';
 import { matchPlayerIds as normalizedMatchPlayerIds, normalizeMatch as normalizeSharedMatch } from './matchModel.js';
 import {
   listEvents as listLocalEvents,
@@ -39,9 +40,13 @@ function isDemoEvent(eventId) {
   return String(eventId || '').startsWith('demo-event-');
 }
 
-function requestedEventId() {
+function eventIdFromUrl() {
   const params = typeof location !== 'undefined' ? new URLSearchParams(location.search) : new URLSearchParams();
-  const fromUrl = params.get('event') || params.get('eventId') || params.get('id');
+  return params.get('event') || params.get('eventId') || params.get('id') || '';
+}
+
+function requestedEventId() {
+  const fromUrl = eventIdFromUrl();
   if (fromUrl) {
     localStorage.setItem(SELECTED_EVENT_KEY, fromUrl);
     return fromUrl;
@@ -145,8 +150,10 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
           ? rememberEvents(knownEvents)
           : rememberEvents([...(await listSupabaseEvents(requireSupabase(supabase), organizationId)), ...(await testEvents())]);
         localStorage.setItem('gdsq_v2_events', JSON.stringify(events));
-        const selected = eventId ? events.find((event) => String(event.id) === String(eventId)) : null;
-        const current = selected || events.find((event) => event.status === 'live') || events[0] || null;
+        const explicitEventId = eventIdFromUrl();
+        // A URL event is an explicit choice. Otherwise an active event must win
+        // over a completed event remembered by this device from an older session.
+        const current = chooseCurrentOrganizerEvent(events, { explicitEventId, selectedEventId: eventId });
         if (current && String(current.id) !== String(eventId)) localStorage.setItem(SELECTED_EVENT_KEY, current.id);
         return current;
       }
