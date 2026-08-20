@@ -75,9 +75,7 @@ export function createSmartQueueStore({ supabase = null, mode = 'mock', getAdmin
   const shared = mode === 'supabase' && Boolean(supabase);
 
   async function adminCall(action, payload) {
-    const passcode = await getAdminPasscode?.();
-    if (!passcode) throw new Error('Admin sign-in and passcode are required for Smart Queue organizer actions.');
-    const { data, error } = await supabase.functions.invoke('v2-admin-results', { body: { action, passcode, ...payload } });
+    const { data, error } = await supabase.functions.invoke('v2-admin-results', { body: { action, ...payload } });
     if (error) throw error;
     if (!data?.ok) throw new Error(data?.error || 'Smart Queue admin request failed');
     return data;

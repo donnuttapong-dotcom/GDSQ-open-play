@@ -75,43 +75,17 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
   });
   const isTestEventId = (eventId) => environments.get(String(eventId)) === 'test';
   const test = (action, payload = {}) => invokeTestAdmin(requireSupabase(supabase), action, { ...payload, organizationId: payload.organizationId || organizationId });
-  let organizerPasscode = '';
   async function organizerAdminCall(action, payload = {}) {
-    if (!isSupabase) throw new Error('Organizer protected mutations require Supabase mode.');
+    if (!isSupabase) throw new Error('Organizer mutations require Supabase mode.');
     const client = requireSupabase(supabase);
-    if (action !== 'createEvent' && typeof client.auth?.getSession === 'function') {
-      const { data: sessionData } = await client.auth.getSession();
-      if (!sessionData?.session) {
-        const signInError = new Error('Sign in with an authorized Admin account first');
-        signInError.code = 'ORGANIZER_SIGN_IN_REQUIRED';
-        signInError.status = 403;
-        throw signInError;
-      }
-    }
-    if (!organizerPasscode && typeof sessionStorage !== 'undefined') organizerPasscode = sessionStorage.getItem('gdsq_v2_organizer_passcode') || '';
-    if (!organizerPasscode && typeof window !== 'undefined' && typeof window.prompt === 'function') organizerPasscode = window.prompt('Admin passcode / รหัส Admin')?.trim() || '';
-    if (!organizerPasscode) throw new Error('ORGANIZER_PASSCODE_REQUIRED');
-    const { data, error } = await client.functions.invoke('v2-admin-results', { body: { action, passcode: organizerPasscode, organizationId, ...payload } });
+    const { data, error } = await client.functions.invoke('v2-admin-results', { body: { action, organizationId, ...payload } });
     if (error) {
-      const normalized = await normalizeEdgeFunctionError(error, 'Organizer mutation failed');
-      if (/sign in with an authorized admin account/i.test(normalized.message)) normalized.code = 'ORGANIZER_SIGN_IN_REQUIRED';
-      if (/invalid admin passcode/i.test(normalized.message)) {
-        organizerPasscode = '';
-        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('gdsq_v2_organizer_passcode');
-      }
-      throw normalized;
+      throw await normalizeEdgeFunctionError(error, 'Organizer mutation failed');
     }
     if (!data?.ok) {
       const detail = String(data?.error || '');
-      if (/invalid admin passcode/i.test(detail)) {
-        organizerPasscode = '';
-        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('gdsq_v2_organizer_passcode');
-      }
-      const normalized = new Error(detail || 'Organizer mutation failed');
-      if (/sign in with an authorized admin account/i.test(detail)) normalized.code = 'ORGANIZER_SIGN_IN_REQUIRED';
-      throw normalized;
+      throw new Error(detail || 'Organizer mutation failed');
     }
-    if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('gdsq_v2_organizer_passcode', organizerPasscode);
     return data;
   }
   const testEvents = async ({ force = false } = {}) => {
