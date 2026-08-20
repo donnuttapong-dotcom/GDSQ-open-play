@@ -73,10 +73,20 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
   let organizerPasscode = '';
   async function organizerAdminCall(action, payload = {}) {
     if (!isSupabase) throw new Error('Organizer protected mutations require Supabase mode.');
+    const client = requireSupabase(supabase);
+    if (typeof client.auth?.getSession === 'function') {
+      const { data: sessionData } = await client.auth.getSession();
+      if (!sessionData?.session) {
+        const signInError = new Error('Sign in with an authorized Admin account first');
+        signInError.code = 'ORGANIZER_SIGN_IN_REQUIRED';
+        signInError.status = 403;
+        throw signInError;
+      }
+    }
     if (!organizerPasscode && typeof sessionStorage !== 'undefined') organizerPasscode = sessionStorage.getItem('gdsq_v2_organizer_passcode') || '';
     if (!organizerPasscode && typeof window !== 'undefined' && typeof window.prompt === 'function') organizerPasscode = window.prompt('Admin passcode / รหัส Admin')?.trim() || '';
     if (!organizerPasscode) throw new Error('ORGANIZER_PASSCODE_REQUIRED');
-    const { data, error } = await requireSupabase(supabase).functions.invoke('v2-admin-results', { body: { action, passcode: organizerPasscode, organizationId, ...payload } });
+    const { data, error } = await client.functions.invoke('v2-admin-results', { body: { action, passcode: organizerPasscode, organizationId, ...payload } });
     if (error) {
       const normalized = await normalizeEdgeFunctionError(error, 'Organizer mutation failed');
       if (/sign in with an authorized admin account/i.test(normalized.message)) normalized.code = 'ORGANIZER_SIGN_IN_REQUIRED';
