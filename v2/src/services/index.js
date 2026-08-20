@@ -3,6 +3,7 @@ import './shareLinksUi.js';
 import { getServiceMode, SERVICE_MODES } from './serviceMode.js';
 import { getSupabaseClient } from './supabaseClient.js';
 import { isTestEnvironment, getTestAdminSession, knownTestEventIds, createTestEvent, authorizeTestAdmin, exitTestAdmin, invokeTestAdmin } from './testAdminService.js';
+import { normalizeEdgeFunctionError } from './edgeFunctionError.js';
 import { matchPlayerIds as normalizedMatchPlayerIds, normalizeMatch as normalizeSharedMatch } from './matchModel.js';
 import {
   listEvents as listLocalEvents,
@@ -76,13 +77,24 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     if (!organizerPasscode && typeof window !== 'undefined' && typeof window.prompt === 'function') organizerPasscode = window.prompt('Admin passcode / รหัส Admin')?.trim() || '';
     if (!organizerPasscode) throw new Error('ORGANIZER_PASSCODE_REQUIRED');
     const { data, error } = await requireSupabase(supabase).functions.invoke('v2-admin-results', { body: { action, passcode: organizerPasscode, organizationId, ...payload } });
-    if (error) throw error;
-    if (!data?.ok) {
-      if (/invalid admin passcode|authorized admin/i.test(String(data?.error || ''))) {
+    if (error) {
+      const normalized = await normalizeEdgeFunctionError(error, 'Organizer mutation failed');
+      if (/sign in with an authorized admin account/i.test(normalized.message)) normalized.code = 'ORGANIZER_SIGN_IN_REQUIRED';
+      if (/invalid admin passcode/i.test(normalized.message)) {
         organizerPasscode = '';
         if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('gdsq_v2_organizer_passcode');
       }
-      throw new Error(data?.error || 'Organizer mutation failed');
+      throw normalized;
+    }
+    if (!data?.ok) {
+      const detail = String(data?.error || '');
+      if (/invalid admin passcode/i.test(detail)) {
+        organizerPasscode = '';
+        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('gdsq_v2_organizer_passcode');
+      }
+      const normalized = new Error(detail || 'Organizer mutation failed');
+      if (/sign in with an authorized admin account/i.test(detail)) normalized.code = 'ORGANIZER_SIGN_IN_REQUIRED';
+      throw normalized;
     }
     if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('gdsq_v2_organizer_passcode', organizerPasscode);
     return data;
@@ -116,10 +128,12 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
       return listArchivedSupabaseEventsForDate(requireSupabase(supabase), organizationId, eventDate);
     },
 
-    async getCurrentEvent() {
+    async getCurrentEvent(knownEvents = null) {
       const eventId = requestedEventId();
       if (isSupabase) {
-        const events = rememberEvents([...(await listSupabaseEvents(requireSupabase(supabase), organizationId)), ...(await testEvents())]);
+        const events = Array.isArray(knownEvents)
+          ? rememberEvents(knownEvents)
+          : rememberEvents([...(await listSupabaseEvents(requireSupabase(supabase), organizationId)), ...(await testEvents())]);
         localStorage.setItem('gdsq_v2_events', JSON.stringify(events));
         const selected = eventId ? events.find((event) => String(event.id) === String(eventId)) : null;
         const current = selected || events.find((event) => event.status === 'live') || events[0] || null;

@@ -1,9 +1,22 @@
 import assert from 'node:assert/strict';
 import { checkInPlayer, findPlayerProfileByEmail, getAuthenticatedPlayer, joinVerifiedPlayerEvent, joinInstantPlayerEvent, updateMyPlayerProfile, requestPlayerProfileClaim } from '../src/services/supabasePlayerService.js';
 import { confirmScore, updateConfirmedScore, updateMatchPreview } from '../src/services/supabaseMatchService.js';
+import { invokeTestAdmin } from '../src/services/testAdminService.js';
+import { normalizeEdgeFunctionError } from '../src/services/edgeFunctionError.js';
 
 function result(value) {
   return Promise.resolve(value);
+}
+
+function memoryStorage(seed = {}) {
+  const storage = { ...seed };
+  Object.defineProperties(storage, {
+    getItem: { enumerable: false, value(key) { return Object.prototype.hasOwnProperty.call(storage, key) ? String(storage[key]) : null; } },
+    setItem: { enumerable: false, value(key, value) { storage[key] = String(value); } },
+    removeItem: { enumerable: false, value(key) { delete storage[key]; } },
+    clear: { enumerable: false, value() { Object.keys(storage).forEach((key) => delete storage[key]); } }
+  });
+  return storage;
 }
 
 function playerServiceFake({ user = null, existingProfile = null, existingEventPlayer = null } = {}) {
@@ -284,6 +297,33 @@ function playerServiceFake({ user = null, existingProfile = null, existingEventP
     /authorized Admin Results Editor/
   );
   assert.deepEqual(rpcCalls, []);
+}
+
+// Edge errors preserve the response status and message for actionable Organizer feedback.
+{
+  const normalized = await normalizeEdgeFunctionError({
+    message: 'Edge Function returned a non-2xx status code',
+    context: new Response(JSON.stringify({ error: 'Sign in with an authorized Admin account first' }), { status: 403, headers: { 'content-type': 'application/json' } })
+  });
+  assert.equal(normalized.message, 'Sign in with an authorized Admin account first');
+  assert.equal(normalized.status, 403);
+}
+
+// Expired Test Admin capabilities are removed after a 401 to stop repeated polling.
+{
+  const previousLocalStorage = globalThis.localStorage;
+  globalThis.localStorage = memoryStorage({ 'gdsq_v2_test_admin_session:event-stale': 'expired-capability' });
+  const supabase = {
+    functions: {
+      invoke: () => result({
+        data: null,
+        error: { message: 'non-2xx', context: new Response(JSON.stringify({ error: 'Test Admin session expired', code: 'TEST_ADMIN_UNAUTHORIZED' }), { status: 401, headers: { 'content-type': 'application/json' } }) }
+      })
+    }
+  };
+  await assert.rejects(() => invokeTestAdmin(supabase, 'getEvent', { eventId: 'event-stale' }), /expired/);
+  assert.equal(globalThis.localStorage.getItem('gdsq_v2_test_admin_session:event-stale'), null);
+  globalThis.localStorage = previousLocalStorage;
 }
 
 console.log('v2 Supabase service tests passed');
