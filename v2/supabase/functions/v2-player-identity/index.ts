@@ -33,6 +33,15 @@ function validId(value: unknown) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f
 function validEmail(value: string) { return !value || (value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)); }
 function safeError(error: unknown) {
   const message = String(error instanceof Error ? error.message : (error as Record<string, unknown>)?.message || error || 'REQUEST_FAILED');
+  const stableCodes = [
+    'CAPABILITY_REQUIRED', 'EMAIL_PROFILE_MISMATCH', 'DISPLAY_NAME_TAKEN',
+    'DISPLAY_NAME_ALREADY_IN_EVENT', 'AMBIGUOUS_PLAYER_IDENTITY',
+    'LEGACY_PLAYER_ALREADY_LINKED', 'LEGACY_PLAYER_LINK_CONFLICT',
+    'EVENT_NOT_FOUND', 'EVENT_NOT_OPEN', 'EVENT_FULL', 'PLAYER_NOT_FOUND',
+    'DISPLAY_NAME_INVALID', 'EMAIL_INVALID', 'IDENTITY_RESOLUTION_INVALID'
+  ];
+  const code = stableCodes.find((item) => message.includes(item));
+  if (code) return { code, error: code };
   if (/duplicate key|unique constraint/i.test(message)) return { code: 'IDENTITY_CONFLICT', error: 'This email or display name is already in use.' };
   if (/not found/i.test(message)) return { code: 'NOT_FOUND', error: 'The requested player was not found.' };
   return { code: 'REQUEST_FAILED', error: 'Could not complete this player request.' };
@@ -131,58 +140,55 @@ Deno.serve(async (request) => {
     if (!event) return json({ ok: false, code: 'EVENT_NOT_FOUND', error: 'Event not found.' }, 404, origin);
     if (!['live', 'open', 'active'].includes(String(event.status || '').toLowerCase()) || !event.checkin_open) return json({ ok: false, code: 'EVENT_NOT_OPEN', error: 'This event is not open for joining.' }, 409, origin);
 
-    let profile: Record<string, unknown> | null = null;
-    if (email) {
-      const { data: current, error: profileError } = await admin.from('v2_players').select('*').eq('organization_id', organizationId).eq('email', email).maybeSingle();
-      if (profileError) throw profileError;
-      if (current) {
-        if (cleanName(current.display_name).toLowerCase() !== displayName.toLowerCase()) return json({ ok: false, code: 'EMAIL_PROFILE_MISMATCH', error: 'That email belongs to a different player name.' }, 409, origin);
-        profile = current;
-      } else {
-        const { data: nameOwner, error: nameOwnerError } = await admin.from('v2_players').select('id').eq('organization_id', organizationId).ilike('display_name', displayName).maybeSingle();
-        if (nameOwnerError) throw nameOwnerError;
-        if (nameOwner) return json({ ok: false, code: 'DISPLAY_NAME_TAKEN', error: 'This display name is already in use.' }, 409, origin);
-        const { data: instant, error: instantError } = await admin.from('v2_instant_player_profiles').select('*').eq('organization_id', organizationId).eq('email', email).maybeSingle();
-        if (instantError) throw instantError;
-        if (instant && cleanName(instant.display_name).toLowerCase() !== displayName.toLowerCase()) return json({ ok: false, code: 'EMAIL_PROFILE_MISMATCH', error: 'That email belongs to a different player name.' }, 409, origin);
-        const { data: created, error: createError } = await admin.from('v2_players').insert({ organization_id: organizationId, user_id: null, email, display_name: displayName, default_level: level, status: 'active' }).select('*').single();
-        if (createError) throw createError;
-        profile = created;
-        const avatarUrl = await saveAvatar(admin, String(created.id), body.avatarDataUrl);
-        if (avatarUrl) {
-          const { data: withAvatar, error: avatarError } = await admin.from('v2_players').update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() }).eq('id', created.id).select('*').single();
-          if (avatarError) throw avatarError;
-          profile = withAvatar;
-        }
-        if (instant) {
-          const { error: linkError } = await admin.from('v2_player_identity_links').upsert({ organization_id: organizationId, source_type: 'instant_profile', source_id: instant.id, canonical_player_id: created.id, link_reason: 'instant_profile_promoted' }, { onConflict: 'source_type,source_id' });
-          if (linkError) throw linkError;
-        }
-      }
+    let resolvedPlayerId: string | null = null;
+    let resolutionSource: string | null = null;
+    const requestedPlayerId = String(body.playerId || '');
+    const requestedCapability = String(body.capability || '');
+    if (requestedPlayerId || requestedCapability) {
+      await requireCapability(admin, requestedPlayerId, requestedCapability);
+      resolvedPlayerId = requestedPlayerId;
+      resolutionSource = 'capability';
+    } else if (body.playerCode) {
+      const playerCode = String(body.playerCode).trim().toUpperCase();
+      const { data: resolved, error } = await admin.from('v2_players').select('id').eq('organization_id', organizationId).eq('player_code', playerCode).eq('status', 'active').maybeSingle();
+      if (error) throw error;
+      if (!resolved) throw new Error('PLAYER_NOT_FOUND');
+      resolvedPlayerId = String(resolved.id);
+      resolutionSource = 'player_code';
     }
 
-    let eventPlayer: Record<string, unknown> | null = null;
-    let alreadyJoined = false;
-    if (profile) {
-      const { data, error } = await admin.from('v2_event_players').select('*').eq('event_id', eventId).eq('player_id', profile.id).neq('status', 'removed').maybeSingle();
-      if (error) throw error;
-      eventPlayer = data;
-      alreadyJoined = Boolean(data);
-    }
-    if (!eventPlayer) {
-      const { data: nameConflict, error: nameConflictError } = await admin.from('v2_event_players').select('id').eq('event_id', eventId).neq('status', 'removed').ilike('display_name', displayName).maybeSingle();
-      if (nameConflictError) throw nameConflictError;
-      if (nameConflict) return json({ ok: false, code: 'DISPLAY_NAME_ALREADY_IN_EVENT', error: 'This player name is already in this event.' }, 409, origin);
-      const { count, error: countError } = await admin.from('v2_event_players').select('id', { count: 'exact', head: true }).eq('event_id', eventId).neq('status', 'removed');
-      if (countError) throw countError;
-      if (Number(event.max_players || 0) > 0 && Number(count || 0) >= Number(event.max_players)) return json({ ok: false, code: 'EVENT_FULL', error: 'This event is full.' }, 409, origin);
-      const avatarUrl = profile ? String(profile.avatar_url || '') : '';
-      const { data, error } = await admin.from('v2_event_players').insert({ organization_id: organizationId, event_id: eventId, player_id: profile?.id || null, display_name: profile?.display_name || displayName, estimated_level: profile?.default_level || level, avatar_url: avatarUrl || null, status: 'ready', queue_joined_at: new Date().toISOString() }).select('*').single();
-      if (error) throw error;
-      eventPlayer = data;
+    const { data: joined, error: joinError } = await admin.rpc('v2_join_player_identity_phase1', {
+      p_organization_id: organizationId,
+      p_event_id: eventId,
+      p_display_name: displayName,
+      p_email: email || null,
+      p_level: level,
+      p_resolved_player_id: resolvedPlayerId,
+      p_resolution_source: resolutionSource
+    });
+    if (joinError) throw joinError;
+    const result = joined as Record<string, unknown>;
+    const eventPlayerId = String(result.eventPlayerId || '');
+    const profileId = String(result.profileId || '');
+    const [{ data: eventPlayer, error: eventPlayerError }, { data: loadedProfile, error: profileError }] = await Promise.all([
+      admin.from('v2_event_players').select('*').eq('id', eventPlayerId).single(),
+      profileId ? admin.from('v2_players').select('*').eq('id', profileId).single() : Promise.resolve({ data: null, error: null })
+    ]);
+    if (eventPlayerError || profileError) throw eventPlayerError || profileError;
+    let profile = loadedProfile as Record<string, unknown> | null;
+    if (profile && result.profileCreated && body.avatarDataUrl) {
+      const avatarUrl = await saveAvatar(admin, profileId, body.avatarDataUrl);
+      if (avatarUrl) {
+        const { data, error } = await admin.from('v2_players').update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() }).eq('id', profileId).select('*').single();
+        if (error) throw error;
+        profile = data;
+        const { error: participantAvatarError } = await admin.from('v2_event_players').update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() }).eq('id', eventPlayerId);
+        if (participantAvatarError) throw participantAvatarError;
+      }
     }
     let capability = '', smartQueueCapability = '';
-    if (profile) capability = await issueCapability(admin, String(profile.id), body.deviceLabel);
+    if (profile && resolutionSource === 'capability') capability = requestedCapability;
+    else if (profile && resolutionSource !== 'player_code') capability = await issueCapability(admin, String(profile.id), body.deviceLabel);
     if (String(event.matching_mode || '').toLowerCase() === 'smart_queue' && eventPlayer) {
       const token = randomToken();
       await admin.from('v2_smart_queue_instant_sessions').update({ revoked_at: new Date().toISOString() }).eq('event_id', eventId).eq('event_player_id', eventPlayer.id).is('revoked_at', null);
@@ -190,10 +196,17 @@ Deno.serve(async (request) => {
       if (error) throw error;
       smartQueueCapability = token;
     }
-    return json({ ok: true, eventPlayer, profile: profile ? publicProfile(profile) : null, capability, smartQueueCapability, alreadyJoined, }, 200, origin);
+    return json({
+      ok: true, eventPlayer, profile: profile ? publicProfile(profile) : null,
+      capability, smartQueueCapability,
+      alreadyJoined: Boolean(result.alreadyJoined),
+      identityState: result.identityState || '',
+      legacyCandidatesCount: Number(result.legacyCandidatesCount || 0)
+    }, 200, origin);
   } catch (error) {
     const safe = safeError(error);
     console.error('v2-player-identity', action, safe.code);
-    return json({ ok: false, ...safe }, safe.code === 'CAPABILITY_REQUIRED' ? 401 : 400, origin);
+    const status = safe.code === 'CAPABILITY_REQUIRED' ? 401 : /MISMATCH|CONFLICT|TAKEN|ALREADY|AMBIGUOUS|FULL|NOT_OPEN/.test(safe.code) ? 409 : 400;
+    return json({ ok: false, ...safe }, status, origin);
   }
 });
