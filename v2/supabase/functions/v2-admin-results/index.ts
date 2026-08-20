@@ -11,9 +11,9 @@ const openOrganizerActions = new Set([
   'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore'
 ]);
 const passcodeOnlyAdminResultsActions = new Set([
-  'verify', 'listEvents', 'listClaims', 'reviewClaim',
+  'verify', 'listEvents',
   'updateScore', 'updatePlayers', 'deleteMatch',
-  'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer'
+  'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent'
 ]);
 
 function cors(origin: string | null) {

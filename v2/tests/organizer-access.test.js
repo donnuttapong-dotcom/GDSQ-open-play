@@ -27,7 +27,7 @@ for (const action of ['verify', 'listEvents', 'updateScore', 'updatePlayers', 'd
   assert.ok(passcodeOnlyActions.has(action), `${action} must accept the Admin Results passcode without email sign-in`);
 }
 
-for (const action of ['listMembers', 'getMember']) {
+for (const action of ['listMembers', 'getMember', 'listClaims', 'reviewClaim', 'linkPlayer']) {
   assert.equal(passcodeOnlyActions.has(action), false, `${action} must still require the authorized Admin account`);
 }
 
@@ -40,6 +40,8 @@ assert.match(organizerCallMatch[0], /protectedAction = action === 'archiveEvent'
 assert.ok(!organizerActions.has('updateScore') && passcodeOnlyActions.has('updateScore'), 'Historical score editing must remain passcode protected');
 assert.doesNotMatch(adminResultsSource, /sendSignInLink|signInWithOtp|Admin email|อีเมล Admin/, 'Admin Results must not require email sign-in');
 assert.doesNotMatch(adminResultsSource.match(/async function openEditor\([\s\S]*?\n    \}/)?.[0] || '', /currentUser|getUser/, 'Opening Admin Results must verify only the passcode');
+assert.doesNotMatch(adminResultsSource.match(/function renderMatches\([\s\S]*?\n    \}/)?.[0] || '', /renderProfileLinker/, 'Passcode-only Results must not expose profile linking controls');
+assert.doesNotMatch(adminResultsSource, /identityAdmin'\)\.classList\.toggle/, 'Passcode-only Results must keep member claim controls hidden');
 assert.match(adminResultsSource, /deleteUnfinalized:'ลบอีเว้นท์ทดลอง'/, 'Unfinalized events must expose a clear delete action in Admin Results');
 assert.match(adminResultsSource, /isHallOfFameFinalized\(selectedEvent\)/, 'Event controls must distinguish Hall of Fame finalized events');
 assert.doesNotMatch(adminResultsSource.match(/async function permanentlyDeleteSelected\([\s\S]*?\n    \}/)?.[0] || '', /prompt\(/, 'Permanent delete must reuse the passcode entered when opening the editor');
