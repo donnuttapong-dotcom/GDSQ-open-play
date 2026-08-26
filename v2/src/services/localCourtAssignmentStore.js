@@ -1,6 +1,31 @@
 const STORAGE_KEY = 'gdsq_v2_court_assignment';
 const COURT_TYPES = ['social', 'balanced', 'challenge', 'open', 'custom'];
 const THEME_COLORS = ['green', 'blue', 'orange', 'purple', 'gray'];
+const ACTIVE_MATCH_STATUSES = new Set(['preview', 'assigned', 'playing', 'pending_score', 'queued_next']);
+
+const PRESET_TEMPLATES = {
+  all_open: [
+    { displayName: 'ALL OPEN', courtType: 'open', minLevel: 2, maxLevel: 5, themeColor: 'purple' }
+  ],
+  beginner_heavy: [
+    { displayName: 'BEGINNER FLEX', courtType: 'custom', minLevel: 2, maxLevel: 2.5, themeColor: 'green' },
+    { displayName: 'MIXED LOW', courtType: 'balanced', minLevel: 2.25, maxLevel: 2.75, themeColor: 'blue' },
+    { displayName: 'MIXED', courtType: 'balanced', minLevel: 2.5, maxLevel: 3, themeColor: 'blue' },
+    { displayName: 'CHALLENGE', courtType: 'challenge', minLevel: 2.75, maxLevel: 5, themeColor: 'orange' }
+  ],
+  balanced: [
+    { displayName: 'SOCIAL LOW', courtType: 'social', minLevel: 2, maxLevel: 2.75, themeColor: 'green' },
+    { displayName: 'BALANCED LOW', courtType: 'balanced', minLevel: 2.25, maxLevel: 3, themeColor: 'blue' },
+    { displayName: 'BALANCED HIGH', courtType: 'balanced', minLevel: 2.5, maxLevel: 3.5, themeColor: 'blue' },
+    { displayName: 'OPEN CHALLENGE', courtType: 'challenge', minLevel: 2.75, maxLevel: 5, themeColor: 'orange' }
+  ],
+  challenge_heavy: [
+    { displayName: 'OPEN MIX', courtType: 'open', minLevel: 2, maxLevel: 5, themeColor: 'purple' },
+    { displayName: 'MIXED HIGH', courtType: 'balanced', minLevel: 2.5, maxLevel: 3.25, themeColor: 'blue' },
+    { displayName: 'CHALLENGE', courtType: 'challenge', minLevel: 2.75, maxLevel: 5, themeColor: 'orange' },
+    { displayName: 'CHALLENGE PLUS', courtType: 'challenge', minLevel: 3, maxLevel: 5, themeColor: 'orange' }
+  ]
+};
 
 function readAll() {
   try {
@@ -130,6 +155,53 @@ export function buildAutoAssignmentProposal(courts, players) {
       counts.set(Number(court.courtNumber), counts.get(Number(court.courtNumber)) + 1);
     });
   return assignments;
+}
+
+export function buildCourtPreset(presetId, count, currentCourts = []) {
+  const templates = PRESET_TEMPLATES[presetId];
+  if (!templates) return [];
+  return Array.from({ length: courtCount(count) }, (_, index) => {
+    const courtNumber = index + 1;
+    const current = currentCourts.find((court) => Number(court.courtNumber) === courtNumber) || defaultCourt(courtNumber);
+    const template = presetId === 'all_open'
+      ? templates[0]
+      : templates[index] || { displayName: `OPEN COURT ${courtNumber}`, courtType: 'open', minLevel: 2, maxLevel: 5, themeColor: 'purple' };
+    return normalizeCourt({ ...current, ...template, active: true }, courtNumber);
+  });
+}
+
+export function buildCourtAvailability(courts, players, matches = []) {
+  const reservedIds = new Set();
+  (matches || []).filter((match) => ACTIVE_MATCH_STATUSES.has(String(match?.status || '').toLowerCase())).forEach((match) => {
+    [...(match?.teamA || match?.team_a || []), ...(match?.teamB || match?.team_b || [])].forEach((player) => {
+      const id = typeof player === 'string' || typeof player === 'number' ? player : player?.id || player?.eventPlayerId || player?.event_player_id;
+      if (id != null) reservedIds.add(String(id));
+    });
+  });
+  const availablePlayers = (players || []).filter((player) => String(player?.status || '').toLowerCase() !== 'removed');
+  return Object.fromEntries((courts || []).map((court) => {
+    const eligible = availablePlayers.filter((player) => playerLevel(player) >= Number(court.minLevel) && playerLevel(player) <= Number(court.maxLevel));
+    const ready = eligible.filter((player) => ['ready', 'checked_in'].includes(String(player?.status || 'ready').toLowerCase()) && !reservedIds.has(String(player.id)));
+    return [Number(court.courtNumber), { eligible: eligible.length, ready: ready.length }];
+  }));
+}
+
+export function buildPlayerMix(players, targetPerBand = 6) {
+  const activePlayers = (players || []).filter((player) => String(player?.status || '').toLowerCase() !== 'removed');
+  const bands = [
+    { id: '2.00-2.25', label: '2.00–2.25', count: 0, target: targetPerBand },
+    { id: '2.50', label: '2.50', count: 0, target: targetPerBand },
+    { id: '2.75', label: '2.75', count: 0, target: targetPerBand },
+    { id: '3.00+', label: '3.00+', count: 0, target: targetPerBand }
+  ];
+  activePlayers.forEach((player) => {
+    const level = playerLevel(player);
+    if (level >= 2 && level <= 2.25) bands[0].count += 1;
+    else if (level === 2.5) bands[1].count += 1;
+    else if (level === 2.75) bands[2].count += 1;
+    else if (level >= 3) bands[3].count += 1;
+  });
+  return { counted: bands.reduce((sum, band) => sum + band.count, 0), total: activePlayers.length, bands };
 }
 
 function playerLevel(player) {

@@ -1,6 +1,9 @@
 import { createV2Services } from '../services/index.js';
 import {
   buildAutoAssignmentProposal,
+  buildCourtAvailability,
+  buildCourtPreset,
+  buildPlayerMix,
   duplicateCourt,
   getCourtAssignment,
   prunePlayerAssignments,
@@ -17,11 +20,14 @@ const menuButton = document.getElementById('courtAssignmentBtn');
 
 let event = null;
 let players = [];
+let matches = [];
 let data = null;
 let activeTab = 'setup';
 let activeMobileColumn = 'unassigned';
 let selectedPlayerIds = new Set();
 let proposal = null;
+let presetProposal = null;
+let selectedPreset = '';
 let visible = false;
 let lastContextKey = '';
 
@@ -34,6 +40,7 @@ const copy = {
     select: 'Select', selected: 'selected', chooseCourt: 'Choose court', assign: 'Assign selected', resetAssignments: 'Reset all assignments', autoAssign: 'Auto Assign by Level', clearSelection: 'Clear selection',
     move: 'Move to court', remove: 'Remove', appliedCourt: 'Court', previewTitle: 'Review auto assignment', previewText: 'Check the suggested court placement, then apply it. Players outside all level ranges remain unassigned.', apply: 'Apply assignment', discard: 'Back to editing',
     active: 'Active', disabled: 'Disabled', level: 'Level', selectEvent: 'Select an event before configuring court assignments.', invalidRange: 'Min level must not be higher than max level.',
+    setupTitle: 'Court setup', activeCourts: 'active courts', presets: 'Quick presets', presetHint: 'Preview a preset before applying it to this event.', allOpen: 'All Open', beginnerHeavy: 'Beginner Heavy', balancedPreset: 'Balanced', challengeHeavy: 'Challenge Heavy', presetPreview: 'Preset preview', presetWarning: 'Applying this preset will update the current Court Setup for this event.', applyPreset: 'Apply preset', cancelPreset: 'Cancel', eligible: 'Eligible', readyNow: 'Ready now', readyWarning: 'Only {count} ready players fit this court range.', playerMix: 'Player mix', target: 'Target', countedPlayers: '{count} / {total} players in planning bands', resetConfirm: 'Reset only Court {court}? Customized values for this court will be replaced.',
     social: 'Social', balanced: 'Balanced', challenge: 'Challenge', open: 'Open', custom: 'Custom', green: 'Green', blue: 'Blue', orange: 'Orange', purple: 'Purple', gray: 'Gray'
   },
   th: {
@@ -44,6 +51,7 @@ const copy = {
     select: 'เลือก', selected: 'คนที่เลือก', chooseCourt: 'เลือกคอร์ท', assign: 'จัดผู้เล่นที่เลือก', resetAssignments: 'ล้างการจัดคอร์ททั้งหมด', autoAssign: 'จัดคอร์ทอัตโนมัติตามระดับ', clearSelection: 'ล้างที่เลือก',
     move: 'ย้ายไปคอร์ท', remove: 'นำออกจากคอร์ท', appliedCourt: 'คอร์ท', previewTitle: 'ตรวจสอบการจัดอัตโนมัติ', previewText: 'ตรวจสอบคอร์ทที่ระบบแนะนำ แล้วกดบันทึก ผู้เล่นที่ไม่อยู่ในช่วงระดับใดจะยังไม่ถูกจัดคอร์ท', apply: 'ยืนยันการจัดคอร์ท', discard: 'กลับไปแก้ไข',
     active: 'เปิดใช้', disabled: 'ปิดใช้', level: 'ระดับ', selectEvent: 'เลือกอีเว้นท์ก่อนตั้งค่าการจัดคอร์ท', invalidRange: 'ระดับต่ำสุดต้องไม่สูงกว่าระดับสูงสุด',
+    setupTitle: 'ตั้งค่าคอร์ท', activeCourts: 'คอร์ทที่เปิดใช้', presets: 'รูปแบบคอร์ทด่วน', presetHint: 'ตรวจสอบรูปแบบก่อนนำไปใช้กับอีเว้นท์นี้', allOpen: 'เปิดทุกระดับ', beginnerHeavy: 'เน้นผู้เล่นเริ่มต้น', balancedPreset: 'สมดุล', challengeHeavy: 'เน้นชาเลนจ์', presetPreview: 'ตัวอย่างรูปแบบคอร์ท', presetWarning: 'การใช้รูปแบบนี้จะอัปเดต Court Setup ปัจจุบันของอีเว้นท์นี้', applyPreset: 'ใช้รูปแบบนี้', cancelPreset: 'ยกเลิก', eligible: 'เข้าเกณฑ์', readyNow: 'พร้อมตอนนี้', readyWarning: 'มีผู้เล่นพร้อมในช่วงนี้เพียง {count} คน', playerMix: 'สัดส่วนผู้เล่น', target: 'เป้าหมาย', countedPlayers: '{count} / {total} คนในช่วงที่วางแผน', resetConfirm: 'รีเซ็ตเฉพาะคอร์ท {court}? ค่าที่ปรับไว้ของคอร์ทนี้จะถูกแทนที่',
     social: 'สังคม', balanced: 'สมดุล', challenge: 'ท้าทาย', open: 'เปิดทุกระดับ', custom: 'กำหนดเอง', green: 'เขียว', blue: 'น้ำเงิน', orange: 'ส้ม', purple: 'ม่วง', gray: 'เทา'
   }
 };
@@ -54,6 +62,10 @@ function language() {
 
 function t(key) {
   return copy[language()][key] || key;
+}
+
+function tx(key, values = {}) {
+  return String(t(key)).replace(/\{(\w+)\}/g, (_, name) => values[name] ?? '');
 }
 
 function esc(value) {
@@ -91,6 +103,13 @@ function activeCourts() {
   return (data?.courts || []).filter((court) => court.active);
 }
 
+function contextKey(nextEvent, nextPlayers, nextMatches) {
+  const count = Math.max(1, Math.min(10, Number(nextEvent?.courtCount ?? nextEvent?.court_count ?? 1)));
+  const playerState = nextPlayers.map((player) => `${player.id}:${playerStatus(player)}:${playerLevel(player)}`).sort().join(',');
+  const matchState = nextMatches.map((match) => `${match.id}:${match.status}:${match.updatedAt || match.updated_at || ''}`).sort().join(',');
+  return `${nextEvent.id}:${count}:${playerState}:${matchState}`;
+}
+
 function showModule() {
   visible = true;
   menuButton.textContent = t('menu');
@@ -114,26 +133,36 @@ async function refreshContext(force = false) {
   if (!nextEvent) {
     event = null;
     players = [];
+    matches = [];
     data = null;
     render();
     return;
   }
-  const nextPlayers = await services.listEventPlayers(nextEvent.id);
-  const key = `${nextEvent.id}:${nextPlayers.map((player) => player.id).sort().join(',')}:${eventCourtCount()}`;
+  const [nextPlayers, nextMatches] = await Promise.all([
+    services.listEventPlayers(nextEvent.id),
+    services.listEventMatches(nextEvent.id)
+  ]);
+  const key = contextKey(nextEvent, nextPlayers, nextMatches);
   if (!force && key === lastContextKey) return;
   event = nextEvent;
   players = nextPlayers.filter((player) => String(player.status || '').toLowerCase() !== 'removed');
+  matches = nextMatches;
   data = prunePlayerAssignments(event.id, eventCourtCount(), players.map((player) => player.id));
   selectedPlayerIds = new Set([...selectedPlayerIds].filter((id) => players.some((player) => String(player.id) === String(id))));
   proposal = null;
-  lastContextKey = `${event.id}:${players.map((player) => player.id).sort().join(',')}:${eventCourtCount()}`;
+  presetProposal = null;
+  selectedPreset = '';
+  lastContextKey = contextKey(event, players, matches);
   render();
 }
 
 function courtCard(court) {
   const nextCourt = data.courts.find((item) => item.courtNumber === court.courtNumber + 1) || data.courts.find((item) => item.courtNumber !== court.courtNumber);
+  const count = buildCourtAvailability(data.courts, players, matches)[court.courtNumber] || { eligible: 0, ready: 0 };
+  const warning = court.active && count.ready < 4 ? `<div class="ca-range-warning">${esc(tx('readyWarning', { count: count.ready }))}</div>` : '';
   return `<article class="cut ca-court-card" data-color="${esc(court.themeColor)}" data-court-card="${court.courtNumber}">
     <div class="flex items-center justify-between gap-2"><b class="lime">${t('appliedCourt').toUpperCase()} ${court.courtNumber}</b><span class="ca-badge">${esc(t(court.courtType))}</span></div>
+    <div class="ca-counts"><span>${t('eligible')}: <b>${count.eligible}</b></span><span>${t('readyNow')}: <b>${count.ready}</b></span></div>${warning}
     <div class="ca-court-fields">
       <label class="ca-field ca-wide">${t('displayName')}<input data-court-field="displayName" value="${esc(court.displayName)}" maxlength="60"></label>
       <label class="ca-field">${t('courtType')}<select data-court-field="courtType">${TYPES.map((type) => `<option value="${type}" ${type === court.courtType ? 'selected' : ''}>${t(type)}</option>`).join('')}</select></label>
@@ -144,6 +173,31 @@ function courtCard(court) {
     </div>
     <div class="ca-actions mt-3"><button class="cut ca-button primary" data-save-court="${court.courtNumber}">${t('save')}</button><button class="cut ca-button" data-duplicate-court="${court.courtNumber}" data-duplicate-target="${nextCourt?.courtNumber || ''}" ${nextCourt ? '' : 'disabled'}>${t('copyNext')}</button><button class="cut ca-button danger" data-reset-court="${court.courtNumber}">${t('reset')}</button></div>
   </article>`;
+}
+
+function courtSetupSummary() {
+  const courts = activeCourts();
+  const availability = buildCourtAvailability(data.courts, players, matches);
+  return `<section class="cut card p-4 ca-summary"><div class="ca-section-head"><div><p class="kicker">${t('setupTitle').toUpperCase()}</p><b>${courts.length} ${t('activeCourts')}</b></div></div><div class="ca-summary-list">${courts.map((court) => {
+    const count = availability[court.courtNumber] || { ready: 0 };
+    return `<div class="ca-summary-row"><b>${t('appliedCourt')} ${court.courtNumber}</b><span class="ca-summary-name" title="${esc(court.displayName)}">${esc(court.displayName)}</span><span>${Number(court.minLevel).toFixed(2)}–${Number(court.maxLevel).toFixed(2)}</span><span>${t('readyNow')} <b>${count.ready}</b></span></div>`;
+  }).join('') || `<div class="ca-empty">${t('disabled')}</div>`}</div></section>`;
+}
+
+function playerMixSummary() {
+  const mix = buildPlayerMix(players);
+  return `<section class="cut card p-4 ca-mix"><div class="ca-section-head"><div><p class="kicker">${t('playerMix').toUpperCase()}</p><b>${tx('countedPlayers', { count: mix.counted, total: mix.total })}</b></div></div><div class="ca-mix-grid">${mix.bands.map((band) => `<div class="ca-mix-band"><span>${band.label}</span><b>${band.count}</b><small>${t('target')} ${band.target}</small></div>`).join('')}</div></section>`;
+}
+
+function presetPanel() {
+  const presets = [
+    ['all_open', 'allOpen'],
+    ['beginner_heavy', 'beginnerHeavy'],
+    ['balanced', 'balancedPreset'],
+    ['challenge_heavy', 'challengeHeavy']
+  ];
+  const preview = presetProposal ? `<div class="ca-preset-preview"><div class="ca-section-head"><div><b>${t('presetPreview')}</b><p>${t('presetWarning')}</p></div></div><div class="ca-preset-courts">${presetProposal.map((court) => `<div><b>${t('appliedCourt')} ${court.courtNumber}</b><span title="${esc(court.displayName)}">${esc(court.displayName)}</span><span>${court.minLevel.toFixed(2)}–${court.maxLevel.toFixed(2)}</span></div>`).join('')}</div><div class="ca-actions mt-3"><button class="cut ca-button primary" data-apply-preset>${t('applyPreset')}</button><button class="cut ca-button" data-cancel-preset>${t('cancelPreset')}</button></div></div>` : '';
+  return `<section class="cut card p-4 ca-presets"><div class="ca-section-head"><div><p class="kicker">${t('presets').toUpperCase()}</p><span class="mini">${t('presetHint')}</span></div></div><div class="ca-preset-buttons">${presets.map(([id, label]) => `<button class="cut ca-button ${selectedPreset === id ? 'is-selected' : ''}" data-court-preset="${id}">${t(label)}</button>`).join('')}</div>${preview}</section>`;
 }
 
 function playerCard(player, courtNumber) {
@@ -164,7 +218,7 @@ function boardColumn(id, title, court, columnPlayers) {
 }
 
 function renderSetup() {
-  return `<div class="ca-court-grid">${data.courts.map(courtCard).join('')}</div>`;
+  return `<div class="ca-overview-grid">${courtSetupSummary()}${playerMixSummary()}</div>${presetPanel()}<div class="ca-court-grid">${data.courts.map(courtCard).join('')}</div>`;
 }
 
 function renderAssignment() {
@@ -211,6 +265,8 @@ function saveSingleCourt(courtNumber) {
   }
   data = saveCourtSetup(event.id, eventCourtCount(), courts);
   proposal = null;
+  presetProposal = null;
+  selectedPreset = '';
   render();
 }
 
@@ -231,12 +287,37 @@ function assignPlayers(playerIds, courtNumber) {
 root?.addEventListener('click', (eventClick) => {
   const tab = eventClick.target.closest('[data-ca-tab]');
   if (tab) { activeTab = tab.dataset.caTab; render(); return; }
+  const preset = eventClick.target.closest('[data-court-preset]');
+  if (preset) {
+    selectedPreset = preset.dataset.courtPreset;
+    presetProposal = buildCourtPreset(selectedPreset, eventCourtCount(), data.courts);
+    render();
+    return;
+  }
+  if (eventClick.target.closest('[data-apply-preset]')) {
+    if (!presetProposal?.length) return;
+    data = saveCourtSetup(event.id, eventCourtCount(), presetProposal);
+    presetProposal = null;
+    selectedPreset = '';
+    proposal = null;
+    render();
+    return;
+  }
+  if (eventClick.target.closest('[data-cancel-preset]')) { presetProposal = null; selectedPreset = ''; render(); return; }
   const save = eventClick.target.closest('[data-save-court]');
   if (save) { saveSingleCourt(save.dataset.saveCourt); return; }
   const duplicate = eventClick.target.closest('[data-duplicate-court]');
   if (duplicate) { data = duplicateCourt(event.id, eventCourtCount(), duplicate.dataset.duplicateCourt, duplicate.dataset.duplicateTarget); proposal = null; render(); return; }
   const reset = eventClick.target.closest('[data-reset-court]');
-  if (reset) { data = resetCourt(event.id, eventCourtCount(), reset.dataset.resetCourt); proposal = null; render(); return; }
+  if (reset) {
+    if (!window.confirm(tx('resetConfirm', { court: reset.dataset.resetCourt }))) return;
+    data = resetCourt(event.id, eventCourtCount(), reset.dataset.resetCourt);
+    proposal = null;
+    presetProposal = null;
+    selectedPreset = '';
+    render();
+    return;
+  }
   if (eventClick.target.closest('[data-auto-assign]')) { proposal = buildAutoAssignmentProposal(data.courts, players); selectedPlayerIds.clear(); render(); return; }
   if (eventClick.target.closest('[data-apply-proposal]')) { updateAssignments(proposal || {}); return; }
   if (eventClick.target.closest('[data-discard-proposal]')) { proposal = null; render(); return; }

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>GDSQ v2 Open Play</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="./src/styles/courtAssignment.css?v=court-assignment-01">
+<link rel="stylesheet" href="./src/styles/courtAssignment.css?v=court-assignment-ux-02">
 <link rel="stylesheet" href="./src/styles/smartQueue.css?v=smart-queue-ux-06">
 <style>
 :root{--bg:#06111f;--panel:#0d1b30;--panel-2:#122743;--line:#28496e;--muted:#8fa5bd;--lime:#d7ff19;--cyan:#22d3ee;--orange:#ffb11b;--danger:#ff5b68}
@@ -553,7 +553,7 @@ function applyOrganizerAccessLanguage(){const en=language()==='en';$('organizerS
 window.addEventListener('gdsq-language-change',applyStaticPageLanguage);window.addEventListener('gdsq-language-change',applySmartQueueModeLanguage);window.addEventListener('gdsq-language-change',applyOrganizerAccessLanguage);applyLanguage();
 loadAll().then(()=>setTab(currentTab)).catch(error=>{console.error('Initial load failed',error);showMessage(actionErrorMessage(error));renderPreEventChecklist();});
 </script>
-<script type="module" src="./src/ui/courtAssignmentUi.js?v=court-assignment-01"></script>
+<script type="module" src="./src/ui/courtAssignmentUi.js?v=court-assignment-ux-02"></script>
 <script>
 function applyHallOfFameLanguage(){const link=document.getElementById('hallOfFameLink');if(link)link.textContent=localStorage.getItem('gdsq_v2_ui_lang')==='en'?'Hall of Fame':'ทำเนียบผู้เล่น';}
 window.addEventListener('gdsq-language-change',applyHallOfFameLanguage);applyHallOfFameLanguage();

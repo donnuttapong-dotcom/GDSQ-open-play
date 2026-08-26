@@ -5,6 +5,8 @@ const { chromium } = require('playwright');
 const baseUrl = 'https://gdsq-open-play-v2-preview.vercel.app/v2/openplay.html?mode=supabase';
 const localHtml = fs.readFileSync(require.resolve('../openplay.html'), 'utf8');
 const localServices = fs.readFileSync(require.resolve('../src/services/index.js'), 'utf8');
+const localCourtUi = fs.readFileSync(require.resolve('../src/ui/courtAssignmentUi.js'), 'utf8');
+const localCourtStore = fs.readFileSync(require.resolve('../src/services/localCourtAssignmentStore.js'), 'utf8');
 const passcode = process.env.GDSQ_TEST_PASSCODE || '';
 
 if (!passcode) throw new Error('Set GDSQ_TEST_PASSCODE before running Production Test Mode QA.');
@@ -39,6 +41,8 @@ async function waitForIdle(page) {
   });
   await page.route('**/v2/openplay.html?*', (route) => route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: localHtml }));
   await page.route('**/v2/src/services/index.js*', (route) => route.fulfill({ status: 200, contentType: 'text/javascript; charset=utf-8', body: localServices }));
+  await page.route('**/v2/src/ui/courtAssignmentUi.js*', (route) => route.fulfill({ status: 200, contentType: 'text/javascript; charset=utf-8', body: localCourtUi }));
+  await page.route('**/v2/src/services/localCourtAssignmentStore.js*', (route) => route.fulfill({ status: 200, contentType: 'text/javascript; charset=utf-8', body: localCourtStore }));
 
   try {
     await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 60_000 });
