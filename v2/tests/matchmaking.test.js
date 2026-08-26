@@ -323,6 +323,9 @@ function match(id, teamA, teamB, minutesAgo) {
   assert.equal(validateMatchScore({ teamAScore: '11', teamBScore: '8' }).ok, true);
   assert.equal(validateMatchScore({ teamAScore: '11', teamBScore: '11' }).ok, false);
   assert.equal(validateMatchScore({ teamAScore: '-1', teamBScore: '8' }).ok, false);
+  assert.equal(validateMatchScore({ teamAScore: '22', teamBScore: '20' }).ok, true);
+  assert.equal(validateMatchScore({ teamAScore: '23', teamBScore: '20' }).ok, false);
+  assert.equal(validateMatchScore({ teamAScore: '11.5', teamBScore: '8' }).ok, false);
   assert.equal(validateMatchScore({ teamAScore: '100', teamBScore: '8' }).ok, false);
 
   const statsEventId = 'stats-event';

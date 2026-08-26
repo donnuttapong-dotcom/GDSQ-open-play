@@ -192,13 +192,15 @@ export async function confirmScore(supabase, matchId, payload) {
   const { data: existing, error: readError } = await supabase.from('v2_matches').select('id,status').eq('id', matchId).single();
   if (readError) throw readError;
   if (existing.status === 'confirmed') return fetchMatch(supabase, matchId);
-  if (!Number.isFinite(Number(payload.teamAScore)) || !Number.isFinite(Number(payload.teamBScore)) || Number(payload.teamAScore) === Number(payload.teamBScore)) {
-    throw new Error('Scores must be different valid numbers');
+  const teamAScore = Number(payload.teamAScore);
+  const teamBScore = Number(payload.teamBScore);
+  if (!Number.isInteger(teamAScore) || !Number.isInteger(teamBScore) || teamAScore < 0 || teamBScore < 0 || teamAScore > 22 || teamBScore > 22 || teamAScore === teamBScore) {
+    throw new Error('Scores must be different whole numbers between 0 and 22');
   }
   const { error: rpcError } = await supabase.rpc('v2_confirm_score_safely', {
     p_match_id: matchId,
-    p_team_a_score: Number(payload.teamAScore),
-    p_team_b_score: Number(payload.teamBScore)
+    p_team_a_score: teamAScore,
+    p_team_b_score: teamBScore
   });
   if (!rpcError) return fetchMatch(supabase, matchId);
   const rpcUnavailable = rpcError.code === 'PGRST202' || /v2_confirm_score_safely/i.test(String(rpcError.message || ''));
@@ -206,9 +208,9 @@ export async function confirmScore(supabase, matchId, payload) {
 
   const { data, error } = await supabase.from('v2_matches').update({
     status: 'confirmed',
-    team_a_score: payload.teamAScore,
-    team_b_score: payload.teamBScore,
-    winner: payload.teamAScore > payload.teamBScore ? 'A' : 'B',
+    team_a_score: teamAScore,
+    team_b_score: teamBScore,
+    winner: teamAScore > teamBScore ? 'A' : 'B',
     completed_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     confirmed_by: payload.confirmedBy || null

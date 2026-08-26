@@ -220,8 +220,8 @@ export function confirmLocalScore(eventId, matchId, payload) {
   }
   const teamAScore = Number(payload.teamAScore);
   const teamBScore = Number(payload.teamBScore);
-  if (!Number.isFinite(teamAScore) || !Number.isFinite(teamBScore)) {
-    throw new Error('Score must be a number');
+  if (!Number.isInteger(teamAScore) || !Number.isInteger(teamBScore) || teamAScore < 0 || teamBScore < 0 || teamAScore > 22 || teamBScore > 22 || teamAScore === teamBScore) {
+    throw new Error('Scores must be different whole numbers between 0 and 22');
   }
   const court = courtKey(matches[index]);
   matches[index] = {

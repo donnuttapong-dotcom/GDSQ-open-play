@@ -5,7 +5,9 @@ const source = fs.readFileSync(new URL('../openplay.html', import.meta.url), 'ut
 
 assert.match(source, /@media\(max-width:960px\)[\s\S]*?#tab-manage \.manage-grid\{display:flex!important;flex-direction:column!important\}/, 'iPad portrait and boundary widths must use one organizer column');
 assert.match(source, /#tab-manage #matchPanels\{[^}]*order:-2/, 'Live and Preview panels must lead the one-column organizer flow');
-assert.match(source, /#tab-manage #matchPanels>\.card:nth-child\(2\)\{order:1\}/, 'Live Courts must render before Preview in the narrow organizer flow');
+assert.match(source, /#tab-manage #matchPanels>\.preview-match-panel\{order:1\}/, 'Match Preview must stay above games that have already started');
+assert.match(source, /#tab-manage #matchPanels>\.live-courts-panel\{order:2\}/, 'Started games must stay below Match Preview');
+assert.match(source, /type="number" min="0" max="22" step="1" inputmode="numeric"/, 'Live score inputs must accept whole numbers from 0 through 22 only');
 assert.match(source, /button,select,input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):not\(\[type="file"\]\),a\.btn\{min-height:44px\}/, 'Operational controls must meet the 44px touch target');
 assert.match(source, /\.mode-tabs button,\.mode-tabs a\{min-height:44px\}/, 'Primary navigation targets must not be reduced below 44px by earlier styles');
 assert.match(source, /@media\(min-width:768px\)\{#playerQueueControl \.queue-actions\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)\}\}/, 'iPad and desktop queue actions must stay on one row');

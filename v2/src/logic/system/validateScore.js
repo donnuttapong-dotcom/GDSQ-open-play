@@ -17,8 +17,12 @@ export function validateMatchScore({ teamAScore, teamBScore, allowTie = false } 
     return { ok: false, message: 'คะแนนต้องไม่ติดลบ' };
   }
 
-  if (a > 99 || b > 99) {
-    return { ok: false, message: 'คะแนนสูงผิดปกติ กรุณาตรวจอีกครั้ง' };
+  if (!Number.isInteger(a) || !Number.isInteger(b)) {
+    return { ok: false, message: 'คะแนนต้องเป็นจำนวนเต็มระหว่าง 0 ถึง 22' };
+  }
+
+  if (a > 22 || b > 22) {
+    return { ok: false, message: 'คะแนนต้องอยู่ระหว่าง 0 ถึง 22' };
   }
 
   if (!allowTie && a === b) {
