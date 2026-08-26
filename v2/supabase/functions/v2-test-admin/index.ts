@@ -181,13 +181,25 @@ Deno.serve(async (request) => {
     }
     if (action === 'setPlayerStatus' || action === 'updatePlayerLevel' || action === 'removePlayer') {
       const id = String(body.playerId || ''); if (!validId(id)) return json({ ok: false, error: 'Invalid test player' }, 400, origin);
+      const { data: queuedRows, error: queuedError } = await admin.from('v2_test_match_players').select('match_id,match:v2_test_matches!inner(status)').eq('event_id', scope.eventId).eq('event_player_id', id).eq('match.status', 'queued_next');
+      if (queuedError) throw queuedError;
       if (action !== 'updatePlayerLevel') {
-        const { count, error: activeError } = await admin.from('v2_test_match_players').select('id,match:v2_test_matches!inner(status)', { count: 'exact', head: true }).eq('event_id', scope.eventId).eq('event_player_id', id).in('match.status', activeStatuses);
+        const { count, error: activeError } = await admin.from('v2_test_match_players').select('id,match:v2_test_matches!inner(status)', { count: 'exact', head: true }).eq('event_id', scope.eventId).eq('event_player_id', id).in('match.status', ['preview', 'assigned', 'playing', 'pending_score']);
         if (activeError) throw activeError;
         if (count) return json({ ok: false, error: 'Finish or cancel the active match before changing this player' }, 409, origin);
       }
-      const patch = action === 'setPlayerStatus' ? { status: ['ready', 'rest'].includes(String(body.status)) ? body.status : 'ready', updated_at: new Date().toISOString() } : action === 'updatePlayerLevel' ? { estimated_level: normalizeLevel(body.level), updated_at: new Date().toISOString() } : { status: 'removed', updated_at: new Date().toISOString() };
-      const { data, error } = await admin.from('v2_test_event_players').update(patch).eq('id', id).eq('event_id', scope.eventId).select('*').single(); if (error) throw error; return json({ ok: true, player: data }, 200, origin);
+      const requestedStatus = String(body.status || '').toLowerCase();
+      const nextStatus = requestedStatus === 'left' ? 'left' : ['rest', 'resting'].includes(requestedStatus) ? 'rest' : 'ready';
+      const patch = action === 'setPlayerStatus' ? { status: nextStatus, updated_at: new Date().toISOString() } : action === 'updatePlayerLevel' ? { estimated_level: normalizeLevel(body.level), updated_at: new Date().toISOString() } : { status: 'removed', updated_at: new Date().toISOString() };
+      const { data, error } = await admin.from('v2_test_event_players').update(patch).eq('id', id).eq('event_id', scope.eventId).select('*').single();
+      if (error) throw error;
+      const cancelsQueued = action === 'removePlayer' || (action === 'setPlayerStatus' && ['rest', 'left'].includes(nextStatus));
+      const queuedMatchIds = [...new Set((queuedRows || []).map((row) => String(row.match_id)).filter(validId))];
+      if (cancelsQueued && queuedMatchIds.length) {
+        const { error: cancelError } = await admin.from('v2_test_matches').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('event_id', scope.eventId).in('id', queuedMatchIds).eq('status', 'queued_next');
+        if (cancelError) throw cancelError;
+      }
+      return json({ ok: true, player: data, cancelledQueuedMatches: cancelsQueued ? queuedMatchIds.length : 0 }, 200, origin);
     }
     if (action === 'cancelMatchNext') {
       const matchId = String(body.matchId || '');
@@ -200,22 +212,31 @@ Deno.serve(async (request) => {
     if (action === 'createMatchPreview' || action === 'updateMatchPreview' || action === 'createMatchNext' || action === 'updateMatchNext') {
       const { teamA, teamB } = matchIds(body); const ids = [...teamA, ...teamB];
       if (ids.length !== 4 || new Set(ids).size !== 4 || ids.some((id) => !validId(id))) return json({ ok: false, error: 'Choose four different test players' }, 400, origin);
-      const court = Math.max(1, Math.min(10, Number(body.courtNumber || 1)));
+      const requestedMatchId = String(body.matchId || '');
+      const isUpdate = action === 'updateMatchPreview' || action === 'updateMatchNext';
+      let targetMatch: { id: string; status: string; court_number: number; court_name: string | null } | null = null;
+      if (isUpdate) {
+        if (!validId(requestedMatchId)) return json({ ok: false, error: 'Invalid test match' }, 400, origin);
+        const { data: target, error: targetError } = await admin.from('v2_test_matches').select('id,status,court_number,court_name').eq('id', requestedMatchId).eq('event_id', scope.eventId).maybeSingle();
+        if (targetError) throw targetError;
+        const expectedStatus = action === 'updateMatchNext' ? 'queued_next' : 'preview';
+        if (!target || target.status !== expectedStatus) return json({ ok: false, error: action === 'updateMatchNext' ? 'Next match not found' : 'Preview match not found' }, 404, origin);
+        targetMatch = target;
+      }
+      const court = Math.max(1, Math.min(10, Number(body.courtNumber || targetMatch?.court_number || 1)));
+      const courtName = String(body.courtName || targetMatch?.court_name || `Court ${court}`);
       if (action === 'createMatchNext' || action === 'updateMatchNext') {
-        const matchId = String(body.matchId || '');
         if (action === 'createMatchNext') {
           const { data: live, error: liveError } = await admin.from('v2_test_matches').select('id').eq('event_id', scope.eventId).eq('court_number', court).in('status', ['playing', 'pending_score']).maybeSingle();
           if (liveError || !live) return json({ ok: false, error: 'Court is not playing' }, 409, origin);
           const { data: existing, error: nextError } = await admin.from('v2_test_matches').select('id').eq('event_id', scope.eventId).eq('court_number', court).eq('status', 'queued_next').maybeSingle();
           if (nextError || existing) return json({ ok: false, error: 'Court already has a next match' }, 409, origin);
         }
-        const targetId = action === 'updateMatchNext' ? matchId : crypto.randomUUID();
+        const targetId = action === 'updateMatchNext' ? requestedMatchId : crypto.randomUUID();
         if (action === 'updateMatchNext') {
-          const { data: target, error: targetError } = await admin.from('v2_test_matches').select('id,status').eq('id', targetId).eq('event_id', scope.eventId).maybeSingle();
-          if (targetError || !target || target.status !== 'queued_next') return json({ ok: false, error: 'Next match not found' }, 404, origin);
           await admin.from('v2_test_match_players').delete().eq('match_id', targetId);
         } else {
-          const { error: createError } = await admin.from('v2_test_matches').insert({ id: targetId, organization_id: scope.organizationId, event_id: scope.eventId, court_number: court, court_name: String(body.courtName || `Court ${court}`), status: 'queued_next', match_mode: String(body.matchMode || 'fair'), fairness_score: body.fairnessScore == null ? null : Number(body.fairnessScore) });
+          const { error: createError } = await admin.from('v2_test_matches').insert({ id: targetId, organization_id: scope.organizationId, event_id: scope.eventId, court_number: court, court_name: courtName, status: 'queued_next', match_mode: String(body.matchMode || 'fair'), fairness_score: body.fairnessScore == null ? null : Number(body.fairnessScore) });
           if (createError) throw createError;
         }
         const { error: playersError } = await admin.from('v2_test_match_players').insert(ids.map((id, index) => ({ organization_id: scope.organizationId, event_id: scope.eventId, match_id: targetId, event_player_id: id, team: index < 2 ? 'A' : 'B', slot: index < 2 ? index + 1 : index - 1 })));
@@ -223,7 +244,7 @@ Deno.serve(async (request) => {
         return json({ ok: true, match: await fetchMatch(targetId) }, 200, origin);
       }
       const { data: matchId, error } = await admin.rpc('v2_test_save_match_preview', {
-        p_event_id: scope.eventId, p_organization_id: scope.organizationId, p_court_number: court, p_court_name: String(body.courtName || `Court ${court}`), p_team_a: teamA, p_team_b: teamB, p_match_mode: String(body.matchMode || body.match_type || 'fair'), p_fairness_score: body.fairnessScore == null ? null : Number(body.fairnessScore), p_idempotency_key: action === 'createMatchPreview' ? String(body.idempotencyKey || '') || null : null, p_match_id: action === 'updateMatchPreview' ? String(body.matchId || '') : null
+        p_event_id: scope.eventId, p_organization_id: scope.organizationId, p_court_number: court, p_court_name: courtName, p_team_a: teamA, p_team_b: teamB, p_match_mode: String(body.matchMode || body.match_type || 'fair'), p_fairness_score: body.fairnessScore == null ? null : Number(body.fairnessScore), p_idempotency_key: action === 'createMatchPreview' ? String(body.idempotencyKey || '') || null : null, p_match_id: action === 'updateMatchPreview' ? requestedMatchId : null
       });
       if (error) throw error;
       return json({ ok: true, match: await fetchMatch(String(matchId)) }, 200, origin);

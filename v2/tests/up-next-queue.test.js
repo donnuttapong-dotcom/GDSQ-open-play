@@ -36,7 +36,10 @@ assert.equal(matches.filter((match) => match.status === 'confirmed').length, 1, 
 const lifecycleSource = fs.readFileSync(new URL('../src/logic/system/eventLifecycle.js', import.meta.url), 'utf8');
 const openplaySource = fs.readFileSync(new URL('../openplay.html', import.meta.url), 'utf8');
 const edgeSource = fs.readFileSync(new URL('../supabase/functions/v2-admin-results/index.ts', import.meta.url), 'utf8');
+const testEdgeSource = fs.readFileSync(new URL('../supabase/functions/v2-test-admin/index.ts', import.meta.url), 'utf8');
 const migrationSource = fs.readFileSync(new URL('../supabase/migrations/20260826103000_up_next_match_queue.sql', import.meta.url), 'utf8');
+const triggerPermissionSource = fs.readFileSync(new URL('../supabase/migrations/20260826170000_up_next_trigger_function_permissions.sql', import.meta.url), 'utf8');
+const servicesSource = fs.readFileSync(new URL('../src/services/index.js', import.meta.url), 'utf8');
 
 assert.match(lifecycleSource, /'queued_next'/, 'An unresolved next match must block End Event');
 assert.match(openplaySource, /GENERATE ALL NEXT/, 'Organizer UI must expose Generate All Next');
@@ -45,8 +48,17 @@ assert.match(openplaySource, /UP NEXT/, 'Organizer UI must render an Up Next car
 assert.match(edgeSource, /createMatchNext/, 'Organizer Edge Function must expose next-match creation');
 assert.match(edgeSource, /updateMatchNext/, 'Organizer Edge Function must expose next-match editing');
 assert.match(edgeSource, /cancelMatchNext/, 'Organizer Edge Function must expose next-match cancellation');
+assert.match(testEdgeSource, /\['preview', 'assigned', 'playing', 'pending_score'\]/, 'Test Mode status changes must not treat queued-next as a playing match');
+assert.match(testEdgeSource, /cancelledQueuedMatches/, 'Test Mode Rest, Left, and Remove must cancel the affected queued-next match');
+assert.match(testEdgeSource, /requestedStatus === 'left'/, 'Test Mode must preserve the Left status instead of converting it to Ready');
+assert.match(testEdgeSource, /body\.courtNumber \|\| targetMatch\?\.court_number \|\| 1/, 'Test Mode match edits must retain the existing court when the UI sends only a new roster');
+assert.match(testEdgeSource, /body\.courtName \|\| targetMatch\?\.court_name/, 'Test Mode match edits must retain the existing court name');
+assert.match(servicesSource, /test\('deleteEvent'[\s\S]*?clearTestAdminSession\(eventId\)[\s\S]*?invalidateTestEvents/, 'Deleting a Test event must clear its local capability before the event list reloads');
 assert.match(migrationSource, /v2_matches_one_queued_next_per_court/, 'Database must enforce one queued next match per court');
 assert.match(migrationSource, /MATCH_PLAYER_ALREADY_ACTIVE/, 'Database must prevent duplicate player reservations');
 assert.match(migrationSource, /v2_promote_queued_next_after_match/, 'Confirm/cancel transitions must promote queued next matches');
+for (const helper of ['v2_promote_queued_next_after_match', 'v2_cancel_queued_next_for_unavailable_player', 'v2_block_event_completion_with_queued_next']) {
+  assert.match(triggerPermissionSource, new RegExp(`revoke all on function public\\.${helper}\\(\\)[\\s\\S]*?public, anon, authenticated`), `${helper} must not be directly executable by browser roles`);
+}
 
 console.log('up next queue tests passed');

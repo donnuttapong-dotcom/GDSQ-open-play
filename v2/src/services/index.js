@@ -2,7 +2,7 @@ import './bilingualUi.js?v=v2-bilingual-02';
 import './shareLinksUi.js';
 import { getServiceMode, SERVICE_MODES } from './serviceMode.js';
 import { getSupabaseClient } from './supabaseClient.js';
-import { isTestEnvironment, getTestAdminSession, knownTestEventIds, createTestEvent, authorizeTestAdmin, exitTestAdmin, invokeTestAdmin } from './testAdminService.js';
+import { isTestEnvironment, getTestAdminSession, clearTestAdminSession, knownTestEventIds, createTestEvent, authorizeTestAdmin, exitTestAdmin, invokeTestAdmin } from './testAdminService.js';
 import { normalizeEdgeFunctionError } from './edgeFunctionError.js';
 import { chooseCurrentOrganizerEvent } from './organizerEventSelection.js';
 import { matchPlayerIds as normalizedMatchPlayerIds, normalizeMatch as normalizeSharedMatch } from './matchModel.js';
@@ -233,7 +233,7 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
     },
 
     async deleteEvent(eventId, { finalized = false } = {}) {
-      if (isSupabase && isTestEventId(eventId)) { const result = await test('deleteEvent', { eventId }); invalidateTestEvents(); return result; }
+      if (isSupabase && isTestEventId(eventId)) { const result = await test('deleteEvent', { eventId }); clearTestAdminSession(eventId); invalidateTestEvents(); return result; }
       if (isSupabase) {
         const result = await organizerAdminCall('deleteEvent', { eventId, confirmation: finalized ? 'DELETE_FINALIZED_EVENT' : 'DELETE_EVENT' });
         forgetOrganizerEventToken(eventId);
