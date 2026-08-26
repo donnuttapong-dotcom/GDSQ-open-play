@@ -1,4 +1,4 @@
-const ACTIVE_MATCH_STATUSES = new Set(['preview', 'assigned', 'playing', 'pending_score']);
+const ACTIVE_MATCH_STATUSES = new Set(['preview', 'assigned', 'playing', 'pending_score', 'queued_next']);
 const CONFIRMED_MATCH_STATUSES = new Set(['confirmed', 'completed', 'done', 'finished']);
 
 function status(value) {

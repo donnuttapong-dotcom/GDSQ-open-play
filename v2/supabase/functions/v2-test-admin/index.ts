@@ -3,8 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 const url = Deno.env.get('SUPABASE_URL') || '';
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const origins = new Set(['https://donnuttapong-dotcom.github.io', 'https://gdsq-open-play-live.vercel.app', 'https://gdsq-open-play-v2-preview.vercel.app', 'http://127.0.0.1:4175', 'http://localhost:4175']);
-const allowedActions = new Set(['createEvent', 'authorize', 'getOrganizerState', 'getEvent', 'listPlayers', 'listMatches', 'listPreferences', 'exit', 'endTest', 'checkInPlayer', 'addTestPlayers', 'setPlayerStatus', 'updatePlayerLevel', 'removePlayer', 'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore', 'savePreference', 'resetMatches', 'resetQueue', 'resetEvent', 'deleteEvent']);
-const activeStatuses = ['preview', 'assigned', 'playing', 'pending_score'];
+const allowedActions = new Set(['createEvent', 'authorize', 'getOrganizerState', 'getEvent', 'listPlayers', 'listMatches', 'listPreferences', 'exit', 'endTest', 'checkInPlayer', 'addTestPlayers', 'setPlayerStatus', 'updatePlayerLevel', 'removePlayer', 'createMatchPreview', 'updateMatchPreview', 'createMatchNext', 'updateMatchNext', 'cancelMatchNext', 'startMatch', 'cancelMatch', 'confirmScore', 'savePreference', 'resetMatches', 'resetQueue', 'resetEvent', 'deleteEvent']);
+const activeStatuses = ['preview', 'assigned', 'playing', 'pending_score', 'queued_next'];
 
 // Vercel gives every deployment a unique URL. Restrict it to this project's
 // deployment naming pattern instead of rejecting a valid preview before it
@@ -189,10 +189,39 @@ Deno.serve(async (request) => {
       const patch = action === 'setPlayerStatus' ? { status: ['ready', 'rest'].includes(String(body.status)) ? body.status : 'ready', updated_at: new Date().toISOString() } : action === 'updatePlayerLevel' ? { estimated_level: normalizeLevel(body.level), updated_at: new Date().toISOString() } : { status: 'removed', updated_at: new Date().toISOString() };
       const { data, error } = await admin.from('v2_test_event_players').update(patch).eq('id', id).eq('event_id', scope.eventId).select('*').single(); if (error) throw error; return json({ ok: true, player: data }, 200, origin);
     }
-    if (action === 'createMatchPreview' || action === 'updateMatchPreview') {
+    if (action === 'cancelMatchNext') {
+      const matchId = String(body.matchId || '');
+      if (!validId(matchId)) return json({ ok: false, error: 'Invalid test match' }, 400, origin);
+      const { data, error } = await admin.from('v2_test_matches').update({ status: 'cancelled', updated_at: new Date().toISOString() }).eq('id', matchId).eq('event_id', scope.eventId).eq('status', 'queued_next').select('*').maybeSingle();
+      if (error) throw error;
+      if (!data) return json({ ok: false, error: 'Next match changed in another session. Refresh and try again.' }, 409, origin);
+      return json({ ok: true, match: await fetchMatch(matchId) }, 200, origin);
+    }
+    if (action === 'createMatchPreview' || action === 'updateMatchPreview' || action === 'createMatchNext' || action === 'updateMatchNext') {
       const { teamA, teamB } = matchIds(body); const ids = [...teamA, ...teamB];
       if (ids.length !== 4 || new Set(ids).size !== 4 || ids.some((id) => !validId(id))) return json({ ok: false, error: 'Choose four different test players' }, 400, origin);
       const court = Math.max(1, Math.min(10, Number(body.courtNumber || 1)));
+      if (action === 'createMatchNext' || action === 'updateMatchNext') {
+        const matchId = String(body.matchId || '');
+        if (action === 'createMatchNext') {
+          const { data: live, error: liveError } = await admin.from('v2_test_matches').select('id').eq('event_id', scope.eventId).eq('court_number', court).in('status', ['playing', 'pending_score']).maybeSingle();
+          if (liveError || !live) return json({ ok: false, error: 'Court is not playing' }, 409, origin);
+          const { data: existing, error: nextError } = await admin.from('v2_test_matches').select('id').eq('event_id', scope.eventId).eq('court_number', court).eq('status', 'queued_next').maybeSingle();
+          if (nextError || existing) return json({ ok: false, error: 'Court already has a next match' }, 409, origin);
+        }
+        const targetId = action === 'updateMatchNext' ? matchId : crypto.randomUUID();
+        if (action === 'updateMatchNext') {
+          const { data: target, error: targetError } = await admin.from('v2_test_matches').select('id,status').eq('id', targetId).eq('event_id', scope.eventId).maybeSingle();
+          if (targetError || !target || target.status !== 'queued_next') return json({ ok: false, error: 'Next match not found' }, 404, origin);
+          await admin.from('v2_test_match_players').delete().eq('match_id', targetId);
+        } else {
+          const { error: createError } = await admin.from('v2_test_matches').insert({ id: targetId, organization_id: scope.organizationId, event_id: scope.eventId, court_number: court, court_name: String(body.courtName || `Court ${court}`), status: 'queued_next', match_mode: String(body.matchMode || 'fair'), fairness_score: body.fairnessScore == null ? null : Number(body.fairnessScore) });
+          if (createError) throw createError;
+        }
+        const { error: playersError } = await admin.from('v2_test_match_players').insert(ids.map((id, index) => ({ organization_id: scope.organizationId, event_id: scope.eventId, match_id: targetId, event_player_id: id, team: index < 2 ? 'A' : 'B', slot: index < 2 ? index + 1 : index - 1 })));
+        if (playersError) throw playersError;
+        return json({ ok: true, match: await fetchMatch(targetId) }, 200, origin);
+      }
       const { data: matchId, error } = await admin.rpc('v2_test_save_match_preview', {
         p_event_id: scope.eventId, p_organization_id: scope.organizationId, p_court_number: court, p_court_name: String(body.courtName || `Court ${court}`), p_team_a: teamA, p_team_b: teamB, p_match_mode: String(body.matchMode || body.match_type || 'fair'), p_fairness_score: body.fairnessScore == null ? null : Number(body.fairnessScore), p_idempotency_key: action === 'createMatchPreview' ? String(body.idempotencyKey || '') || null : null, p_match_id: action === 'updateMatchPreview' ? String(body.matchId || '') : null
       });
@@ -220,6 +249,7 @@ Deno.serve(async (request) => {
         const existing = await fetchMatch(matchId);
         if (existing.status === 'confirmed') return json({ ok: true, match: existing }, 200, origin);
       }
+      const before = await fetchMatch(matchId);
       const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
       const allowedFrom = action === 'startMatch' ? ['preview'] : action === 'cancelMatch' ? activeStatuses : ['playing', 'pending_score'];
       if (action === 'startMatch') Object.assign(patch, { status: 'playing', started_at: new Date().toISOString() });
@@ -235,7 +265,10 @@ Deno.serve(async (request) => {
       const match = await fetchMatch(matchId);
       const ids = [...match.teamA, ...match.teamB];
       if (action === 'startMatch') { const { error: playerError } = await admin.from('v2_test_event_players').update({ status: 'playing', updated_at: new Date().toISOString() }).eq('event_id', scope.eventId).in('id', ids); if (playerError) throw playerError; }
-      if (action === 'cancelMatch' || action === 'confirmScore') await releasePlayers(match, scope);
+      if (['cancelMatch', 'confirmScore'].includes(action) && ['playing', 'pending_score'].includes(String(before.status))) {
+        await releasePlayers(match, scope);
+        await admin.from('v2_test_matches').update({ status: 'preview', updated_at: new Date().toISOString() }).eq('event_id', scope.eventId).eq('court_number', before.courtNumber).eq('status', 'queued_next');
+      }
       return json({ ok: true, match }, 200, origin);
     }
     return json({ ok: true }, 200, origin);

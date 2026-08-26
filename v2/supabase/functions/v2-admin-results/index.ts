@@ -8,7 +8,7 @@ const openOrganizerActions = new Set([
   'createEvent', 'setEventStatus',
   'smartQueueSavePreference', 'smartQueueRecordMatch',
   'updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer',
-  'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore'
+  'createMatchPreview', 'updateMatchPreview', 'createMatchNext', 'updateMatchNext', 'cancelMatchNext', 'startMatch', 'cancelMatch', 'confirmScore'
 ]);
 const organizerDeviceActions = new Set(['endEventAndSaveResults', 'deleteEvent']);
 const passcodeOnlyAdminResultsActions = new Set([
@@ -38,7 +38,7 @@ Deno.serve(async (request) => {
   if (!url || !serviceRoleKey) return json({ ok: false, error: 'Admin service is not configured' }, 500, origin);
   const body = await request.json().catch(() => null);
   const action = String(body?.action || ''), passcode = String(body?.passcode || '');
-  if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listLegacyCandidates', 'linkLegacyHistory', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer', 'setRating', 'smartQueueSetEnabled', 'smartQueueSavePreference', 'smartQueueRecordMatch', 'updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer', 'createEvent', 'setEventStatus', 'endEventAndSaveResults', 'deleteEvent', 'createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore'].includes(action) || passcode.length > 128 || (!openOrganizerActions.has(action) && !organizerDeviceActions.has(action) && passcode.length < 5)) return json({ ok: false, error: 'Invalid request' }, 400, origin);
+  if (!['verify', 'listEvents', 'listProfiles', 'listMembers', 'getMember', 'listLegacyCandidates', 'linkLegacyHistory', 'listClaims', 'updateProfileName', 'reviewClaim', 'updateScore', 'updatePlayers', 'deleteMatch', 'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'linkPlayer', 'setRating', 'smartQueueSetEnabled', 'smartQueueSavePreference', 'smartQueueRecordMatch', 'updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer', 'createEvent', 'setEventStatus', 'endEventAndSaveResults', 'deleteEvent', 'createMatchPreview', 'updateMatchPreview', 'createMatchNext', 'updateMatchNext', 'cancelMatchNext', 'startMatch', 'cancelMatch', 'confirmScore'].includes(action) || passcode.length > 128 || (!openOrganizerActions.has(action) && !organizerDeviceActions.has(action) && passcode.length < 5)) return json({ ok: false, error: 'Invalid request' }, 400, origin);
   const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
   const ipHash = await hash(clientIp(request));
   let organizerDeviceAuthorized = false;
@@ -149,20 +149,31 @@ Deno.serve(async (request) => {
     if (error) return json({ ok: false, error: error.message || 'Could not delete event' }, 409, origin);
     return json({ ok: true, result }, 200, origin);
   }
-  if (['createMatchPreview', 'updateMatchPreview', 'startMatch', 'cancelMatch', 'confirmScore'].includes(action)) {
+  if (['createMatchPreview', 'updateMatchPreview', 'createMatchNext', 'updateMatchNext', 'cancelMatchNext', 'startMatch', 'cancelMatch', 'confirmScore'].includes(action)) {
     const organizationId = String(body?.organizationId || ''), eventId = String(body?.eventId || ''), matchId = String(body?.matchId || '');
     const playerIds = [...(Array.isArray(body?.teamA) ? body.teamA : []), ...(Array.isArray(body?.teamB) ? body.teamB : [])].map((player) => String(player?.eventPlayerId || player?.event_player_id || player?.id || player || '')).filter(validId);
     let resolvedMatchId = matchId;
-    if (!validId(organizationId) || !validId(eventId) || (action !== 'createMatchPreview' && !validId(matchId))) return json({ ok: false, error: 'Invalid match request' }, 400, origin);
+    if (!validId(organizationId) || !validId(eventId) || (!['createMatchPreview', 'createMatchNext'].includes(action) && !validId(matchId))) return json({ ok: false, error: 'Invalid match request' }, 400, origin);
     if (!await requireLiveEvent(eventId, organizationId)) return json({ ok: false, error: 'Event is not LIVE' }, 409, origin);
     if (action === 'createMatchPreview') {
       const { data, error } = await admin.rpc('v2_admin_create_match_preview', { p_event_id: eventId, p_organization_id: organizationId, p_court_number: Number(body?.courtNumber), p_event_player_ids: playerIds, p_idempotency_key: body?.idempotencyKey || null, p_ip_hash: ipHash });
       if (error) return json({ ok: false, error: error.message || 'Could not create preview' }, 400, origin);
       resolvedMatchId = String(data || '');
+    } else if (action === 'createMatchNext') {
+      const { data, error } = await admin.rpc('v2_admin_create_match_next', { p_event_id: eventId, p_organization_id: organizationId, p_court_number: Number(body?.courtNumber), p_event_player_ids: playerIds, p_ip_hash: ipHash });
+      if (error) return json({ ok: false, error: error.message || 'Could not create next match' }, 400, origin);
+      resolvedMatchId = String(data || '');
     } else if (action === 'updateMatchPreview') {
       if (playerIds.length !== 4) return json({ ok: false, error: 'Choose four different players' }, 400, origin);
       const { error } = await admin.rpc('v2_admin_update_match_preview', { p_match_id: matchId, p_organization_id: organizationId, p_event_player_ids: playerIds, p_ip_hash: ipHash });
       if (error) return json({ ok: false, error: error.message || 'Could not update preview' }, 400, origin);
+    } else if (action === 'updateMatchNext') {
+      if (playerIds.length !== 4) return json({ ok: false, error: 'Choose four different players' }, 400, origin);
+      const { error } = await admin.rpc('v2_admin_update_match_next', { p_match_id: matchId, p_organization_id: organizationId, p_event_player_ids: playerIds, p_ip_hash: ipHash });
+      if (error) return json({ ok: false, error: error.message || 'Could not update next match' }, 400, origin);
+    } else if (action === 'cancelMatchNext') {
+      const { error } = await admin.rpc('v2_admin_cancel_match_next', { p_match_id: matchId, p_organization_id: organizationId, p_ip_hash: ipHash });
+      if (error) return json({ ok: false, error: error.message || 'Could not cancel next match' }, 400, origin);
     } else if (action === 'startMatch') {
       const { error } = await admin.rpc('v2_admin_start_match', { p_match_id: matchId, p_organization_id: organizationId, p_ip_hash: ipHash });
       if (error) return json({ ok: false, error: error.message || 'Could not start match' }, 400, origin);

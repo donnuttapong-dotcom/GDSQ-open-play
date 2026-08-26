@@ -22,7 +22,7 @@ import { getEventPlayers as getMockEventPlayers } from './mockPlayerService.js';
 import { getMatchHistory as getMockMatchHistory } from './mockMatchService.js';
 import { listLocalEventPlayers, checkInLocalPlayer, updateLocalEventPlayerLevel, findLocalPlayerProfileByEmail } from './localPlayerStore.js?v=email-profile-02';
 import { mergeLocalPlayerStats, setLocalPlayerStatus, setLocalPlayerLevel, forceAllLocalPlayersReady, applyLocalMatchResult, rebuildLocalMatchStats, releaseInactivePlayingPlayers } from './localPlayerStatsStore.js';
-import { listLocalEventMatches, createLocalMatchPreview, updateLocalMatchPreview, startLocalMatch, cancelLocalMatch, confirmLocalScore, updateLocalConfirmedScore } from './localMatchStore.js';
+import { listLocalEventMatches, createLocalMatchPreview, createLocalMatchNext, updateLocalMatchPreview, updateLocalMatchNext, startLocalMatch, cancelLocalMatch, confirmLocalScore, updateLocalConfirmedScore } from './localMatchStore.js';
 import { clearLocalEventData } from './localEventCleanup.js';
 import { listEvents as listSupabaseEvents, listStatsEvents as listSupabaseStatsEvents, getEventById as getSupabaseEventById, listArchivedEventsForDate as listArchivedSupabaseEventsForDate, createEvent as createSupabaseEvent, updateEventStatus as updateSupabaseEventStatus, deleteEvent as deleteSupabaseEvent } from './supabaseEventService.js?v=event-history-01';
 import { listEventPlayers as listSupabaseEventPlayers, checkInPlayer as checkInSupabasePlayer, updateEventPlayerStatus as updateSupabaseEventPlayerStatus, updateEventPlayerLevel as updateSupabaseEventPlayerLevel, findPlayerProfileByEmail as findSupabasePlayerProfileByEmail, getAuthenticatedPlayer as getSupabaseAuthenticatedPlayer, sendPlayerSignInLink as sendSupabasePlayerSignInLink, signOutPlayer as signOutSupabasePlayer, joinVerifiedPlayerEvent as joinSupabaseVerifiedPlayerEvent, joinInstantPlayerEvent as joinSupabaseInstantPlayerEvent, updateMyPlayerProfile as updateSupabaseMyPlayerProfile, requestPlayerProfileClaim as requestSupabasePlayerProfileClaim, listMyPlayerProfileClaims as listSupabaseMyPlayerProfileClaims } from './supabasePlayerService.js?v=player-level-01';
@@ -427,6 +427,15 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
       return createLocalMatchPreview(payload);
     },
 
+    async createMatchNext(payload) {
+      if (isSupabase && isTestEventId(payload.eventId)) {
+        const result = await test('createMatchNext', payload);
+        return normalizeSharedMatch(result.match);
+      }
+      if (isSupabase) { const result = await organizerAdminCall('createMatchNext', { ...payload, organizationId: payload.organizationId || organizationId }); return normalizeSharedMatch(result.match); }
+      return createLocalMatchNext(payload);
+    },
+
     async updateMatchPreview(matchId, payload) {
       if (isSupabase && isTestEventId(payload.eventId)) {
         const result = await test('updateMatchPreview', { ...payload, matchId });
@@ -434,6 +443,24 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
       }
       if (isSupabase) { const result = await organizerAdminCall('updateMatchPreview', { ...payload, matchId, organizationId: payload.organizationId || organizationId }); return normalizeSharedMatch(result.match); }
       return updateLocalMatchPreview(payload.eventId, matchId, payload);
+    },
+
+    async updateMatchNext(matchId, payload) {
+      if (isSupabase && isTestEventId(payload.eventId)) {
+        const result = await test('updateMatchNext', { ...payload, matchId });
+        return normalizeSharedMatch(result.match);
+      }
+      if (isSupabase) { const result = await organizerAdminCall('updateMatchNext', { ...payload, matchId, organizationId: payload.organizationId || organizationId }); return normalizeSharedMatch(result.match); }
+      return updateLocalMatchNext(payload.eventId, matchId, payload);
+    },
+
+    async cancelMatchNext(matchId, payload = {}) {
+      if (isSupabase && isTestEventId(payload.eventId)) {
+        const result = await test('cancelMatchNext', { ...payload, matchId });
+        return normalizeSharedMatch(result.match);
+      }
+      if (isSupabase) { const result = await organizerAdminCall('cancelMatchNext', { ...payload, matchId, organizationId: payload.organizationId || organizationId }); return normalizeSharedMatch(result.match); }
+      return cancelLocalMatch(payload.eventId, matchId, payload.reason || 'next_cancelled');
     },
 
     async startMatch(matchId, payload = {}) {

@@ -43,7 +43,7 @@ function hasScore(value) {
 }
 
 function isActive(match) {
-  return ['preview', 'assigned', 'playing', 'pending_score'].includes(String(match?.status || '').toLowerCase());
+  return ['preview', 'assigned', 'playing', 'pending_score', 'queued_next'].includes(String(match?.status || '').toLowerCase());
 }
 
 function courtKey(match) {
@@ -94,6 +94,36 @@ export function createLocalMatchPreview(payload) {
   return match;
 }
 
+export function createLocalMatchNext(payload) {
+  if (!payload.eventId) throw new Error('Missing event id');
+  const matches = list(payload.eventId);
+  const court = courtKey(payload);
+  if (!matches.some((match) => courtKey(match) === court && ['playing', 'pending_score'].includes(String(match.status).toLowerCase()))) throw new Error('Court is not playing');
+  if (matches.some((match) => courtKey(match) === court && String(match.status).toLowerCase() === 'queued_next')) throw new Error('Court already has a next match');
+  const match = {
+    id: payload.id || `local-next-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    eventId: payload.eventId,
+    courtId: payload.courtId,
+    courtName: payload.courtName,
+    court_number: payload.courtNumber || null,
+    status: 'queued_next',
+    teamA: (payload.teamA || []).map(playerId).filter(Boolean),
+    teamB: (payload.teamB || []).map(playerId).filter(Boolean),
+    fairnessScore: payload.fairnessScore || null,
+    matchMode: payload.matchMode || 'auto_next',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  const ids = new Set(matchPlayerIds(match));
+  if (ids.size !== 4) throw new Error('A next match must contain four different players');
+  for (const current of matches) {
+    if (!isActive(current)) continue;
+    if (matchPlayerIds(current).some((id) => ids.has(id))) throw new Error('A selected player is already assigned to an active match');
+  }
+  save(payload.eventId, [match, ...matches]);
+  return match;
+}
+
 export function updateLocalMatchPreview(eventId, matchId, payload) {
   const matches = list(eventId);
   const index = matches.findIndex((match) => String(match.id) === String(matchId));
@@ -106,6 +136,23 @@ export function updateLocalMatchPreview(eventId, matchId, payload) {
     updatedAt: new Date().toISOString()
   };
   assertAvailable(matches, updated, matchId);
+  matches[index] = updated;
+  save(eventId, matches);
+  return updated;
+}
+
+export function updateLocalMatchNext(eventId, matchId, payload) {
+  const matches = list(eventId);
+  const index = matches.findIndex((match) => String(match.id) === String(matchId));
+  if (index < 0) throw new Error('Match not found');
+  if (String(matches[index].status).toLowerCase() !== 'queued_next') throw new Error('Only next matches can be edited');
+  const updated = { ...matches[index], teamA: (payload.teamA || []).map(playerId).filter(Boolean), teamB: (payload.teamB || []).map(playerId).filter(Boolean), updatedAt: new Date().toISOString() };
+  const ids = new Set(matchPlayerIds(updated));
+  if (ids.size !== 4) throw new Error('A next match must contain four different players');
+  for (const current of matches) {
+    if (!isActive(current) || String(current.id) === String(matchId)) continue;
+    if (matchPlayerIds(current).some((id) => ids.has(id))) throw new Error('A selected player is already assigned to an active match');
+  }
   matches[index] = updated;
   save(eventId, matches);
   return updated;
@@ -142,6 +189,8 @@ export function cancelLocalMatch(eventId, matchId, reasonOrPayload = 'cancelled_
     source: 'cancel_match'
   };
 
+  const wasPlaying = ['playing', 'pending_score'].includes(String(matches[index].status).toLowerCase());
+  const court = courtKey(matches[index]);
   matches[index] = {
     ...matches[index],
     status: 'cancelled',
@@ -153,6 +202,10 @@ export function cancelLocalMatch(eventId, matchId, reasonOrPayload = 'cancelled_
     teamBScore: scoreSnapshot.teamBScore,
     updatedAt: new Date().toISOString()
   };
+  if (wasPlaying) {
+    const nextIndex = matches.findIndex((match) => courtKey(match) === court && String(match.status).toLowerCase() === 'queued_next');
+    if (nextIndex >= 0) matches[nextIndex] = { ...matches[nextIndex], status: 'preview', updatedAt: new Date().toISOString() };
+  }
   save(eventId, matches);
   return matches[index];
 }
@@ -170,6 +223,7 @@ export function confirmLocalScore(eventId, matchId, payload) {
   if (!Number.isFinite(teamAScore) || !Number.isFinite(teamBScore)) {
     throw new Error('Score must be a number');
   }
+  const court = courtKey(matches[index]);
   matches[index] = {
     ...matches[index],
     status: 'confirmed',
@@ -179,6 +233,8 @@ export function confirmLocalScore(eventId, matchId, payload) {
     completedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
+  const nextIndex = matches.findIndex((match) => courtKey(match) === court && String(match.status).toLowerCase() === 'queued_next');
+  if (nextIndex >= 0) matches[nextIndex] = { ...matches[nextIndex], status: 'preview', updatedAt: new Date().toISOString() };
   save(eventId, matches);
   return matches[index];
 }

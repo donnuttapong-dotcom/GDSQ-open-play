@@ -54,7 +54,7 @@ async function fetchMatch(supabase, matchId) {
 }
 
 function activeStatus(match) {
-  return ['preview', 'assigned', 'playing', 'pending_score'].includes(String(match?.status || '').toLowerCase());
+  return ['preview', 'assigned', 'playing', 'pending_score', 'queued_next'].includes(String(match?.status || '').toLowerCase());
 }
 
 function matchPlayerIds(match) {

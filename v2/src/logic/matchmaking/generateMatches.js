@@ -95,7 +95,7 @@ function getMatchesPlayed(player, historyStats) {
 }
 
 function shouldUseMatchInHistory(match) {
-  return !['cancelled', 'canceled', 'deleted', 'removed', 'void', 'draft', 'preview'].includes(normalizeStatus(match));
+  return !['cancelled', 'canceled', 'deleted', 'removed', 'void', 'draft', 'preview', 'queued_next'].includes(normalizeStatus(match));
 }
 
 export function buildMatchHistoryStats(history = []) {

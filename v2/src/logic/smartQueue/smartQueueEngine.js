@@ -13,7 +13,7 @@ export const SMART_QUEUE_LEVEL_SPREAD = Object.freeze({
   challenge: 1
 });
 
-const ACTIVE_MATCH_STATUSES = new Set(['preview', 'assigned', 'playing', 'pending_score']);
+const ACTIVE_MATCH_STATUSES = new Set(['preview', 'assigned', 'playing', 'pending_score', 'queued_next']);
 const CONFIRMED_MATCH_STATUSES = new Set(['confirmed', 'completed', 'done', 'finished']);
 const MODE_TIE_ORDER = Object.freeze({ balanced: 0, social: 1, challenge: 2 });
 

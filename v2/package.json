@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node ./tests/matchmaking.test.js && node ./tests/smart-queue.test.js && node ./tests/match-model.test.js && node ./tests/supabase-services.test.js && node ./tests/player-identity-service.test.js && node ./tests/player-identity-migration-safety.test.js && node ./tests/public-player-experience.test.js && node ./tests/event-history.test.js && node ./tests/archived-event-history-service.test.js && node ./tests/confirmed-history-stats.test.js && node ./tests/hall-of-fame.test.js && node ./tests/gdsq-rating.test.js && node ./tests/organizer-access.test.js && node ./tests/player-level-behavior.test.js && node ./tests/production-readiness.test.js"
+    "test": "node ./tests/matchmaking.test.js && node ./tests/smart-queue.test.js && node ./tests/match-model.test.js && node ./tests/supabase-services.test.js && node ./tests/player-identity-service.test.js && node ./tests/player-identity-migration-safety.test.js && node ./tests/public-player-experience.test.js && node ./tests/event-history.test.js && node ./tests/archived-event-history-service.test.js && node ./tests/confirmed-history-stats.test.js && node ./tests/hall-of-fame.test.js && node ./tests/gdsq-rating.test.js && node ./tests/organizer-access.test.js && node ./tests/player-level-behavior.test.js && node ./tests/up-next-queue.test.js && node ./tests/production-readiness.test.js"
   }
 }
