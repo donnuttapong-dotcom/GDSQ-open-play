@@ -34,7 +34,7 @@
     <section id="joinedPanel" class="cut card mt-4 hidden p-5 text-center"><div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-lime-300/50 bg-lime-300/10 text-3xl lime">✓</div><h2 id="joinedTitle" class="mt-3 text-2xl font-black">เข้าร่วมสำเร็จ</h2><p id="joinedHint" class="muted mt-2">พร้อมลงเล่นแล้ว</p><a id="playerInfoLink" class="cut primary mt-4 block px-4 py-4 font-black" href="#">เปิดข้อมูลผู้เล่น</a></section>
   </main>
   <script type="module">
-    import { createV2Services } from './src/services/index.js?v=production-readiness-02';
+    import { createV2Services } from './src/services/index.js?v=player-level-01';
     const $=id=>document.getElementById(id),services=createV2Services({mode:'supabase'}),ORG='00000000-0000-4000-8000-000000000001';
     let event=null,rememberedProfile=null,joinedLinked=null,busy=false;
     const params=()=>new URLSearchParams(location.search),eventId=()=>params().get('event')||params().get('eventId')||'',lang=()=>localStorage.getItem('gdsq_v2_ui_lang')==='en'?'en':'th';

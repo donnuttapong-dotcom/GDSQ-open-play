@@ -188,7 +188,7 @@ export async function checkInPlayer(supabase, payload) {
   if (existing) {
     const eventPlayerPatch = {
       display_name: profile?.display_name || name,
-      estimated_level: profile?.default_level || level,
+      estimated_level: level,
       updated_at: new Date().toISOString()
     };
     const avatarUrl = profile?.avatar_url || profilePayload.avatarUrl || existing.avatar_url || '';
@@ -217,7 +217,7 @@ export async function checkInPlayer(supabase, payload) {
     event_id: payload.eventId,
     player_id: profile?.id || payload.playerId || null,
     display_name: profile?.display_name || name,
-    estimated_level: profile?.default_level || level,
+    estimated_level: level,
     status: payload.status || 'checked_in',
     queue_joined_at: new Date().toISOString()
   };
