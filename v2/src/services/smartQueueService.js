@@ -76,10 +76,10 @@ export function createSmartQueueStore({ supabase = null, mode = 'mock', getAdmin
 
   async function adminCall(action, payload) {
     const passcode = action === 'smartQueueSetEnabled' ? await getAdminPasscode?.() : '';
-    if (action === 'smartQueueSetEnabled' && !passcode) throw new Error('Admin access is required to change Smart Queue settings.');
+    if (action === 'smartQueueSetEnabled' && !passcode) throw new Error('Admin access is required to change Match Making settings.');
     const { data, error } = await supabase.functions.invoke('v2-admin-results', { body: { action, ...(passcode ? { passcode } : {}), ...payload } });
     if (error) throw error;
-    if (!data?.ok) throw new Error(data?.error || 'Smart Queue admin request failed');
+    if (!data?.ok) throw new Error(data?.error || 'Match Making admin request failed');
     return data;
   }
 
@@ -95,7 +95,7 @@ export function createSmartQueueStore({ supabase = null, mode = 'mock', getAdmin
       body: { action: 'saveOwnPreference', capability, ...payload }
     });
     if (error) throw error;
-    if (!data?.ok) throw new Error(data?.error || 'Could not save Smart Queue preference');
+    if (!data?.ok) throw new Error(data?.error || 'Could not save Match Making preference');
     return normalizePreference(data.preference);
   }
 

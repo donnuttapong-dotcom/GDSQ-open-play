@@ -2,7 +2,10 @@ import { SMART_QUEUE_MODES, generateSmartQueueMatch, normalizeSmartQueueModes } 
 import { createSmartQueueStore } from '../services/smartQueueService.js';
 import { matchPlayerIds as normalizedMatchPlayerIds, playerId } from '../services/matchModel.js';
 
-const MODE_LABELS = { social: 'SOCIAL', balanced: 'BALANCED', challenge: 'CHALLENGE' };
+const MODE_LABELS = {
+  en: { social: 'BEGINNER', balanced: 'MIXED LEVEL', challenge: 'CHALLENGE' },
+  th: { social: 'ผู้เริ่มต้น', balanced: 'คละระดับ', challenge: 'ท้าทาย' }
+};
 
 function matchPlayerIds(match) {
   return normalizedMatchPlayerIds(match);
@@ -14,6 +17,10 @@ function isActiveMatch(match) {
 
 function text(language, english, thai) {
   return language() === 'en' ? english : thai;
+}
+
+function modeLabel(language, mode) {
+  return MODE_LABELS[language()]?.[mode] || mode;
 }
 
 export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, getMatches, getCourtCount, reloadCore, showMessage }) {
@@ -59,7 +66,7 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
   }
 
   function modeBadges(modes = []) {
-    return normalizeSmartQueueModes(modes).map((mode) => `<span class="smart-pref-badge ${mode}">${MODE_LABELS[mode]}</span>`).join('');
+    return normalizeSmartQueueModes(modes).map((mode) => `<span class="smart-pref-badge ${mode}">${modeLabel(language, mode)}</span>`).join('');
   }
 
   function createRenderContext(sourcePlayers = players(), sourceMatches = matches()) {
@@ -86,14 +93,14 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
 
   function joinPreferenceMarkup() {
     if (!isSmartEvent()) return '';
-    return `<section class="smart-pref-panel mt-3" id="smartJoinPreference"><div class="flex items-center justify-between gap-2"><div><div class="smart-pref-title">${text(language, 'PLAY PREFERENCE', 'รูปแบบเกมที่เล่นได้')}</div><p class="mini mt-1">${text(language, 'Pick one or more. You can change this later.', 'เลือกได้มากกว่า 1 แบบ และแก้ได้ภายหลัง')}</p></div><span class="smart-pref-badge">SMART QUEUE</span></div><div class="smart-pref-modes">${SMART_QUEUE_MODES.map((mode) => `<button type="button" class="smart-pref-mode ${joinModes.includes(mode) ? 'is-on' : ''}" data-sq-join-mode="${mode}" aria-pressed="${joinModes.includes(mode)}">${MODE_LABELS[mode]}</button>`).join('')}<button type="button" class="smart-pref-mode ${joinModes.length === SMART_QUEUE_MODES.length ? 'is-on' : ''}" data-sq-join-any aria-pressed="${joinModes.length === SMART_QUEUE_MODES.length}">ANY</button></div></section>`;
+    return `<section class="smart-pref-panel mt-3" id="smartJoinPreference"><div class="flex items-center justify-between gap-2"><div><div class="smart-pref-title">${text(language, 'GAME PREFERENCES', 'รูปแบบเกมที่ต้องการ')}</div><p class="mini mt-1">${text(language, 'Pick one or more. You can change this later.', 'เลือกได้มากกว่า 1 แบบ และแก้ได้ภายหลัง')}</p></div><span class="smart-pref-badge">MATCH MAKING</span></div><div class="smart-pref-modes">${SMART_QUEUE_MODES.map((mode) => `<button type="button" class="smart-pref-mode ${joinModes.includes(mode) ? 'is-on' : ''}" data-sq-join-mode="${mode}" aria-pressed="${joinModes.includes(mode)}">${modeLabel(language, mode)}</button>`).join('')}<button type="button" class="smart-pref-mode ${joinModes.length === SMART_QUEUE_MODES.length ? 'is-on' : ''}" data-sq-join-any aria-pressed="${joinModes.length === SMART_QUEUE_MODES.length}">${text(language, 'ANY', 'ทุกแบบ')}</button></div></section>`;
   }
 
   function smartMatchMarkup(context = null) {
     if (!isSmartEvent()) return '';
     const available = context?.waitingCount ?? players().filter((player) => displayStatus(player) === 'waiting').length;
     const courtCount = Number(getCourtCount?.() || 0);
-    return `<div class="cut card p-4 smart-match-control"><div class="flex items-start justify-between gap-3"><div><div class="smart-pref-title">SMART MATCH</div><h3 class="font-black text-cyan-300 mt-1">${text(language, 'Next match recommendation', 'แนะนำแมตช์ถัดไป')}</h3><p class="mini mt-1">${text(language, `${available} waiting · ${courtCount} courts`, `รอเล่น ${available} คน · ${courtCount} คอร์ท`)}</p></div><span class="smart-pref-badge">SMART QUEUE</span></div><button id="generateSmartMatchBtn" class="cut bg-lime p-4 font-black text-black w-full mt-3" ${available < 4 ? 'disabled' : ''}>${text(language, 'GENERATE SMART MATCH', 'สร้าง Smart Match')}</button><p class="mini mt-2">${text(language, 'The recommendation uses preferences, level, waiting time, fairness, and recent pairings.', 'ระบบพิจารณารูปแบบที่เลือก ระดับ เวลารอ ความสมดุล และคู่ที่เพิ่งเล่น')}</p></div>`;
+    return `<div class="cut card p-4 smart-match-control"><div class="flex items-start justify-between gap-3"><div><div class="smart-pref-title">${text(language, 'AUTOMATIC MATCHING', 'จับคู่อัตโนมัติ')}</div><h3 class="font-black text-cyan-300 mt-1">${text(language, 'Match by Game Preferences', 'จับคู่ตามรูปแบบเกมที่ต้องการ')}</h3><p class="mini mt-1">${text(language, `${available} waiting · ${courtCount} courts`, `รอเล่น ${available} คน · ${courtCount} คอร์ท`)}</p></div><span class="smart-pref-badge">MATCH MAKING</span></div><div class="smart-pref-modes" aria-label="Game preferences">${SMART_QUEUE_MODES.map((mode) => `<span class="smart-pref-badge ${mode}">${modeLabel(language, mode)}</span>`).join('')}</div><button id="generateSmartMatchBtn" class="cut bg-lime p-4 font-black text-black w-full mt-3" ${available < 4 ? 'disabled' : ''}>${text(language, 'GENERATE MATCH', 'สร้างแมตช์')}</button><p class="mini mt-2">${text(language, 'Automatic Matching uses Game Preferences, level, waiting time, fairness, and recent pairings.', 'ระบบจับคู่อัตโนมัติใช้รูปแบบเกม ระดับ เวลารอ ความสมดุล และคู่ที่เพิ่งเล่น')}</p></div>`;
   }
 
   function editorMarkup() {
@@ -101,7 +108,7 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
     if (!player) return '';
     const pref = preferenceFor(editorPlayerId);
     const modes = normalizeSmartQueueModes(pref.modes);
-    return `<dialog id="smartPreferenceDialog" class="cut card smart-pref-dialog p-5"><form method="dialog" class="flex justify-between gap-3"><div><div class="smart-pref-title">SMART QUEUE</div><h2 class="text-xl font-black mt-1">${String(player.displayName || player.nickname || player.name || 'Player')}</h2><p class="mini mt-1">${text(language, 'Update game preference', 'แก้ไขรูปแบบเกม')}</p></div><button class="cut btn bg-white/5 px-3 py-2" value="cancel">${text(language, 'Close', 'ปิด')}</button></form><div class="smart-pref-modes mt-4">${SMART_QUEUE_MODES.map((mode) => `<button type="button" class="smart-pref-mode ${modes.includes(mode) ? 'is-on' : ''}" data-sq-editor-mode="${mode}" aria-pressed="${modes.includes(mode)}">${MODE_LABELS[mode]}</button>`).join('')}<button type="button" class="smart-pref-mode ${modes.length === SMART_QUEUE_MODES.length ? 'is-on' : ''}" data-sq-editor-any>ANY</button></div><div class="grid grid-cols-2 gap-2 mt-4"><button type="button" class="smart-pref-rest ${pref.status !== 'rest' ? 'is-on' : ''}" data-sq-editor-status="ready">${text(language, 'WAITING', 'รอเล่น')}</button><button type="button" class="smart-pref-rest ${pref.status === 'rest' ? 'is-on' : ''}" data-sq-editor-status="rest">${text(language, 'REST', 'พัก')}</button></div><p class="mini mt-3">${text(language, 'Status does not change the normal V2 player status.', 'สถานะนี้ไม่เปลี่ยน Player Status หลักของ V2')}</p></dialog>`;
+    return `<dialog id="smartPreferenceDialog" class="cut card smart-pref-dialog p-5"><form method="dialog" class="flex justify-between gap-3"><div><div class="smart-pref-title">MATCH MAKING</div><h2 class="text-xl font-black mt-1">${String(player.displayName || player.nickname || player.name || 'Player')}</h2><p class="mini mt-1">${text(language, 'Edit Game Preferences', 'แก้ไขรูปแบบเกมที่ต้องการ')}</p></div><button class="cut btn bg-white/5 px-3 py-2" value="cancel">${text(language, 'Close', 'ปิด')}</button></form><div class="smart-pref-modes mt-4">${SMART_QUEUE_MODES.map((mode) => `<button type="button" class="smart-pref-mode ${modes.includes(mode) ? 'is-on' : ''}" data-sq-editor-mode="${mode}" aria-pressed="${modes.includes(mode)}">${modeLabel(language, mode)}</button>`).join('')}<button type="button" class="smart-pref-mode ${modes.length === SMART_QUEUE_MODES.length ? 'is-on' : ''}" data-sq-editor-any>${text(language, 'ANY', 'ทุกแบบ')}</button></div><div class="grid grid-cols-2 gap-2 mt-4"><button type="button" class="smart-pref-rest ${pref.status !== 'rest' ? 'is-on' : ''}" data-sq-editor-status="ready">${text(language, 'WAITING', 'รอเล่น')}</button><button type="button" class="smart-pref-rest ${pref.status === 'rest' ? 'is-on' : ''}" data-sq-editor-status="rest">${text(language, 'REST', 'พัก')}</button></div><p class="mini mt-3">${text(language, 'Status does not change the normal V2 player status.', 'สถานะนี้ไม่เปลี่ยน Player Status หลักของ V2')}</p></dialog>`;
   }
 
   function renderEditor() {
@@ -125,8 +132,8 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
         : await store.load(event().id);
       return state;
     } catch (error) {
-      console.error('Smart Queue preferences failed to load', error);
-      if (!silent) showMessage?.(text(language, `Smart Queue could not load: ${error.message}`, `โหลด Smart Queue ไม่สำเร็จ: ${error.message}`));
+      console.error('Match Making preferences failed to load', error);
+      if (!silent) showMessage?.(text(language, `Match Making could not load: ${error.message}`, `โหลด Match Making ไม่สำเร็จ: ${error.message}`));
       return state;
     }
   }
@@ -163,7 +170,7 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
   async function registerJoinedPlayer(player) {
     if (!isSmartEvent() || !player?.id) return;
     const modes = normalizeSmartQueueModes(joinModes);
-    if (!modes.length) throw new Error(text(language, 'Choose at least one play preference for this Smart Queue event.', 'เลือกอย่างน้อย 1 รูปแบบเกมสำหรับ Smart Queue ก่อนเข้าคิว'));
+    if (!modes.length) throw new Error(text(language, 'Choose at least one Game Preference for this Match Making event.', 'เลือกอย่างน้อย 1 รูปแบบเกมสำหรับ Match Making ก่อนเข้าคิว'));
     await savePreference(player.id, { modes, preferredMode: modes[0], status: 'ready' }, 'player');
     joinModes = [];
   }
@@ -193,7 +200,7 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
       // Test reloadCore hydrates preferences with its single Organizer-state
       // response, so a second preference fetch would only add latency.
       if (String(event()?.environment || 'live') !== 'test') await refresh({ silent: true });
-      showMessage?.(text(language, 'Smart Match preview is ready.', 'สร้างพรีวิว Smart Match แล้ว'));
+      showMessage?.(text(language, 'Match Making preview is ready.', 'สร้างพรีวิว Match Making แล้ว'));
     } finally {
       busy = false;
     }

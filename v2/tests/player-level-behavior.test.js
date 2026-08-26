@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const openplaySource = fs.readFileSync(new URL('../openplay.html', import.meta.url), 'utf8');
+const joinSource = fs.readFileSync(new URL('../join.html', import.meta.url), 'utf8');
 const playerServiceSource = fs.readFileSync(new URL('../src/services/supabasePlayerService.js', import.meta.url), 'utf8');
 const identityMigrationSource = fs.readFileSync(new URL('../supabase/migrations/20260826090000_player_level_event_join_consistency.sql', import.meta.url), 'utf8');
 const safetyMigrationSource = fs.readFileSync(new URL('../supabase/migrations/20260818180446_production_safety_p0_guards.sql', import.meta.url), 'utf8');
@@ -11,6 +12,11 @@ assert.match(openplaySource, /Applies from next match/, 'Active-player level edi
 assert.doesNotMatch(openplaySource.match(/function playerRow\([\s\S]*?\nfunction renderJoin/)[0], /data-level-player[\s\S]*?\$\{actionLock\}/, 'Level select must not reuse the active-match action lock');
 assert.match(openplaySource, /pendingLevelUpdates\.add\(String\(id\)\)[\s\S]*?services\.updatePlayerLevel\(event\.id,id,level\)/, 'Level saves must mark only the current level field pending');
 assert.match(openplaySource, /pendingLevelUpdates\.delete\(String\(id\)\)[\s\S]*?renderOrganizerUpdate\(\)/, 'Level field must be re-enabled after its request settles');
+assert.match(openplaySource, /addEventListener\('input',[\s\S]*?queuePlayerLevelSave/, 'Numeric level editing must auto-save after typing on touch devices');
+assert.match(openplaySource, /id="joinLevel"[^>]*type="number"[^>]*step="0\.01"/, 'Organizer Join must accept custom decimal levels');
+assert.match(openplaySource, /data-level-player[^>]*type="number"|type="number"[^>]*data-level-player/, 'Organizer player rows must use a direct numeric level editor');
+assert.match(joinSource, /id="playerLevel"[^>]*type="number"[^>]*step="0\.01"/, 'QR Join must accept custom decimal levels');
+assert.match(joinSource, /level<1\|\|level>6/, 'QR Join must reject values outside the supported backend range');
 
 assert.doesNotMatch(playerServiceSource, /estimated_level:\s*profile\?\.default_level\s*\|\|\s*level/, 'Legacy join fallback must not overwrite a submitted event level with profile default');
 assert.match(playerServiceSource, /estimated_level:\s*level/, 'Join fallback must persist the submitted level to the event player');

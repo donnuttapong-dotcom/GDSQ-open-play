@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>GDSQ Player Info</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="./src/styles/smartQueue.css?v=smart-queue-player-01">
+<link rel="stylesheet" href="./src/styles/smartQueue.css?v=match-making-01">
 <style>
 body{background:#10151b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-serif}.cut{clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}.card{background:#222931;border:1px solid #39434d}.soft{background:rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.1);border-radius:16px}.lime{color:#c7ff2e}.btn{border:1px solid rgba(255,255,255,.15);font-weight:900}.mini{font-size:12px;color:#94a3b8}.pill{display:inline-flex;gap:6px;align-items:center;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:1000;border:1px solid rgba(255,255,255,.14);white-space:nowrap}.pill-live,.pill-ready,.pill-win{background:rgba(199,255,46,.14);border-color:rgba(199,255,46,.5);color:#c7ff2e}.pill-playing{background:rgba(251,146,60,.16);border-color:rgba(251,146,60,.5);color:#fb923c}.pill-rest{background:rgba(56,189,248,.13);border-color:rgba(56,189,248,.4);color:#7dd3fc}.pill-ended,.pill-left{background:rgba(148,163,184,.14);border-color:rgba(148,163,184,.35);color:#cbd5e1}.pill-lose{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.45);color:#fca5a5}.modal-bg{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:14px}.modal-card{max-width:760px;width:100%;max-height:88vh;overflow:auto}button.player-link{text-align:left;color:#c7ff2e;font-weight:1000}
 </style>
@@ -17,7 +17,7 @@ body{background:#10151b;color:#fff;font-family:system-ui,'Noto Sans Thai',sans-s
 <script type="module">
 import { createV2Services } from './src/services/index.js?v=fixes-02';
 import { getSupabaseClient } from './src/services/supabaseClient.js';
-import { createSmartQueuePlayerUi } from './src/ui/smartQueuePlayerUi.js?v=instant-preference-01';
+import { createSmartQueuePlayerUi } from './src/ui/smartQueuePlayerUi.js?v=match-making-01';
 const $=(id)=>document.getElementById(id);const services=createV2Services();const MY_PREFIX='gdsq_v2_my_player:';let event=null,players=[],matches=[],me=null;
 const smartQueuePlayerUi=createSmartQueuePlayerUi({services,supabase:getSupabaseClient(),getEvent:()=>event,getPlayer:()=>me,showError});
 const playerLanguage=()=>localStorage.getItem('gdsq_v2_ui_lang')==='en'?'en':'th';

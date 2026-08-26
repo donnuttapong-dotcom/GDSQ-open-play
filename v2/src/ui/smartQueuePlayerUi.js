@@ -1,8 +1,11 @@
 import { normalizeSmartQueueModes, SMART_QUEUE_MODES } from '../logic/smartQueue/smartQueueEngine.js';
 import { createSmartQueueStore } from '../services/smartQueueService.js';
 
-function modeLabel(mode) {
-  return ({ social: 'SOCIAL', balanced: 'BALANCED', challenge: 'CHALLENGE' })[mode] || mode;
+function modeLabel(mode, language) {
+  const labels = language === 'en'
+    ? { social: 'BEGINNER', balanced: 'MIXED LEVEL', challenge: 'CHALLENGE' }
+    : { social: 'ผู้เริ่มต้น', balanced: 'คละระดับ', challenge: 'ท้าทาย' };
+  return labels[mode] || mode;
 }
 
 export function createSmartQueuePlayerUi({ services, supabase, getEvent, getPlayer, showError }) {
@@ -28,7 +31,7 @@ export function createSmartQueuePlayerUi({ services, supabase, getEvent, getPlay
     root.classList.remove('hidden');
     const preference = current() || { modes: ['balanced'], preferredMode: 'balanced', status: 'rest' };
     const modes = normalizeSmartQueueModes(preference.modes);
-    root.innerHTML = `<div class="flex justify-between gap-3 items-start"><div><div class="smart-queue-kicker">EXPERIMENTAL</div><h2 class="text-2xl font-black lime">GDSQ SMART QUEUE</h2><p class="mini mt-1">${copy('Choose every game style you accept. Your organizer sees the same settings.', 'เลือกได้หลายโหมด ข้อมูลชุดเดียวกันจะอัปเดตไปที่หน้าผู้จัด')}</p></div><span class="pill ${preference.status === 'ready' ? 'pill-ready' : preference.status === 'playing' ? 'pill-playing' : 'pill-rest'}">${String(preference.status || 'rest').toUpperCase()}</span></div><div class="smart-queue-modes mt-4">${SMART_QUEUE_MODES.map((mode) => `<button class="smart-queue-mode ${modes.includes(mode) ? 'is-on' : ''}" data-player-sq-mode="${mode}" aria-pressed="${modes.includes(mode)}">${modeLabel(mode)}</button>`).join('')}<button class="smart-queue-mode ${modes.length === 3 ? 'is-on' : ''}" data-player-sq-any>ANY GAME</button></div><div class="grid sm:grid-cols-[1fr_auto] gap-2 mt-3"><select class="smart-queue-preferred" data-player-sq-preferred ${modes.length ? '' : 'disabled'}><option value="">${copy('Preferred mode', 'โหมดที่อยากเล่นที่สุด')}</option>${modes.map((mode) => `<option value="${mode}" ${preference.preferredMode === mode ? 'selected' : ''}>${modeLabel(mode)}</option>`).join('')}</select><div class="smart-queue-statuses"><button class="smart-queue-status ${preference.status === 'ready' ? 'is-on' : ''}" data-player-sq-status="ready">READY</button><button class="smart-queue-status ${preference.status === 'rest' ? 'is-on' : ''}" data-player-sq-status="rest">REST</button></div></div>`;
+    root.innerHTML = `<div class="flex justify-between gap-3 items-start"><div><div class="smart-queue-kicker">GAME PREFERENCES</div><h2 class="text-2xl font-black lime">GDSQ MATCH MAKING</h2><p class="mini mt-1">${copy('Choose every game style you accept. Your organizer sees the same settings.', 'เลือกได้หลายรูปแบบ ข้อมูลชุดเดียวกันจะอัปเดตไปที่หน้าผู้จัด')}</p></div><span class="pill ${preference.status === 'ready' ? 'pill-ready' : preference.status === 'playing' ? 'pill-playing' : 'pill-rest'}">${String(preference.status || 'rest').toUpperCase()}</span></div><div class="smart-queue-modes mt-4">${SMART_QUEUE_MODES.map((mode) => `<button class="smart-queue-mode ${modes.includes(mode) ? 'is-on' : ''}" data-player-sq-mode="${mode}" aria-pressed="${modes.includes(mode)}">${modeLabel(mode, language())}</button>`).join('')}<button class="smart-queue-mode ${modes.length === 3 ? 'is-on' : ''}" data-player-sq-any>${copy('ANY GAME', 'ทุกแบบ')}</button></div><div class="grid sm:grid-cols-[1fr_auto] gap-2 mt-3"><select class="smart-queue-preferred" data-player-sq-preferred ${modes.length ? '' : 'disabled'}><option value="">${copy('Preferred game', 'รูปแบบที่อยากเล่นที่สุด')}</option>${modes.map((mode) => `<option value="${mode}" ${preference.preferredMode === mode ? 'selected' : ''}>${modeLabel(mode, language())}</option>`).join('')}</select><div class="smart-queue-statuses"><button class="smart-queue-status ${preference.status === 'ready' ? 'is-on' : ''}" data-player-sq-status="ready">READY</button><button class="smart-queue-status ${preference.status === 'rest' ? 'is-on' : ''}" data-player-sq-status="rest">REST</button></div></div>`;
   }
 
   async function save(patch) {
@@ -58,8 +61,8 @@ export function createSmartQueuePlayerUi({ services, supabase, getEvent, getPlay
       state = await store.load(event().id);
       render();
     } catch (error) {
-      console.error('Player Smart Queue failed', error);
-      showError?.(copy(`Smart Queue failed: ${error.message}`, `Smart Queue มีปัญหา: ${error.message}`));
+      console.error('Player Match Making failed', error);
+      showError?.(copy(`Match Making failed: ${error.message}`, `Match Making มีปัญหา: ${error.message}`));
     } finally {
       busy = false;
     }

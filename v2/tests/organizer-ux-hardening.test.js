@@ -15,6 +15,9 @@ assert.match(playerRowSource, /queued=queuedNextForPlayer\(p\.id\)/, 'Player Que
 assert.match(playerRowSource, /lockedInCurrentMatch=busy&&!queued/, 'Queued-next players must not be locked like active match players');
 assert.match(playerRowSource, /actionLock=\(removed\|\|lockedInCurrentMatch\)/, 'Only removed or current-match players may lock status controls');
 assert.match(playerRowSource, /levelLock=\(removed\|\|pendingLevelUpdates/, 'Level editing must remain available for active and queued players');
+assert.match(playerRowSource, /queue-player-name[\s\S]*?\$\{inlineEdit\}/, 'Match Making preference edit must sit beside the player name');
+assert.match(source, /MATCH MAKING · \$\{gamePreferenceName/, 'Match history must display the renamed Match Making preference');
+assert.doesNotMatch(source, />SMART QUEUE</, 'The retired Smart Queue product name must not remain visible');
 
 assert.match(source, /UP NEXT on \$\{queued\.courtName\} was cancelled and the other players were released/, 'Queue cancellation must give the organizer an immediate recovery message');
 assert.match(source, /render:cancelsQueued\?'organizer-matches':'organizer'/, 'Cancelling a queued player must refresh the match and Up Next panels immediately');
