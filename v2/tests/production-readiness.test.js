@@ -116,9 +116,10 @@ assert.match(openplaySource, /END EVENT & SAVE RESULTS/, 'End Event modal must n
 assert.match(openplaySource, /COPY SHARE MESSAGE/, 'Completion success must expose a ready-to-send share message');
 assert.match(openplaySource, /has already been included in Hall of Fame/, 'Finalized deletion must show a stronger confirmation warning');
 assert.match(servicesSource, /DELETE_FINALIZED_EVENT/, 'Finalized deletion must send the stronger confirmation token');
-assert.match(openplaySource, /created before Organizer device control was saved[\s\S]*?Admin Results/, 'Legacy event deletion must direct Organizer to the existing protected Admin path');
+assert.match(openplaySource, /passcode=prompt[\s\S]*?services\.deleteEvent\(id,\{finalized,passcode\}\)/, 'Legacy event deletion must use the protected Admin passcode fallback on the Events page');
 
-assert.match(edgeSource, /organizerDeviceActions = new Set\(\['endEventAndSaveResults', 'deleteEvent'\]\)/, 'Event finalization and deletion must be restricted to the Organizer device');
+assert.match(edgeSource, /organizerDeviceActions = new Set\(\['endEventAndSaveResults', 'deleteEvent'\]\)/, 'Event finalization and same-device deletion must use Organizer device control');
+assert.match(edgeSource, /'permanentlyDeleteEvent', 'deleteEvent'/, 'Legacy deletion must remain protected by the existing Admin passcode');
 assert.match(edgeSource, /v2_admin_end_event_and_save_results/, 'Edge Function must call the atomic finalization RPC');
 assert.match(edgeSource, /v2_admin_delete_event_stateful/, 'Edge Function must call the state-aware delete RPC');
 assert.match(deviceKeyMigrationSource, /enable row level security/, 'Organizer device keys must have RLS enabled');

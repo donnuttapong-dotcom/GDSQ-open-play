@@ -14,7 +14,7 @@ const organizerDeviceActions = new Set(['endEventAndSaveResults', 'deleteEvent']
 const passcodeOnlyAdminResultsActions = new Set([
   'verify', 'listEvents',
   'updateScore', 'updatePlayers', 'deleteMatch',
-  'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent'
+  'archiveEvent', 'restoreEvent', 'permanentlyDeleteEvent', 'deleteEvent'
 ]);
 
 function cors(origin: string | null) {
@@ -45,23 +45,22 @@ Deno.serve(async (request) => {
   if (organizerDeviceActions.has(action)) {
     const eventId = String(body?.eventId || ''), organizationId = String(body?.organizationId || '');
     const organizerToken = String(body?.organizerToken || '');
-    if (!validId(eventId) || !validId(organizationId) || !/^[0-9a-f]{64}$/i.test(organizerToken)) {
-      return json({ ok: false, code: 'ORGANIZER_DEVICE_KEY_REQUIRED', error: 'This event can only be completed or deleted from its Organizer device' }, 403, origin);
+    if (validId(eventId) && validId(organizationId) && /^[0-9a-f]{64}$/i.test(organizerToken)) {
+      const tokenHash = await hash(organizerToken);
+      const { data: deviceKey, error: deviceKeyError } = await admin
+        .from('v2_event_organizer_keys')
+        .select('event_id')
+        .eq('event_id', eventId)
+        .eq('organization_id', organizationId)
+        .eq('token_hash', tokenHash)
+        .is('revoked_at', null)
+        .maybeSingle();
+      organizerDeviceAuthorized = !deviceKeyError && Boolean(deviceKey);
+      if (organizerDeviceAuthorized) await admin.from('v2_event_organizer_keys').update({ last_used_at: new Date().toISOString() }).eq('event_id', eventId);
     }
-    const tokenHash = await hash(organizerToken);
-    const { data: deviceKey, error: deviceKeyError } = await admin
-      .from('v2_event_organizer_keys')
-      .select('event_id')
-      .eq('event_id', eventId)
-      .eq('organization_id', organizationId)
-      .eq('token_hash', tokenHash)
-      .is('revoked_at', null)
-      .maybeSingle();
-    if (deviceKeyError || !deviceKey) {
-      return json({ ok: false, code: 'ORGANIZER_DEVICE_KEY_INVALID', error: 'Organizer device key is missing or invalid' }, 403, origin);
+    if (!organizerDeviceAuthorized && !(action === 'deleteEvent' && passcode.length >= 5)) {
+      return json({ ok: false, code: 'ORGANIZER_DEVICE_KEY_REQUIRED', error: 'A valid Organizer device key or Admin passcode is required' }, 403, origin);
     }
-    organizerDeviceAuthorized = true;
-    await admin.from('v2_event_organizer_keys').update({ last_used_at: new Date().toISOString() }).eq('event_id', eventId);
   }
   if (!openOrganizerActions.has(action) && !organizerDeviceAuthorized) {
     if (!passcodeOnlyAdminResultsActions.has(action)) {
@@ -194,7 +193,7 @@ Deno.serve(async (request) => {
     const { data: targetEvent, error: eventError } = await admin.from('v2_events').select('id').eq('id', eventId).eq('organization_id', organizationId).maybeSingle();
     if (eventError || !targetEvent) return json({ ok: false, error: 'Event not found' }, 404, origin);
     const { data: setting, error } = await admin.from('v2_smart_queue_settings').upsert({ event_id: eventId, organization_id: organizationId, enabled: body?.enabled === true, updated_by: 'admin', updated_at: new Date().toISOString() }, { onConflict: 'event_id' }).select('*').single();
-    if (error) return json({ ok: false, error: error.message || 'Could not update Smart Queue' }, 400, origin);
+    if (error) return json({ ok: false, error: error.message || 'Could not update Match Making' }, 400, origin);
     return json({ ok: true, setting }, 200, origin);
   }
   if (action === 'smartQueueSavePreference') {
@@ -203,23 +202,23 @@ Deno.serve(async (request) => {
     const modes = [...new Set(Array.isArray(body?.modes) ? body.modes.map(String).filter((mode: string) => allowedModes.includes(mode)) : [])];
     const preferredMode = modes.includes(String(body?.preferredMode || '')) ? String(body.preferredMode) : modes[0] || null;
     const status = String(body?.status || 'rest');
-    if (!validId(eventId) || !validId(organizationId) || !validId(eventPlayerId) || !['ready', 'match_ready', 'playing', 'rest'].includes(status)) return json({ ok: false, error: 'Invalid Smart Queue preference' }, 400, origin);
+    if (!validId(eventId) || !validId(organizationId) || !validId(eventPlayerId) || !['ready', 'match_ready', 'playing', 'rest'].includes(status)) return json({ ok: false, error: 'Invalid Match Making preference' }, 400, origin);
     if (!await requireLiveEvent(eventId, organizationId)) return json({ ok: false, error: 'Event is not LIVE' }, 409, origin);
     const { data: targetPlayer, error: playerError } = await admin.from('v2_event_players').select('id').eq('id', eventPlayerId).eq('event_id', eventId).eq('organization_id', organizationId).maybeSingle();
     if (playerError || !targetPlayer) return json({ ok: false, error: 'Event player not found' }, 404, origin);
     const { data: preference, error } = await admin.from('v2_smart_queue_preferences').upsert({ event_player_id: eventPlayerId, event_id: eventId, organization_id: organizationId, modes, preferred_mode: preferredMode, queue_status: status, ready_since: status === 'ready' ? String(body?.readySince || new Date().toISOString()) : null, updated_by: String(body?.updatedBy || 'admin') === 'system' ? 'system' : 'admin', updated_at: new Date().toISOString() }, { onConflict: 'event_player_id' }).select('*').single();
-    if (error) return json({ ok: false, error: error.message || 'Could not update Smart Queue preference' }, 400, origin);
+    if (error) return json({ ok: false, error: error.message || 'Could not update Match Making preference' }, 400, origin);
     return json({ ok: true, preference }, 200, origin);
   }
   if (action === 'smartQueueRecordMatch') {
     const matchId = String(body?.matchId || ''), eventId = String(body?.eventId || ''), organizationId = String(body?.organizationId || '');
     const courtNumber = Number(body?.courtNumber), playMode = String(body?.playMode || ''), state = String(body?.state || 'match_ready');
-    if (!validId(matchId) || !validId(eventId) || !validId(organizationId) || !Number.isInteger(courtNumber) || courtNumber < 1 || courtNumber > 10 || !['social', 'balanced', 'challenge'].includes(playMode) || !['match_ready', 'playing', 'confirmed', 'cancelled'].includes(state)) return json({ ok: false, error: 'Invalid Smart Queue match' }, 400, origin);
+    if (!validId(matchId) || !validId(eventId) || !validId(organizationId) || !Number.isInteger(courtNumber) || courtNumber < 1 || courtNumber > 10 || !['social', 'balanced', 'challenge'].includes(playMode) || !['match_ready', 'playing', 'confirmed', 'cancelled'].includes(state)) return json({ ok: false, error: 'Invalid Match Making match' }, 400, origin);
     if (!await requireLiveEvent(eventId, organizationId)) return json({ ok: false, error: 'Event is not LIVE' }, 409, origin);
     const { data: targetMatch, error: matchError } = await admin.from('v2_matches').select('id').eq('id', matchId).eq('event_id', eventId).eq('organization_id', organizationId).maybeSingle();
     if (matchError || !targetMatch) return json({ ok: false, error: 'Match not found' }, 404, origin);
     const { data: match, error } = await admin.from('v2_smart_queue_matches').upsert({ match_id: matchId, event_id: eventId, organization_id: organizationId, court_number: courtNumber, play_mode: playMode, queue_state: state, updated_at: new Date().toISOString() }, { onConflict: 'match_id' }).select('*').single();
-    if (error) return json({ ok: false, error: error.message || 'Could not update Smart Queue match' }, 400, origin);
+    if (error) return json({ ok: false, error: error.message || 'Could not update Match Making match' }, 400, origin);
     return json({ ok: true, match }, 200, origin);
   }
   if (['updateEventPlayerStatus', 'updateEventPlayerLevel', 'removeEventPlayer'].includes(action)) {

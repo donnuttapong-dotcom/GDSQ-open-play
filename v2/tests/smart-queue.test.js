@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { chooseBalancedSmartQueueTeams, generateSmartQueueMatch } from '../src/logic/smartQueue/smartQueueEngine.js';
+import { chooseBalancedSmartQueueTeams, generateSmartQueueMatch, generateSmartQueueMatches } from '../src/logic/smartQueue/smartQueueEngine.js';
 import { createSmartQueueStore } from '../src/services/smartQueueService.js';
 
 const player = (id, level) => ({ id, displayName: id.toUpperCase(), estimatedLevel: level });
@@ -70,15 +70,40 @@ const preference = (id, modes, options = {}) => ({ eventPlayerId: id, modes, pre
   assert.notDeepEqual(split.teamB.map(({ id }) => id).sort(), ['c', 'd']);
 }
 
-// H: long waiting time increases priority without bypassing the level guardrail.
+// H: long waiting time increases priority; Level balances teams and never filters a court/group.
 {
   const pool = [player('a', 3), player('b', 3), player('c', 3.25), player('d', 3.25), player('e', 3.25)];
   const preferences = pool.map(({ id }) => preference(id, ['balanced'], { readySince: id === 'a' ? '2026-08-16T05:00:00Z' : '2026-08-16T08:55:00Z' }));
   const result = generateSmartQueueMatch({ players: pool, preferences, now: new Date('2026-08-16T09:00:00Z').getTime() });
   assert.ok(result.match.playerIds.includes('a'));
-  const unsafe = [...pool, player('x', 5)];
-  const unsafePreferences = [...preferences, preference('x', ['balanced'], { readySince: '2026-08-15T01:00:00Z' })];
-  assert.equal(generateSmartQueueMatch({ players: unsafe, preferences: unsafePreferences, now: new Date('2026-08-16T09:00:00Z').getTime() }).match.playerIds.includes('x'), false);
+  const wideLevels = [player('w1', 2), player('w2', 2.5), player('w3', 3.1), player('w4', 4.2)];
+  const wideResult = generateSmartQueueMatch({ players: wideLevels, preferences: wideLevels.map(({ id }) => preference(id, ['balanced'])) });
+  assert.ok(wideResult.match);
+  assert.deepEqual(wideResult.match.playerIds.sort(), ['w1', 'w2', 'w3', 'w4']);
+}
+
+// Generate one complete Preview group for every available court without duplicate players.
+{
+  const pool = Array.from({ length: 24 }, (_, index) => player(`p${index + 1}`, 2 + index * 0.08));
+  const result = generateSmartQueueMatches({
+    players: pool,
+    preferences: pool.map(({ id }) => preference(id, ['balanced'])),
+    maxMatches: 4
+  });
+  assert.equal(result.matches.length, 4);
+  assert.equal(result.assignedPlayerIds.length, 16);
+  assert.equal(new Set(result.assignedPlayerIds).size, 16);
+  assert.equal(result.remainingPlayerIds.length, 8);
+}
+
+// Partial preference compatibility generates only complete compatible groups.
+{
+  const pool = Array.from({ length: 17 }, (_, index) => player(`c${index + 1}`, 2.1 + index * 0.09));
+  const preferences = pool.map(({ id }, index) => preference(id, index < 12 ? ['balanced'] : index < 14 ? ['social'] : index < 16 ? ['challenge'] : ['social', 'challenge']));
+  const result = generateSmartQueueMatches({ players: pool, preferences, maxMatches: 4 });
+  assert.equal(result.matches.length, 3);
+  assert.equal(result.assignedPlayerIds.length, 12);
+  assert.equal(result.remainingPlayerIds.length, 5);
 }
 
 // I/J/K: feature state and Smart Queue metadata are isolated and survive reloads.

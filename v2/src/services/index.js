@@ -232,14 +232,17 @@ export function createV2Services({ supabase = getSupabaseClient(), organizationI
       return { event: completed, result: { alreadyProcessed: false } };
     },
 
-    async deleteEvent(eventId, { finalized = false } = {}) {
+    async deleteEvent(eventId, { finalized = false, passcode = '' } = {}) {
       if (isSupabase && isTestEventId(eventId)) { const result = await test('deleteEvent', { eventId }); clearTestAdminSession(eventId); invalidateTestEvents(); return result; }
       if (isSupabase) {
-        const result = await organizerAdminCall('deleteEvent', { eventId, confirmation: finalized ? 'DELETE_FINALIZED_EVENT' : 'DELETE_EVENT' });
+        const result = await organizerAdminCall('deleteEvent', { eventId, confirmation: finalized ? 'DELETE_FINALIZED_EVENT' : 'DELETE_EVENT', ...(passcode ? { passcode } : {}) });
         forgetOrganizerEventToken(eventId);
+        if (String(localStorage.getItem(SELECTED_EVENT_KEY) || '') === String(eventId)) localStorage.removeItem(SELECTED_EVENT_KEY);
         return result.result || { eventId, deleted: true, wasFinalized: finalized };
       }
-      return deleteLocalEvent(eventId);
+      const result = deleteLocalEvent(eventId);
+      if (String(localStorage.getItem(SELECTED_EVENT_KEY) || '') === String(eventId)) localStorage.removeItem(SELECTED_EVENT_KEY);
+      return result;
     },
 
     async listAllEvents() {

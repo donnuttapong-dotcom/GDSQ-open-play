@@ -177,11 +177,11 @@ function fairnessScore(group, preferenceMap, history, now) {
 function candidateForMode(group, mode, preferenceMap, history, now) {
   const levels = group.map(playerLevel);
   const spread = Math.max(...levels) - Math.min(...levels);
-  const guardrail = SMART_QUEUE_LEVEL_SPREAD[mode];
-  if (spread > guardrail) return null;
   const split = chooseBalancedSmartQueueTeams(group, history);
+  const gameCounts = group.map((player) => history.games.get(playerId(player)) || 0);
+  const readyTimes = group.map((player) => new Date(preferenceMap.get(playerId(player)).readySince || 0).getTime() || 0);
   const preferredCount = group.filter((player) => preferenceMap.get(playerId(player)).preferredMode === mode).length;
-  const skillScore = clamp((1 - spread) * 0.55 + (1 - split.teamGap) * 0.45);
+  const skillScore = clamp(1 - split.teamGap);
   const modeScore = 0.65 + (preferredCount / 4) * 0.35;
   const fairness = fairnessScore(group, preferenceMap, history, now);
   const variety = clamp(1 - split.repeatPenalty / 28);
@@ -199,14 +199,22 @@ function candidateForMode(group, mode, preferenceMap, history, now) {
     teamGap: Number(split.teamGap.toFixed(2)),
     repeatPenalty: Number(split.repeatPenalty.toFixed(2)),
     fairnessScore: Number(fairness.toFixed(4)),
+    gameMax: Math.max(...gameCounts),
+    gameTotal: gameCounts.reduce((sum, value) => sum + value, 0),
+    oldestReady: Math.min(...readyTimes.filter(Boolean), Number.MAX_SAFE_INTEGER),
+    readyTotal: readyTimes.reduce((sum, value) => sum + value, 0),
     explanation: `${mode} · spread ${spread.toFixed(2)} · team gap ${split.teamGap.toFixed(2)}`
   };
 }
 
 function deterministicCandidateOrder(left, right) {
-  return right.score - left.score
-    || left.repeatPenalty - right.repeatPenalty
+  return left.gameMax - right.gameMax
+    || left.gameTotal - right.gameTotal
+    || left.oldestReady - right.oldestReady
+    || left.readyTotal - right.readyTotal
     || left.teamGap - right.teamGap
+    || left.repeatPenalty - right.repeatPenalty
+    || right.score - left.score
     || MODE_TIE_ORDER[left.mode] - MODE_TIE_ORDER[right.mode]
     || left.playerIds.join(':').localeCompare(right.playerIds.join(':'));
 }
@@ -252,5 +260,31 @@ export function generateSmartQueueMatch({ players = [], preferences = [], matche
       return id && !active.has(id) && preference.status === 'ready' && preference.modes.includes(mode);
     }).length])),
     playerLabel: playerName
+  };
+}
+
+export function generateSmartQueueMatches({ players = [], preferences = [], matches = [], maxMatches = Infinity, now = Date.now(), candidateLimit = 20 } = {}) {
+  const remaining = [...players];
+  const generated = [];
+  const assignedPlayerIds = new Set();
+  let consideredGroups = 0;
+  const limit = Math.max(0, Math.min(Math.floor(Number(maxMatches) || 0), Math.floor(remaining.length / 4)));
+
+  while (generated.length < limit && remaining.length >= 4) {
+    const result = generateSmartQueueMatch({ players: remaining, preferences, matches, now, candidateLimit });
+    consideredGroups += result.consideredGroups;
+    if (!result.match) break;
+    generated.push(result.match);
+    result.match.playerIds.forEach((id) => assignedPlayerIds.add(String(id)));
+    for (let index = remaining.length - 1; index >= 0; index -= 1) {
+      if (assignedPlayerIds.has(playerId(remaining[index]))) remaining.splice(index, 1);
+    }
+  }
+
+  return {
+    matches: generated,
+    consideredGroups,
+    assignedPlayerIds: [...assignedPlayerIds],
+    remainingPlayerIds: remaining.map(playerId).filter(Boolean)
   };
 }
