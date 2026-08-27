@@ -1,4 +1,4 @@
-import { SMART_QUEUE_MODES, buildMatchMakingCourtProfile, generateMatchMakingCourtMatches, normalizeSmartQueueModes } from '../logic/smartQueue/smartQueueEngine.js?v=match-making-level-courts-01';
+import { SMART_QUEUE_MODES, buildMatchMakingCourtProfile, generateMatchMakingCourtMatches, normalizeSmartQueueModes } from '../logic/smartQueue/smartQueueEngine.js?v=match-making-all-levels-01';
 import { createSmartQueueStore } from '../services/smartQueueService.js';
 import { gamePreferenceLabel, anyGamePreferenceLabel } from '../services/gamePreferenceLabels.js';
 import { matchPlayerIds as normalizedMatchPlayerIds, playerId } from '../services/matchModel.js';

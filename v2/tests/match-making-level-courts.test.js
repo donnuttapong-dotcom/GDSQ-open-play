@@ -38,6 +38,88 @@ assert.deepEqual(buildMatchMakingCourtProfile(2).map(({ role }) => role), ['soci
 assert.deepEqual(buildMatchMakingCourtProfile(5).map(({ role }) => role), ['social', 'challenge', 'balanced', 'balanced', 'balanced']);
 assert.equal(buildMatchMakingCourtProfile(12).length, 10);
 
+// Approved all-level behavior: spread never blocks an otherwise eligible group.
+{
+  const wideMix = [
+    player('mix-1', 2), player('mix-2', 2.3),
+    player('mix-3', 3.1), player('mix-4', 3.4)
+  ];
+  const mixResult = generated(wideMix, 1);
+  assert.equal(mixResult.matches.length, 1);
+  assert.equal(mixResult.matches[0].mode, 'balanced');
+  assert.equal(mixResult.matches[0].spread, 1.4);
+  assert.match(mixResult.matches[0].explanation, /all eligible/);
+
+  const wideChallenge = [
+    player('challenge-1', 2.6), player('challenge-2', 2.75),
+    player('challenge-3', 3.7), player('challenge-4', 4)
+  ];
+  const challengeResult = generated(wideChallenge, 2);
+  const challengeMatch = challengeResult.matches.find((match) => match.courtNumber === 2);
+  assert.ok(challengeMatch);
+  assert.equal(challengeMatch.mode, 'challenge');
+  assert.equal(challengeMatch.spread, 1.4);
+  assert.equal(challengeMatch.fallback, false);
+
+  const beginner = [
+    player('beginner-1', 2), player('beginner-2', 2.1),
+    player('beginner-3', 2.2), player('beginner-4', 2.3)
+  ];
+  const beginnerResult = generated(beginner, 2);
+  const beginnerMatch = beginnerResult.matches.find((match) => match.courtNumber === 1);
+  assert.ok(beginnerMatch);
+  assert.equal(beginnerMatch.mode, 'social');
+  assert.equal(beginnerMatch.fallback, false);
+}
+
+// A fourth player outside Beginner does not count toward the specialist court.
+{
+  const pool = [
+    player('outside-1', 2), player('outside-2', 2.1),
+    player('outside-3', 2.2), player('outside-4', 2.31)
+  ];
+  const result = generated(pool, 2);
+  const court1 = result.matches.find((match) => match.courtNumber === 1);
+  assert.ok(court1);
+  assert.equal(court1.mode, 'balanced');
+  assert.equal(court1.fallback, true);
+  assert.ok(result.fallbackCourtNumbers.includes(1));
+}
+
+// Challenge starts at exactly 2.60; 2.59 remains Mix Level.
+assert.equal(matchMakingLevelRole(player('challenge-low', 2.59)), 'balanced');
+assert.equal(matchMakingLevelRole(player('challenge-edge', 2.6)), 'challenge');
+assert.equal(matchMakingLevelRole(player('challenge-high', 4.5)), 'challenge');
+
+// Specialist fallback accepts a complete wide-Level group without a spread cap.
+{
+  const pool = [
+    player('fallback-1', 2), player('fallback-2', 2.1),
+    player('fallback-3', 2.25), player('fallback-4', 4)
+  ];
+  const result = generated(pool, 2);
+  const court1 = result.matches.find((match) => match.courtNumber === 1);
+  assert.ok(court1);
+  assert.equal(court1.mode, 'balanced');
+  assert.equal(court1.fallback, true);
+  assert.equal(court1.spread, 2);
+}
+
+// Waiting fairness remains stronger than choosing a visually tighter Level group.
+{
+  const pool = [
+    player('long-low', 2), player('long-high', 3.5),
+    player('recent-1', 2.7), player('recent-2', 2.8),
+    player('recent-3', 2.9), player('recent-4', 3)
+  ];
+  const prefs = pool.map(({ id }) => preference(id, {
+    readySince: id.startsWith('long-') ? '2026-08-27T05:00:00Z' : '2026-08-27T09:55:00Z'
+  }));
+  const result = generated(pool, 1, { preferences: prefs });
+  assert.ok(result.assignedPlayerIds.includes('long-low'));
+  assert.ok(result.assignedPlayerIds.includes('long-high'));
+}
+
 // A: 4 Beginner, 4 Challenge and 8 Middle players fill the expected four courts.
 {
   const pool = [
@@ -138,6 +220,19 @@ assert.equal(matchMakingLevelRole({ id: 'event-level-wins', estimatedLevel: 2.2,
   const standard = generateMatches({ players: standardPlayers, courts: [{ id: 'standard-court', name: 'Standard Court' }] });
   assert.equal(standard.previews.length, 1);
   assert.equal(standard.previews[0].courtId, 'standard-court');
+}
+
+// Historical confirmed match data is read for fairness and never mutated.
+{
+  const history = [{
+    id: 'confirmed-history', status: 'confirmed',
+    teamA: ['history-a', 'history-b'], teamB: ['history-c', 'history-d'],
+    teamAScore: 11, teamBScore: 8, winner: 'A', completedAt: '2026-08-27T09:00:00Z'
+  }];
+  const snapshot = structuredClone(history);
+  const pool = ['history-a', 'history-b', 'history-c', 'history-d'].map((id, index) => player(id, 2.4 + index * 0.2));
+  generated(pool, 1, { matches: history });
+  assert.deepEqual(history, snapshot);
 }
 
 // UI wiring keeps Match Making isolated and reuses the existing UP NEXT lifecycle.

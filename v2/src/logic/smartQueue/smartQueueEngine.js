@@ -212,6 +212,42 @@ function candidateForMode(group, mode, preferenceMap, history, now) {
   };
 }
 
+// MATCH MAKING court ranges decide player eligibility only. Once four players
+// are eligible, Level is used to balance teams and never rejects the group.
+function candidateForMatchMakingCourt(group, role, preferenceMap, history, now) {
+  const split = chooseBalancedSmartQueueTeams(group, history);
+  if (!split) return null;
+  const levels = group.map(playerLevel);
+  const spread = Math.max(...levels) - Math.min(...levels);
+  const gameCounts = group.map((player) => history.games.get(playerId(player)) || 0);
+  const readyTimes = group.map((player) => new Date(preferenceMap.get(playerId(player)).readySince || 0).getTime() || 0);
+  const preferredCount = group.filter((player) => preferenceMap.get(playerId(player)).preferredMode === role).length;
+  const skillScore = clamp(1 - split.teamGap);
+  const modeScore = 0.65 + (preferredCount / 4) * 0.35;
+  const fairness = fairnessScore(group, preferenceMap, history, now);
+  const variety = clamp(1 - split.repeatPenalty / 28);
+  const score = skillScore * SMART_QUEUE_WEIGHTS.skill
+    + modeScore * SMART_QUEUE_WEIGHTS.mode
+    + fairness * SMART_QUEUE_WEIGHTS.fairness
+    + variety * SMART_QUEUE_WEIGHTS.variety;
+  return {
+    mode: role,
+    teamA: split.teamA,
+    teamB: split.teamB,
+    playerIds: group.map(playerId),
+    score: Number(score.toFixed(4)),
+    spread: Number(spread.toFixed(2)),
+    teamGap: Number(split.teamGap.toFixed(2)),
+    repeatPenalty: Number(split.repeatPenalty.toFixed(2)),
+    fairnessScore: Number(fairness.toFixed(4)),
+    gameMax: Math.max(...gameCounts),
+    gameTotal: gameCounts.reduce((sum, value) => sum + value, 0),
+    oldestReady: Math.min(...readyTimes.filter(Boolean), Number.MAX_SAFE_INTEGER),
+    readyTotal: readyTimes.reduce((sum, value) => sum + value, 0),
+    explanation: `${role} · all eligible · team gap ${split.teamGap.toFixed(2)}`
+  };
+}
+
 function deterministicCandidateOrder(left, right) {
   return left.gameMax - right.gameMax
     || left.gameTotal - right.gameTotal
@@ -375,7 +411,7 @@ function bestLevelCourtCandidate(players, role, preferenceMap, history, now, can
 
   if (eligible.length < 4) return null;
   return combinations(eligible, 4)
-    .map((group) => candidateForMode(group, role, preferenceMap, history, Number(now)))
+    .map((group) => candidateForMatchMakingCourt(group, role, preferenceMap, history, Number(now)))
     .sort(deterministicCandidateOrder)[0] || null;
 }
 
