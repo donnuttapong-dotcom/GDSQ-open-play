@@ -13,12 +13,12 @@ const [organizer, playerPage, playerUi, organizerUi, profile, edge, services] = 
 ]);
 
 assert.equal(gamePreferenceLabel('social', 'en'), 'BEGINNER');
-assert.equal(gamePreferenceLabel('balanced', 'en'), 'MIXED LEVEL');
+assert.equal(gamePreferenceLabel('balanced', 'en'), 'MIX LEVEL');
 assert.equal(gamePreferenceLabel('challenge', 'th'), 'ท้าทาย');
 assert.equal(anyGamePreferenceLabel('th'), 'ทุกแบบ');
 
 assert.match(organizerUi, /GENERATE MATCHES/);
-assert.match(organizerUi, /generateSmartQueueMatches/);
+assert.match(organizerUi, /generateMatchMakingCourtMatches/);
 assert.match(organizerUi, /data-sq-inline-editor/);
 assert.match(organizerUi, /data-sq-inline-save/);
 assert.doesNotMatch(organizerUi, /<dialog/);

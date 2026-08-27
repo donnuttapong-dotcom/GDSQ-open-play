@@ -1,4 +1,4 @@
-import { SMART_QUEUE_MODES, generateSmartQueueMatches, normalizeSmartQueueModes } from '../logic/smartQueue/smartQueueEngine.js';
+import { SMART_QUEUE_MODES, buildMatchMakingCourtProfile, generateMatchMakingCourtMatches, normalizeSmartQueueModes } from '../logic/smartQueue/smartQueueEngine.js?v=match-making-level-courts-01';
 import { createSmartQueueStore } from '../services/smartQueueService.js';
 import { gamePreferenceLabel, anyGamePreferenceLabel } from '../services/gamePreferenceLabels.js';
 import { matchPlayerIds as normalizedMatchPlayerIds, playerId } from '../services/matchModel.js';
@@ -58,7 +58,9 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
     sourceMatches.filter(isActiveMatch).forEach((match) => matchPlayerIds(match).forEach((id) => activePlayerIds.add(String(id))));
     const statusById = new Map(sourcePlayers.map((player) => {
       const id = playerId(player);
-      const status = activePlayerIds.has(id) ? 'playing' : (preferencesById.get(id)?.status === 'rest' ? 'rest' : 'waiting');
+      const playerStatus = String(player?.status || 'ready').toLowerCase();
+      const unavailable = ['removed', 'deleted', 'left', 'rest', 'resting', 'wait'].includes(playerStatus);
+      const status = activePlayerIds.has(id) ? 'playing' : (unavailable || preferencesById.get(id)?.status === 'rest' ? 'rest' : 'waiting');
       return [id, status];
     }));
     return { preferencesById, activePlayerIds, statusById, waitingCount: [...statusById.values()].filter((status) => status === 'waiting').length };
@@ -74,14 +76,44 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
 
   function joinPreferenceMarkup() {
     if (!isSmartEvent()) return '';
-    return `<section class="smart-pref-panel mt-3" id="smartJoinPreference"><div class="flex items-center justify-between gap-2"><div><div class="smart-pref-title">${text('GAME PREFERENCES', 'รูปแบบเกมที่ต้องการ')}</div><p class="mini mt-1">${text('Pick one or more. You can change this later.', 'เลือกได้มากกว่า 1 แบบ และแก้ได้ภายหลัง')}</p></div><span class="smart-pref-badge">MATCH MAKING</span></div><div class="smart-pref-modes">${SMART_QUEUE_MODES.map((mode) => `<button type="button" class="smart-pref-mode ${joinModes.includes(mode) ? 'is-on' : ''}" data-sq-join-mode="${mode}" aria-pressed="${joinModes.includes(mode)}">${modeLabel(mode)}</button>`).join('')}<button type="button" class="smart-pref-mode ${joinModes.length === SMART_QUEUE_MODES.length ? 'is-on' : ''}" data-sq-join-any aria-pressed="${joinModes.length === SMART_QUEUE_MODES.length}">${anyGamePreferenceLabel(language())}</button></div></section>`;
+    return `<section class="smart-pref-panel mt-3" id="smartJoinPreference"><div class="flex items-center justify-between gap-2"><div><div class="smart-pref-title">${text('GAME PREFERENCES', 'รูปแบบเกมที่ต้องการ')}</div><p class="mini mt-1">${text('Preferences guide tie-breaks. Your Event Level controls court eligibility.', 'ใช้เป็นตัวช่วยเมื่อคะแนนความเหมาะสมใกล้กัน โดย Level ของอีเว้นท์เป็นตัวกำหนดคอร์ทที่เล่นได้')}</p></div><span class="smart-pref-badge">MATCH MAKING</span></div><div class="smart-pref-modes">${SMART_QUEUE_MODES.map((mode) => `<button type="button" class="smart-pref-mode ${joinModes.includes(mode) ? 'is-on' : ''}" data-sq-join-mode="${mode}" aria-pressed="${joinModes.includes(mode)}">${modeLabel(mode)}</button>`).join('')}<button type="button" class="smart-pref-mode ${joinModes.length === SMART_QUEUE_MODES.length ? 'is-on' : ''}" data-sq-join-any aria-pressed="${joinModes.length === SMART_QUEUE_MODES.length}">${anyGamePreferenceLabel(language())}</button></div></section>`;
+  }
+
+  function courtRoleLevel(role) {
+    if (role === 'social') return '2.00–2.30';
+    if (role === 'challenge') return '2.60+';
+    return text('ALL LEVELS', 'ทุก Level');
+  }
+
+  function courtNumberFromMatch(match) {
+    return Number(match?.courtNumber ?? match?.court_number)
+      || Number(String(match?.courtId || match?.court_id || match?.courtName || match?.court_name || '').match(/\d+/)?.[0])
+      || 0;
+  }
+
+  function courtProfile() {
+    return buildMatchMakingCourtProfile(getCourtCount?.() || 1);
+  }
+
+  function isFallbackThisRound(court) {
+    if (court.role === 'balanced') return false;
+    return matches().some((match) => isActiveMatch(match)
+      && courtNumberFromMatch(match) === court.courtNumber
+      && String(match?.matchMode || match?.match_type || '') === 'smart_queue_balanced');
+  }
+
+  function courtProfileMarkup() {
+    return `<section class="match-making-courts mt-3"><div class="smart-pref-title">${text('MATCH MAKING COURTS', 'คอร์ท MATCH MAKING')}</div><div class="match-making-court-grid mt-2">${courtProfile().map((court) => {
+      const fallback = isFallbackThisRound(court);
+      return `<div class="match-making-court ${court.role} ${fallback ? 'is-fallback' : ''}"><b>${text('Court', 'คอร์ท')} ${court.courtNumber}</b><span>${modeLabel(court.role)}${fallback ? ` → ${modeLabel('balanced')} ${text('THIS ROUND', 'รอบนี้')}` : ''}</span><small>${courtRoleLevel(court.role)}</small></div>`;
+    }).join('')}</div></section>`;
   }
 
   function smartMatchMarkup(context = null) {
     if (!isSmartEvent()) return '';
     const available = context?.waitingCount ?? players().filter((player) => displayStatus(player) === 'waiting').length;
     const freeCourtCount = getAvailableCourts?.().length ?? Number(getCourtCount?.() || 0);
-    return `<div class="cut card p-4 smart-match-control"><div class="flex items-start justify-between gap-3"><div><div class="smart-pref-title">${text('AUTOMATIC MATCHING', 'จับคู่อัตโนมัติ')}</div><h3 class="font-black text-cyan-300 mt-1">${text('Match by Game Preferences', 'จับคู่ตามรูปแบบเกมที่ต้องการ')}</h3><p class="mini mt-1">${text(`${available} waiting · ${freeCourtCount} free courts`, `รอเล่น ${available} คน · ว่าง ${freeCourtCount} คอร์ท`)}</p></div><span class="smart-pref-badge">MATCH MAKING</span></div><div class="smart-pref-modes">${SMART_QUEUE_MODES.map((mode) => `<span class="smart-pref-badge ${mode}">${modeLabel(mode)}</span>`).join('')}</div><button id="generateSmartMatchBtn" class="cut bg-lime p-4 font-black text-black w-full mt-3" ${available < 4 || freeCourtCount < 1 ? 'disabled' : ''}>${text('GENERATE MATCHES', 'สร้างแมตช์ทั้งหมด')}</button><p class="mini mt-2">${text('Create as many matches as possible from Ready players and available courts.', 'สร้างแมตช์ให้ได้มากที่สุดจากผู้เล่นที่พร้อมและคอร์ทที่ว่าง')}</p></div>`;
+    return `<div class="cut card p-4 smart-match-control"><div class="flex items-start justify-between gap-3"><div><div class="smart-pref-title">${text('AUTOMATIC MATCHING', 'จับคู่อัตโนมัติ')}</div><h3 class="font-black text-cyan-300 mt-1">${text('Match by Court Level Profile', 'จับคู่ตาม Level ของคอร์ท')}</h3><p class="mini mt-1">${text(`${available} waiting · ${freeCourtCount} free courts`, `รอเล่น ${available} คน · ว่าง ${freeCourtCount} คอร์ท`)}</p></div><span class="smart-pref-badge">MATCH MAKING</span></div>${courtProfileMarkup()}<button id="generateSmartMatchBtn" class="cut bg-lime p-4 font-black text-black w-full mt-3" ${available < 4 || freeCourtCount < 1 ? 'disabled' : ''}>${text('GENERATE MATCHES', 'สร้างแมตช์ทั้งหมด')}</button><p class="mini mt-2">${text('Beginner and Challenge courts are filled first. Any specialist shortage becomes Mix Level for this round.', 'เติมคอร์ท Beginner และ Challenge ก่อน หากผู้เล่นไม่ครบ คอร์ทนั้นจะเป็น Mix Level เฉพาะรอบนี้')}</p></div>`;
   }
 
   function inlineEditor(player, context = null) {
@@ -139,22 +171,30 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
     if (!isSmartEvent() || busy) return;
     const freeCourts = getAvailableCourts?.() || Array.from({ length: Number(getCourtCount?.() || 0) }, (_, index) => ({ id: `court-${index + 1}`, name: `Court ${index + 1}`, courtNumber: index + 1 }));
     if (!freeCourts.length) return showMessage?.(text('No court is available. Finish or cancel an active match first.', 'ไม่มีคอร์ทว่าง กรุณาจบหรือยกเลิกแมตช์ที่กำลังเล่นก่อน'));
-    const result = generateSmartQueueMatches({ players: players(), preferences: state.preferences, matches: matches(), maxMatches: freeCourts.length });
-    if (!result.matches.length) return showMessage?.(text('No compatible group of four is ready yet.', 'ยังไม่พบผู้เล่น 4 คนที่มีรูปแบบเกมร่วมกัน'));
+    const result = generateMatchMakingCourtMatches({ players: players(), preferences: state.preferences, matches: matches(), courts: freeCourts, courtCount: getCourtCount?.() || freeCourts.length });
+    if (!result.matches.length) return showMessage?.(text('No eligible group of four is ready yet.', 'ยังไม่มีผู้เล่นที่พร้อมครบ 4 คน'));
     busy = true;
     let created = 0;
     try {
-      for (const [index, generated] of result.matches.entries()) {
-        const court = freeCourts[index];
-        await services.createMatchPreview({ eventId: event().id, organizationId: organizationId(), courtId: court.id || `court-${court.courtNumber}`, courtNumber: Number(court.courtNumber || index + 1), courtName: court.name || `Court ${court.courtNumber || index + 1}`, teamA: generated.teamA, teamB: generated.teamB, matchMode: `smart_queue_${generated.mode}`, fairnessScore: generated.score, idempotencyKey: `match-making:${event().id}:${court.id || court.courtNumber}:${generated.playerIds.slice().sort().join('-')}:${Date.now()}` });
+      for (const generated of result.matches) {
+        await services.createMatchPreview({ eventId: event().id, organizationId: organizationId(), courtId: generated.courtId, courtNumber: generated.courtNumber, courtName: generated.courtName, teamA: generated.teamA, teamB: generated.teamB, matchMode: `smart_queue_${generated.mode}`, fairnessScore: generated.score, idempotencyKey: `match-making:${event().id}:${generated.courtId}:${generated.playerIds.slice().sort().join('-')}:${Date.now()}` });
         created += 1;
       }
       await reloadCore?.({ render: 'organizer-matches' });
       if (String(event()?.environment || 'live') !== 'test') await refresh({ silent: true });
       const assigned = created * 4;
-      const waiting = Math.max(0, createRenderContext().waitingCount - assigned);
+      const waiting = createRenderContext().waitingCount;
       showMessage?.(text(`${created} MATCHES READY · ${assigned} PLAYERS ASSIGNED · ${waiting} PLAYERS WAITING`, `พร้อม ${created} แมตช์ · จัดผู้เล่น ${assigned} คน · รอ ${waiting} คน`));
     } finally { busy = false; }
+  }
+
+  async function generateNextForCourt(court) {
+    if (!isSmartEvent() || !court) return false;
+    const result = generateMatchMakingCourtMatches({ players: players(), preferences: state.preferences, matches: matches(), courts: [court], courtCount: getCourtCount?.() || 1 });
+    const generated = result.matches[0];
+    if (!generated) return false;
+    await services.createMatchNext({ eventId: event().id, organizationId: organizationId(), courtId: generated.courtId, courtNumber: generated.courtNumber, courtName: generated.courtName, teamA: generated.teamA, teamB: generated.teamB, matchMode: `smart_queue_${generated.mode}`, fairnessScore: generated.score });
+    return true;
   }
 
   function rerenderQueue() { window.dispatchEvent(new CustomEvent('gdsq-smart-queue-change')); }
@@ -212,7 +252,7 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
   return {
     refresh, hydratePreferences, isSmartEvent, joinPreferenceMarkup, smartMatchMarkup,
     hasJoinPreference: () => joinModes.length > 0,
-    registerJoinedPlayer, modeBadges, createRenderContext, displayStatus, preferenceFor, inlineEditor,
+    registerJoinedPlayer, generateNextForCourt, courtProfile, modeBadges, createRenderContext, displayStatus, preferenceFor, inlineEditor,
     isSmartMatch: (match) => String(match?.matchMode || match?.match_type || '').startsWith('smart_queue_'),
     matchMode: (match) => String(match?.matchMode || match?.match_type || '').replace(/^smart_queue_/, ''),
     editorButton: (player) => isSmartEvent() ? `<button type="button" class="cut smart-pref-edit" data-sq-edit="${playerId(player)}" aria-expanded="${editorPlayerId === playerId(player)}">${text('EDIT', 'แก้ไข')}</button>` : ''

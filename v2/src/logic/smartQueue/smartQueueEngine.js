@@ -13,6 +13,11 @@ export const SMART_QUEUE_LEVEL_SPREAD = Object.freeze({
   challenge: 1
 });
 
+export const MATCH_MAKING_LEVEL_BANDS = Object.freeze({
+  beginner: Object.freeze({ min: 2, max: 2.3 }),
+  challenge: Object.freeze({ min: 2.6, max: Infinity })
+});
+
 const ACTIVE_MATCH_STATUSES = new Set(['preview', 'assigned', 'playing', 'pending_score', 'queued_next']);
 const CONFIRMED_MATCH_STATUSES = new Set(['confirmed', 'completed', 'done', 'finished']);
 const MODE_TIE_ORDER = Object.freeze({ balanced: 0, social: 1, challenge: 2 });
@@ -286,5 +291,163 @@ export function generateSmartQueueMatches({ players = [], preferences = [], matc
     consideredGroups,
     assignedPlayerIds: [...assignedPlayerIds],
     remainingPlayerIds: remaining.map(playerId).filter(Boolean)
+  };
+}
+
+function courtNumberOf(court, fallback = 1) {
+  return Number(court?.courtNumber ?? court?.court_number)
+    || Number(String(court?.id || court?.name || '').match(/\d+/)?.[0])
+    || fallback;
+}
+
+function courtRole(courtNumber, courtCount) {
+  if (courtCount <= 1) return 'balanced';
+  if (courtNumber === 1) return 'social';
+  if (courtNumber === 2) return 'challenge';
+  return 'balanced';
+}
+
+export function buildMatchMakingCourtProfile(courtCount = 1) {
+  const count = Math.max(1, Math.min(10, Math.floor(Number(courtCount) || 1)));
+  return Array.from({ length: count }, (_, index) => {
+    const courtNumber = index + 1;
+    const role = courtRole(courtNumber, count);
+    return {
+      id: `court-${courtNumber}`,
+      name: `Court ${courtNumber}`,
+      courtNumber,
+      role,
+      courtType: role,
+      minLevel: role === 'social' ? MATCH_MAKING_LEVEL_BANDS.beginner.min : role === 'challenge' ? MATCH_MAKING_LEVEL_BANDS.challenge.min : -Infinity,
+      maxLevel: role === 'social' ? MATCH_MAKING_LEVEL_BANDS.beginner.max : Infinity
+    };
+  });
+}
+
+export function matchMakingLevelRole(player) {
+  const level = playerLevel(player);
+  if (level >= MATCH_MAKING_LEVEL_BANDS.beginner.min && level <= MATCH_MAKING_LEVEL_BANDS.beginner.max) return 'social';
+  if (level >= MATCH_MAKING_LEVEL_BANDS.challenge.min) return 'challenge';
+  return 'balanced';
+}
+
+function eligibleForCourtRole(player, role) {
+  if (role === 'social') return matchMakingLevelRole(player) === 'social';
+  if (role === 'challenge') return matchMakingLevelRole(player) === 'challenge';
+  return true;
+}
+
+function matchingPreferenceFor(player, preferenceMap) {
+  const id = playerId(player);
+  const raw = preferenceMap.get(id);
+  const preference = preferenceFor(player, preferenceMap);
+  if (!raw) {
+    preference.status = 'ready';
+    preference.modes = SMART_QUEUE_MODES.slice();
+    preference.preferredMode = matchMakingLevelRole(player);
+  }
+  preference.readySince = preference.readySince
+    || player?.queueJoinedAt || player?.queue_joined_at
+    || player?.createdAt || player?.created_at || null;
+  preferenceMap.set(id, preference);
+  return preference;
+}
+
+function isFutureMatchEligible(player, preferenceMap, active) {
+  const id = playerId(player);
+  if (!id || active.has(id)) return false;
+  const playerStatus = statusOf(player?.status || player?.queueStatus || player?.queue_status || 'ready');
+  if (['removed', 'deleted', 'left', 'rest', 'resting', 'wait', 'playing', 'preview', 'assigned', 'pending_score', 'queued_next'].includes(playerStatus)) return false;
+  return matchingPreferenceFor(player, preferenceMap).status === 'ready';
+}
+
+function bestLevelCourtCandidate(players, role, preferenceMap, history, now, candidateLimit) {
+  const eligible = players
+    .filter((player) => eligibleForCourtRole(player, role))
+    .sort((left, right) => {
+      const leftGames = history.games.get(playerId(left)) || 0;
+      const rightGames = history.games.get(playerId(right)) || 0;
+      const leftReady = new Date(preferenceMap.get(playerId(left))?.readySince || 0).getTime() || 0;
+      const rightReady = new Date(preferenceMap.get(playerId(right))?.readySince || 0).getTime() || 0;
+      return leftGames - rightGames || leftReady - rightReady || playerId(left).localeCompare(playerId(right));
+    })
+    .slice(0, Math.max(4, Number(candidateLimit) || 20));
+
+  if (eligible.length < 4) return null;
+  return combinations(eligible, 4)
+    .map((group) => candidateForMode(group, role, preferenceMap, history, Number(now)))
+    .sort(deterministicCandidateOrder)[0] || null;
+}
+
+function decorateCourtMatch(candidate, court, configuredRole, fallback) {
+  const courtNumber = courtNumberOf(court);
+  return {
+    ...candidate,
+    courtId: court.id || `court-${courtNumber}`,
+    courtNumber,
+    courtName: court.name || `Court ${courtNumber}`,
+    configuredRole,
+    fallback: Boolean(fallback)
+  };
+}
+
+// MATCH MAKING uses the existing queue, preview and match lifecycle. This layer
+// only decides which four players belong on each free court for the next round.
+export function generateMatchMakingCourtMatches({ players = [], preferences = [], matches = [], courts = [], courtCount = 1, now = Date.now(), candidateLimit = 20 } = {}) {
+  const profile = buildMatchMakingCourtProfile(courtCount);
+  const profileByNumber = new Map(profile.map((court) => [court.courtNumber, court]));
+  const freeCourts = (courts.length ? courts : profile).map((court, index) => {
+    const courtNumber = courtNumberOf(court, index + 1);
+    const configured = profileByNumber.get(courtNumber) || { ...court, courtNumber, role: courtRole(courtNumber, profile.length) };
+    return { ...configured, ...court, courtNumber, role: configured.role };
+  });
+  const preferenceMap = new Map((preferences || []).map((preference) => [
+    String(preference.eventPlayerId || preference.event_player_id || preference.playerId || preference.player_id || ''),
+    preference
+  ]));
+  const active = activePlayerIds(matches);
+  const history = buildSmartQueueHistory(matches);
+  let remaining = players.filter((player) => isFutureMatchEligible(player, preferenceMap, active));
+  const generated = [];
+  const assignedPlayerIds = new Set();
+  const fallbackCourts = [];
+
+  function reserve(candidate, court, configuredRole, fallback = false) {
+    if (!candidate) return false;
+    const match = decorateCourtMatch(candidate, court, configuredRole, fallback);
+    generated.push(match);
+    candidate.playerIds.forEach((id) => assignedPlayerIds.add(String(id)));
+    remaining = remaining.filter((player) => !assignedPlayerIds.has(playerId(player)));
+    return true;
+  }
+
+  const specialists = freeCourts
+    .filter((court) => court.role === 'social' || court.role === 'challenge')
+    .sort((left, right) => (left.role === 'social' ? 0 : 1) - (right.role === 'social' ? 0 : 1));
+  const mixCourts = freeCourts.filter((court) => court.role === 'balanced');
+
+  specialists.forEach((court) => {
+    const eligibleCount = remaining.filter((player) => eligibleForCourtRole(player, court.role)).length;
+    if (eligibleCount < 4) {
+      fallbackCourts.push(court);
+      return;
+    }
+    reserve(bestLevelCourtCandidate(remaining, court.role, preferenceMap, history, now, candidateLimit), court, court.role);
+  });
+
+  [...fallbackCourts, ...mixCourts]
+    .sort((left, right) => left.courtNumber - right.courtNumber)
+    .forEach((court) => {
+      if (remaining.length < 4) return;
+      reserve(bestLevelCourtCandidate(remaining, 'balanced', preferenceMap, history, now, candidateLimit), court, court.role, court.role !== 'balanced');
+    });
+
+  return {
+    matches: generated,
+    courtProfile: profile,
+    fallbackCourtNumbers: generated.filter((match) => match.fallback).map((match) => match.courtNumber),
+    assignedPlayerIds: [...assignedPlayerIds],
+    remainingPlayerIds: remaining.map(playerId).filter(Boolean),
+    eligiblePlayerIds: players.filter((player) => isFutureMatchEligible(player, preferenceMap, active)).map(playerId).filter(Boolean)
   };
 }
