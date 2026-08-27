@@ -44,7 +44,7 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
 
   function preferenceFor(id, context = null) {
     return context?.preferencesById?.get(String(id)) || state.preferences.find((row) => String(row.eventPlayerId) === String(id)) || {
-      eventPlayerId: id, modes: [], preferredMode: null, status: 'rest'
+      eventPlayerId: id, modes: SMART_QUEUE_MODES.slice(), preferredMode: null, status: 'ready'
     };
   }
 
@@ -120,7 +120,8 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
     const id = playerId(player);
     if (!isSmartEvent() || editorPlayerId !== id) return '';
     const pref = preferenceFor(id, context);
-    const modes = normalizeSmartQueueModes(pref.modes);
+    const storedModes = normalizeSmartQueueModes(pref.modes);
+    const modes = storedModes.length ? storedModes : SMART_QUEUE_MODES.slice();
     const active = context?.activePlayerIds?.has(id) || matches().some((match) => isActiveMatch(match) && matchPlayerIds(match).includes(id));
     const level = Number(player?.estimatedLevel ?? player?.estimated_level ?? player?.level ?? 3);
     return `<div class="smart-inline-editor" data-sq-inline-editor="${id}" data-modes="${modes.join(',')}" data-status="${pref.status === 'rest' ? 'rest' : 'ready'}"><label class="smart-inline-field"><span>LEVEL</span><input type="number" min="1" max="6" step="0.01" inputmode="decimal" value="${level.toFixed(2)}" data-sq-inline-level></label><div><div class="smart-pref-title">${text('GAME PREFERENCES', 'รูปแบบเกมที่ต้องการ')}</div><div class="smart-pref-modes">${SMART_QUEUE_MODES.map((mode) => `<button type="button" class="smart-pref-mode ${modes.includes(mode) ? 'is-on' : ''}" data-sq-inline-mode="${mode}" aria-pressed="${modes.includes(mode)}">${modeLabel(mode)}</button>`).join('')}<button type="button" class="smart-pref-mode ${modes.length === SMART_QUEUE_MODES.length ? 'is-on' : ''}" data-sq-inline-any>${anyGamePreferenceLabel(language())}</button></div></div><div><div class="smart-pref-title">${text('QUEUE STATUS', 'สถานะคิว')}</div><div class="smart-inline-statuses"><button type="button" class="smart-pref-rest ${pref.status !== 'rest' ? 'is-on' : ''}" data-sq-inline-status="ready">${text('READY TO PLAY', 'พร้อมเล่น')}</button><button type="button" class="smart-pref-rest ${pref.status === 'rest' ? 'is-on' : ''}" data-sq-inline-status="rest">${text('WAIT', 'รอก่อน')}</button></div></div>${active ? `<p class="mini text-cyan-200">${text('Current Preview / Playing / Up Next reservation stays unchanged. Updates apply from the next match.', 'การจอง Preview / Playing / Up Next ปัจจุบันไม่เปลี่ยน ค่าใหม่มีผลจากแมตช์ถัดไป')}</p>` : ''}<div class="smart-inline-actions"><button type="button" class="cut btn bg-white/5" data-sq-inline-cancel>${text('CANCEL', 'ยกเลิก')}</button><button type="button" class="cut bg-lime text-black font-black" data-sq-inline-save>${text('SAVE', 'บันทึก')}</button></div></div>`;
@@ -234,15 +235,28 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
     if (target.hasAttribute('data-sq-inline-save')) {
       const id = editor.dataset.sqInlineEditor;
       const level = Number(editor.querySelector('[data-sq-inline-level]')?.value);
-      const modes = normalizeSmartQueueModes(editor.dataset.modes.split(',').filter(Boolean));
+      const selectedModes = normalizeSmartQueueModes(editor.dataset.modes.split(',').filter(Boolean));
+      const modes = selectedModes.length ? selectedModes : SMART_QUEUE_MODES.slice();
       if (!Number.isFinite(level) || level < 1 || level > 6) return void showMessage?.(text('Enter a Level from 1.00 to 6.00.', 'กรอก Level ตั้งแต่ 1.00 ถึง 6.00'));
-      if (!modes.length) return void showMessage?.(text('Choose at least one Game Preference.', 'เลือกอย่างน้อย 1 รูปแบบเกม'));
       busy = true;
-      Promise.all([services.updatePlayerLevel(event().id, id, level), savePreference(id, { modes, preferredMode: modes[0], status: editor.dataset.status })]).then(async () => {
+      void (async () => {
+        await services.updatePlayerLevel(event().id, id, level);
+        let preferenceError = null;
+        try {
+          await savePreference(id, { modes, preferredMode: modes[0], status: editor.dataset.status });
+        } catch (error) {
+          preferenceError = error;
+          if (/passcode|unauthorized|401/i.test(String(error?.message || ''))) adminPasscode = '';
+        }
         editorPlayerId = '';
         await reloadCore?.({ render: 'organizer' });
-        showMessage?.(text('Player settings saved.', 'บันทึกข้อมูลผู้เล่นแล้ว'));
-      }).catch((error) => {
+        const refreshed = players().find((player) => playerId(player) === String(id));
+        const refreshedLevel = Number(refreshed?.estimatedLevel ?? refreshed?.estimated_level ?? refreshed?.level);
+        if (refreshed && Math.abs(refreshedLevel - level) > 0.000001) throw new Error(text('Level verification failed. Refresh and try again.', 'ตรวจสอบ Level หลังบันทึกไม่สำเร็จ กรุณารีเฟรชแล้วลองอีกครั้ง'));
+        showMessage?.(preferenceError
+          ? text(`Level saved. Game Preference remains ANY (${preferenceError.message}).`, `บันทึก Level แล้ว รูปแบบเกมยังใช้ ANY (${preferenceError.message})`)
+          : text('Player settings saved.', 'บันทึกข้อมูลผู้เล่นแล้ว'));
+      })().catch((error) => {
         if (/passcode|unauthorized|401/i.test(String(error?.message || ''))) adminPasscode = '';
         showMessage?.(error.message);
       }).finally(() => { busy = false; rerenderQueue(); });

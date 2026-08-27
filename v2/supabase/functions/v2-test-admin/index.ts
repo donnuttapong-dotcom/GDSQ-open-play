@@ -27,7 +27,11 @@ function classifiedError(error: unknown) {
 function validId(value: unknown) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '')); }
 function playerId(value: unknown) { return typeof value === 'string' || typeof value === 'number' ? String(value) : String((value as Record<string, unknown>)?.id || (value as Record<string, unknown>)?.playerId || (value as Record<string, unknown>)?.player_id || (value as Record<string, unknown>)?.eventPlayerId || (value as Record<string, unknown>)?.event_player_id || ''); }
 function matchIds(body: Record<string, unknown>) { return { teamA: (Array.isArray(body.teamA) ? body.teamA : []).map(playerId).filter(Boolean), teamB: (Array.isArray(body.teamB) ? body.teamB : []).map(playerId).filter(Boolean) }; }
-function normalizeLevel(value: unknown) { return Math.max(2, Math.min(8, Math.round(Number(value || 3) * 4) / 4)); }
+function normalizeLevel(value: unknown) {
+  const level = Number(value || 3);
+  if (!Number.isFinite(level) || level < 1 || level > 6) throw new Error('Level must be between 1.00 and 6.00');
+  return level;
+}
 function base64Url(bytes: Uint8Array) { return btoa(String.fromCharCode(...bytes)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', ''); }
 function fromBase64Url(value: string) { const base64 = value.replaceAll('-', '+').replaceAll('_', '/') + '='.repeat((4 - value.length % 4) % 4); return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0)); }
 async function digest(value: string) { const result = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)); return Array.from(new Uint8Array(result)).map((item) => item.toString(16).padStart(2, '0')).join(''); }

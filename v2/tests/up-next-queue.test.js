@@ -16,6 +16,12 @@ const current = store.createLocalMatchPreview({ eventId, courtId: 'court-1', cou
 store.startLocalMatch(eventId, current.id);
 const next = store.createLocalMatchNext({ eventId, courtId: 'court-1', courtNumber: 1, courtName: 'Court 1', teamA: roster('c'), teamB: roster('d') });
 assert.equal(next.status, 'queued_next');
+const updatedNext = store.updateLocalMatchNext(eventId, next.id, { teamA: [{ id: 'c1' }, { id: 'replacement' }], teamB: roster('d') });
+assert.equal(updatedNext.id, next.id, 'Replacing one Up Next player must preserve Match ID');
+assert.equal(updatedNext.courtId, next.courtId, 'Replacing one Up Next player must preserve Court');
+assert.equal(updatedNext.status, 'queued_next', 'Replacing one Up Next player must preserve queued-next status');
+assert.deepEqual(updatedNext.teamA, ['c1', 'replacement'], 'Only the selected Up Next slot must change');
+assert.deepEqual(updatedNext.teamB, ['d1', 'd2'], 'The other Up Next team must remain unchanged');
 assert.throws(() => store.createLocalMatchNext({ eventId, courtId: 'court-1', courtNumber: 1, teamA: roster('e'), teamB: roster('f') }), /already has a next match/i);
 assert.throws(() => store.createLocalMatchNext({ eventId, courtId: 'court-2', courtNumber: 2, teamA: roster('a'), teamB: roster('e') }), /Court is not playing|active match/i);
 
@@ -45,6 +51,11 @@ assert.match(lifecycleSource, /'queued_next'/, 'An unresolved next match must bl
 assert.match(openplaySource, /GENERATE ALL NEXT/, 'Organizer UI must expose Generate All Next');
 assert.match(openplaySource, /SET NEXT/, 'Organizer UI must expose manual Set Next');
 assert.match(openplaySource, /UP NEXT/, 'Organizer UI must render an Up Next card');
+assert.match(openplaySource, /data-next-player="\$\{next\.id\}" data-next-slot="\$\{start\}"/, 'Up Next player selectors must always be rendered directly on the card');
+assert.doesNotMatch(openplaySource, /data-edit-next|EDIT NEXT/, 'The redundant Edit Next button must be removed');
+assert.match(openplaySource, /nextTeamNames[\s\S]*?levelText\(currentEventLevel\(item\)\)/, 'Up Next summary must show exact current Event Levels');
+assert.match(openplaySource, /A AVG \$\{levelText\(a\)\} · B AVG \$\{levelText\(b\)\} · GAP/, 'Up Next must display both team averages and the Level gap');
+assert.match(openplaySource, /id===selected\|\|\(isReadyForMatch\(player\)&&!busy\.has\(id\)&&!auto\.has\(id\)&&!picked\.has\(id\)\)/, 'Replacement options must exclude active, auto-rested, and duplicate players while retaining the current player');
 assert.match(edgeSource, /createMatchNext/, 'Organizer Edge Function must expose next-match creation');
 assert.match(edgeSource, /updateMatchNext/, 'Organizer Edge Function must expose next-match editing');
 assert.match(edgeSource, /cancelMatchNext/, 'Organizer Edge Function must expose next-match cancellation');

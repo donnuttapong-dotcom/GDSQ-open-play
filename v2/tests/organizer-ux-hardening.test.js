@@ -11,6 +11,10 @@ assert.match(source, /type="number" min="0" max="22" step="1" inputmode="numeric
 assert.match(source, /button,select,input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):not\(\[type="file"\]\),a\.btn\{min-height:44px\}/, 'Operational controls must meet the 44px touch target');
 assert.match(source, /\.mode-tabs button,\.mode-tabs a\{min-height:44px\}/, 'Primary navigation targets must not be reduced below 44px by earlier styles');
 assert.match(source, /@media\(min-width:768px\)\{#playerQueueControl \.queue-actions\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)\}\}/, 'iPad and desktop queue actions must stay on one row');
+assert.match(source, /#tab-stats,#tab-stats>\.space-y-5\{height:auto;max-height:none;overflow:visible\}/, 'Stats content must use normal document height instead of a nested vertical scroller');
+assert.match(source, /#tab-stats \.overflow-auto\{overflow-x:auto;overflow-y:visible;max-height:none;overscroll-behavior-x:contain;overscroll-behavior-y:auto;touch-action:pan-x pan-y\}/, 'Stats tables must allow page scrolling while retaining horizontal table access');
+assert.match(source, /html\{overflow-y:auto\}[\s\S]*?body\{overflow-y:visible\}/, 'The document root must remain the vertical scroll owner');
+assert.match(source, /\.next-team select\{[^}]*min-height:44px/, 'Up Next selectors must retain an iPad-safe touch target');
 
 const playerRowSource = source.match(/function playerRow\([\s\S]*?\nfunction renderJoin/)?.[0] || '';
 assert.match(playerRowSource, /queued=queuedNextForPlayer\(p\.id\)/, 'Player Queue must identify queued-next reservations independently');
