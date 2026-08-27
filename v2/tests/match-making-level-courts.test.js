@@ -243,6 +243,13 @@ assert.equal(matchMakingLevelRole({ id: 'event-level-wins', estimatedLevel: 2.2,
   ]);
   assert.match(organizer, /if\(smartQueueUi\.isSmartEvent\(\)\)return smartQueueUi\.generateNextForCourt\(court\)/);
   assert.match(organizer, /if\(smartQueueUi\.isSmartEvent\(\)\)return smartQueueUi\.courtProfile\(\)/);
+  assert.match(organizer, /\$\('standardManualPickControl'\)\?\.classList\.remove\('hidden'\)/, 'Manual Pick must remain visible in Match Making events');
+  assert.match(organizer, /function manualAvailablePlayers[\s\S]*?statusById\.get\(String\(p\.id\)\)===['"]waiting['"]/, 'Match Making Manual Pick must use only waiting players');
+  assert.match(organizer, /generateManualPreview[\s\S]*?available=manualAvailablePlayers\(context\)[\s\S]*?services\.createMatchPreview/, 'Manual Match Making must reuse the existing preview lifecycle');
+  assert.match(organizer, /renderManualOptions\(\);syncManualPickControls\(\)/, 'Manual button state must be calculated after event options are refreshed');
+  assert.match(organizer, /addEventListener\('change',[\s\S]*?renderManualOptions\(\);syncManualPickControls\(\);renderNextControls\(\)/, 'Manual controls must update immediately after each player selection');
+  assert.match(organizer, /control\.id===['"]manualPreviewBtn['"]\)syncManualPickControls\(\)/, 'Manual validity must be restored after the pending action state ends');
+  assert.match(organizer, /if\(finalized\)\['generateAutoBtn'[\s\S]*?'manualClearBtn'\]/, 'Live event synchronization must not re-enable Manual and Auto controls unconditionally');
   assert.match(ui, /generateMatchMakingCourtMatches/);
   assert.match(ui, /MATCH MAKING COURTS/);
   assert.doesNotMatch(ui, />SMART QUEUE</);
