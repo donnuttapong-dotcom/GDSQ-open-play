@@ -29,4 +29,5 @@
 .queue-status-playing.is-active:disabled{opacity:1}
 .queue-card-footer{display:flex;justify-content:flex-end}
 .queue-card-footer .status-delete-btn{width:min(100%,140px)}
+@media(min-width:961px) and (max-width:1099px){.queue-status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:767px){.queue-status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.queue-player-name>b{max-width:100%}}

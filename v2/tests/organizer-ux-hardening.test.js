@@ -13,6 +13,7 @@ assert.match(source, /type="number" min="0" max="22" step="1" inputmode="numeric
 assert.match(source, /button,select,input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):not\(\[type="file"\]\),a\.btn\{min-height:44px\}/, 'Operational controls must meet the 44px touch target');
 assert.match(source, /\.mode-tabs button,\.mode-tabs a\{min-height:44px\}/, 'Primary navigation targets must not be reduced below 44px by earlier styles');
 assert.match(smartQueueStyles, /\.queue-status-grid\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/, 'iPad landscape and desktop queue statuses must stay on one row');
+assert.match(smartQueueStyles, /@media\(min-width:961px\) and \(max-width:1099px\)\{\.queue-status-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/, 'Narrow two-column iPad layouts must switch queue statuses to a 2x2 grid');
 assert.match(smartQueueStyles, /@media\(max-width:767px\)\{\.queue-status-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/, 'Mobile and narrow iPad queue statuses must use a tappable 2x2 grid');
 assert.match(smartQueueStyles, /\.queue-status-btn\{[^}]*min-height:44px/, 'Every queue status control must keep a 44px touch target');
 assert.match(source, /#tab-stats,#tab-stats>\.space-y-5\{height:auto;max-height:none;overflow:visible\}/, 'Stats content must use normal document height instead of a nested vertical scroller');
