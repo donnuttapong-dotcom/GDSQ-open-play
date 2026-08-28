@@ -9,7 +9,7 @@ const safetyMigrationSource = fs.readFileSync(new URL('../supabase/migrations/20
 const smartQueueUiSource = fs.readFileSync(new URL('../src/ui/smartQueueUi.js', import.meta.url), 'utf8');
 const testAdminSource = fs.readFileSync(new URL('../supabase/functions/v2-test-admin/index.ts', import.meta.url), 'utf8');
 
-assert.match(openplaySource, /levelLock=.*pendingLevelUpdates\.has\(String\(p\.id/, 'Organizer level editing must not lock because a player is active');
+assert.match(openplaySource, /levelLock=.*pendingLevelUpdates\.has\((?:String\(p\.id\)|id)/, 'Organizer level editing must not lock because a player is active');
 assert.match(openplaySource, /Applies from next match/, 'Active-player level edits must explain that the current roster is unchanged');
 assert.doesNotMatch(openplaySource.match(/function playerRow\([\s\S]*?\nfunction renderJoin/)[0], /data-level-player[\s\S]*?\$\{actionLock\}/, 'Level select must not reuse the active-match action lock');
 assert.match(openplaySource, /pendingLevelUpdates\.add\(String\(id\)\)[\s\S]*?services\.updatePlayerLevel\(event\.id,id,level\)/, 'Level saves must mark only the current level field pending');

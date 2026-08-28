@@ -122,9 +122,8 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
     const pref = preferenceFor(id, context);
     const storedModes = normalizeSmartQueueModes(pref.modes);
     const modes = storedModes.length ? storedModes : SMART_QUEUE_MODES.slice();
-    const active = context?.activePlayerIds?.has(id) || matches().some((match) => isActiveMatch(match) && matchPlayerIds(match).includes(id));
     const level = Number(player?.estimatedLevel ?? player?.estimated_level ?? player?.level ?? 3);
-    return `<div class="smart-inline-editor" data-sq-inline-editor="${id}" data-modes="${modes.join(',')}" data-status="${pref.status === 'rest' ? 'rest' : 'ready'}"><label class="smart-inline-field"><span>LEVEL</span><input type="number" min="1" max="6" step="0.01" inputmode="decimal" value="${level.toFixed(2)}" data-sq-inline-level></label><div><div class="smart-pref-title">${text('GAME PREFERENCES', 'รูปแบบเกมที่ต้องการ')}</div><div class="smart-pref-modes">${SMART_QUEUE_MODES.map((mode) => `<button type="button" class="smart-pref-mode ${modes.includes(mode) ? 'is-on' : ''}" data-sq-inline-mode="${mode}" aria-pressed="${modes.includes(mode)}">${modeLabel(mode)}</button>`).join('')}<button type="button" class="smart-pref-mode ${modes.length === SMART_QUEUE_MODES.length ? 'is-on' : ''}" data-sq-inline-any>${anyGamePreferenceLabel(language())}</button></div></div><div><div class="smart-pref-title">${text('QUEUE STATUS', 'สถานะคิว')}</div><div class="smart-inline-statuses"><button type="button" class="smart-pref-rest ${pref.status !== 'rest' ? 'is-on' : ''}" data-sq-inline-status="ready">${text('READY TO PLAY', 'พร้อมเล่น')}</button><button type="button" class="smart-pref-rest ${pref.status === 'rest' ? 'is-on' : ''}" data-sq-inline-status="rest">${text('WAIT', 'รอก่อน')}</button></div></div>${active ? `<p class="mini text-cyan-200">${text('Current Preview / Playing / Up Next reservation stays unchanged. Updates apply from the next match.', 'การจอง Preview / Playing / Up Next ปัจจุบันไม่เปลี่ยน ค่าใหม่มีผลจากแมตช์ถัดไป')}</p>` : ''}<div class="smart-inline-actions"><button type="button" class="cut btn bg-white/5" data-sq-inline-cancel>${text('CANCEL', 'ยกเลิก')}</button><button type="button" class="cut bg-lime text-black font-black" data-sq-inline-save>${text('SAVE', 'บันทึก')}</button></div></div>`;
+    return `<div class="smart-inline-editor" data-sq-inline-editor="${id}" data-modes="${modes.join(',')}"><label class="smart-inline-field"><span>LEVEL</span><input type="number" min="1" max="6" step="0.01" inputmode="decimal" value="${level.toFixed(2)}" data-sq-inline-level></label><div><div class="smart-pref-title">${text('GAME PREFERENCES', 'รูปแบบเกมที่ต้องการ')}</div><div class="smart-pref-modes">${SMART_QUEUE_MODES.map((mode) => `<button type="button" class="smart-pref-mode ${modes.includes(mode) ? 'is-on' : ''}" data-sq-inline-mode="${mode}" aria-pressed="${modes.includes(mode)}">${modeLabel(mode)}</button>`).join('')}<button type="button" class="smart-pref-mode ${modes.length === SMART_QUEUE_MODES.length ? 'is-on' : ''}" data-sq-inline-any>${anyGamePreferenceLabel(language())}</button></div></div><div class="smart-inline-actions"><button type="button" class="cut btn bg-white/5" data-sq-inline-cancel>${text('CANCEL', 'ยกเลิก')}</button><button type="button" class="cut bg-lime text-black font-black" data-sq-inline-save>${text('SAVE', 'บันทึก')}</button></div></div>`;
   }
 
   async function refresh({ silent = false } = {}) {
@@ -158,6 +157,10 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
     const result = normalizePreference(saved?.preference || saved);
     state.preferences = [...state.preferences.filter((row) => String(row.eventPlayerId) !== String(id)), result];
     return result;
+  }
+
+  async function setQueueStatus(id, status) {
+    return savePreference(id, { status: status === 'rest' ? 'rest' : 'ready' }, 'admin');
   }
 
   async function registerJoinedPlayer(player) {
@@ -201,7 +204,7 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
   function rerenderQueue() { window.dispatchEvent(new CustomEvent('gdsq-smart-queue-change')); }
 
   document.addEventListener('click', (eventObject) => {
-    const target = eventObject.target.closest('[data-sq-join-mode],[data-sq-join-any],[data-sq-edit],[data-sq-inline-mode],[data-sq-inline-any],[data-sq-inline-status],[data-sq-inline-save],[data-sq-inline-cancel],#generateSmartMatchBtn');
+    const target = eventObject.target.closest('[data-sq-join-mode],[data-sq-join-any],[data-sq-edit],[data-sq-inline-mode],[data-sq-inline-any],[data-sq-inline-save],[data-sq-inline-cancel],#generateSmartMatchBtn');
     if (!target || busy) return;
     if (target.id === 'generateSmartMatchBtn') return void generateSmartMatches().catch((error) => showMessage?.(error.message));
     if (target.dataset.sqJoinMode) {
@@ -227,11 +230,6 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
       editor.querySelector('[data-sq-inline-any]')?.classList.toggle('is-on', modes.length === SMART_QUEUE_MODES.length);
       return;
     }
-    if (target.dataset.sqInlineStatus) {
-      editor.dataset.status = target.dataset.sqInlineStatus;
-      editor.querySelectorAll('[data-sq-inline-status]').forEach((button) => button.classList.toggle('is-on', button.dataset.sqInlineStatus === editor.dataset.status));
-      return;
-    }
     if (target.hasAttribute('data-sq-inline-save')) {
       const id = editor.dataset.sqInlineEditor;
       const level = Number(editor.querySelector('[data-sq-inline-level]')?.value);
@@ -243,7 +241,7 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
         await services.updatePlayerLevel(event().id, id, level);
         let preferenceError = null;
         try {
-          await savePreference(id, { modes, preferredMode: modes[0], status: editor.dataset.status });
+          await savePreference(id, { modes, preferredMode: modes[0] });
         } catch (error) {
           preferenceError = error;
           if (/passcode|unauthorized|401/i.test(String(error?.message || ''))) adminPasscode = '';
@@ -266,7 +264,7 @@ export function createSmartQueueUi({ services, supabase, getEvent, getPlayers, g
   return {
     refresh, hydratePreferences, isSmartEvent, joinPreferenceMarkup, smartMatchMarkup,
     hasJoinPreference: () => joinModes.length > 0,
-    registerJoinedPlayer, generateNextForCourt, courtProfile, modeBadges, createRenderContext, displayStatus, preferenceFor, inlineEditor,
+    registerJoinedPlayer, generateNextForCourt, courtProfile, modeBadges, createRenderContext, displayStatus, preferenceFor, inlineEditor, setQueueStatus,
     isSmartMatch: (match) => String(match?.matchMode || match?.match_type || '').startsWith('smart_queue_'),
     matchMode: (match) => String(match?.matchMode || match?.match_type || '').replace(/^smart_queue_/, ''),
     editorButton: (player) => isSmartEvent() ? `<button type="button" class="cut smart-pref-edit" data-sq-edit="${playerId(player)}" aria-expanded="${editorPlayerId === playerId(player)}">${text('EDIT', 'แก้ไข')}</button>` : ''
