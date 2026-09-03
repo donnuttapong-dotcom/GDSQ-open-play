@@ -107,7 +107,7 @@ export function buildMatchHistoryStats(history = []) {
   const playedCount = new Map();
   const recentOpponentPairs = new Set();
   const recentGroupKeys = new Set();
-  const waves = [];
+  const matchSequence = [];
   const syntheticStepMs = 240000;
   const syntheticBaseMs = 4102444800000;
 
@@ -145,15 +145,16 @@ export function buildMatchHistoryStats(history = []) {
       if (!lastPlayedAt.has(sid) || item.time > lastPlayedAt.get(sid)) lastPlayedAt.set(sid, item.time);
     });
 
-    let wave = waves[waves.length - 1];
-    if (!wave || Math.abs(wave.time - item.time) > 180000) {
-      wave = { time: item.time, playerIds: new Set() };
-      waves.push(wave);
-    }
-    allPlayers.forEach((id) => wave.playerIds.add(String(id)));
+    matchSequence.push({
+      time: item.time,
+      matchId: String(item.match?.id || ''),
+      playerIds: new Set(allPlayers.map(String))
+    });
   }
 
-  return { partnerRepeats, opponentRepeats, winningPartnerRepeats, losingPartnerRepeats, recentOpponentPairs, recentGroupKeys, waves, lastPlayedAt, playedCount };
+  // Keep `waves` as a compatibility alias, but each entry is now one actual
+  // completed match instead of a time-window grouping.
+  return { partnerRepeats, opponentRepeats, winningPartnerRepeats, losingPartnerRepeats, recentOpponentPairs, recentGroupKeys, matchSequence, waves: matchSequence, lastPlayedAt, playedCount };
 }
 
 function matchWinner(match) {
@@ -169,8 +170,8 @@ function matchWinner(match) {
 export function countConsecutiveGames(player, historyStats) {
   const id = playerId(player);
   let count = 0;
-  for (const wave of historyStats?.waves || []) {
-    if (wave.playerIds.has(id)) count += 1;
+  for (const match of historyStats?.matchSequence || historyStats?.waves || []) {
+    if (match.playerIds.has(id)) count += 1;
     else break;
   }
   return count;
@@ -180,9 +181,9 @@ function countConsecutiveRests(player, historyStats) {
   const id = playerId(player);
   const joinedAt = getQueueJoinedAt(player);
   let count = 0;
-  for (const wave of historyStats?.waves || []) {
-    if (joinedAt && joinedAt > wave.time + 60000) continue;
-    if (wave.playerIds.has(id)) break;
+  for (const match of historyStats?.matchSequence || historyStats?.waves || []) {
+    if (joinedAt && joinedAt > match.time + 60000) continue;
+    if (match.playerIds.has(id)) break;
     count += 1;
   }
   return count;
@@ -300,20 +301,23 @@ export function generateMatches({ players = [], courts = [], history = [], rules
   const historyStats = buildMatchHistoryStats(history);
   const courtList = courts.length ? courts : [{ id: 'court-1', name: 'Court 1' }];
   const eligiblePlayers = players.filter((player) => player && ['ready', 'checked_in'].includes(normalizeStatus(player)));
-  const proposedRestingPlayers = mergedRules.enforceAutoRest ? eligiblePlayers.filter((player) => shouldRest(player, historyStats, mergedRules)) : [];
-  const proposedRestingIds = new Set(proposedRestingPlayers.map(playerId));
-  const restedAvailablePlayers = eligiblePlayers.filter((player) => !proposedRestingIds.has(playerId(player)));
-  // A rest rule must never stall an Open Play session. If it leaves fewer than
-  // one full match, release the rest queue and let the fairness scoring choose.
-  const canRestWithoutBlockingPlay = restedAvailablePlayers.length >= 4;
-  const restingPlayers = canRestWithoutBlockingPlay ? proposedRestingPlayers : [];
-  const availablePlayers = canRestWithoutBlockingPlay ? restedAvailablePlayers : eligiblePlayers;
-
-  if (availablePlayers.length < 4) return { previews: [], restingPlayers, availablePlayers, reason: `Not enough eligible players. Need 4, got ${availablePlayers.length}.` };
-
-  const waitedTooLong = availablePlayers.filter((player) => countConsecutiveRests(player, historyStats) >= mergedRules.maxConsecutiveWaitRounds);
-  const waitLimitIds = new Set(waitedTooLong.map(playerId));
+  const autoRestCandidates = mergedRules.enforceAutoRest ? eligiblePlayers.filter((player) => shouldRest(player, historyStats, mergedRules)) : [];
+  const autoRestIds = new Set(autoRestCandidates.map(playerId));
+  const preferredPlayers = eligiblePlayers.filter((player) => !autoRestIds.has(playerId(player)));
+  let availablePlayers = preferredPlayers;
+  let waitedTooLong = [];
+  let waitLimitIds = new Set();
   let searchBudget = 1200;
+
+  if (eligiblePlayers.length < 4) return {
+    previews: [],
+    restingPlayers: autoRestCandidates,
+    availablePlayers: eligiblePlayers,
+    autoRestCandidates: autoRestCandidates.map(playerId),
+    autoRestUsed: [],
+    autoRestFallbackUsed: false,
+    reason: `Not enough eligible players. Need 4, got ${eligiblePlayers.length}.`
+  };
 
   function candidatesForCourt(courtIndex, usedIds) {
     const court = courtList[courtIndex];
@@ -379,8 +383,24 @@ export function generateMatches({ players = [], courts = [], history = [], rules
     return bestPlan;
   }
 
-  const previews = planCourts(0, new Set(), []);
+  function planWithPlayers(candidatePlayers) {
+    availablePlayers = candidatePlayers;
+    waitedTooLong = availablePlayers.filter((player) => countConsecutiveRests(player, historyStats) >= mergedRules.maxConsecutiveWaitRounds);
+    waitLimitIds = new Set(waitedTooLong.map(playerId));
+    searchBudget = 1200;
+    if (availablePlayers.length < 4) return [];
+    return planCourts(0, new Set(), []);
+  }
+
+  let previews = planWithPlayers(preferredPlayers);
+  let autoRestFallbackUsed = false;
+  if (!previews.length && autoRestCandidates.length) {
+    previews = planWithPlayers(eligiblePlayers);
+    autoRestFallbackUsed = previews.length > 0;
+  }
   const used = new Set(previews.flatMap((preview) => [...preview.teamA, ...preview.teamB].map(playerId)));
+  const autoRestUsed = autoRestCandidates.filter((player) => used.has(playerId(player)));
+  const restingPlayers = autoRestCandidates.filter((player) => !used.has(playerId(player)));
 
   const unservedWaitLimitPlayers = waitedTooLong.filter((player) => !used.has(playerId(player)));
   const reason = previews.length
@@ -390,6 +410,9 @@ export function generateMatches({ players = [], courts = [], history = [], rules
     previews,
     restingPlayers,
     availablePlayers,
+    autoRestCandidates: autoRestCandidates.map(playerId),
+    autoRestUsed: autoRestUsed.map(playerId),
+    autoRestFallbackUsed,
     reason,
     constraints: {
       minBalancePercent: mergedRules.minBalancePercent,
