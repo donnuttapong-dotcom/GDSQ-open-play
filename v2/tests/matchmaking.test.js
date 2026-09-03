@@ -46,7 +46,7 @@ function match(id, teamA, teamB, minutesAgo) {
   assert.equal(result.previews[0].teamB.length, 2);
 }
 
-// Test 2: auto rest blocks a player after two consecutive completed games by default.
+// Test 2: recently played READY players are deprioritized but never auto-blocked.
 {
   const history = [
     match('m2', ['p1', 'p2'], ['p3', 'p4'], 1),
@@ -59,7 +59,7 @@ function match(id, teamA, teamB, minutesAgo) {
     now
   });
   const selectedIds = [...result.previews[0].teamA, ...result.previews[0].teamB].map((p) => p.id);
-  assert.equal(result.restingPlayers.some((p) => p.id === 'p1'), true);
+  assert.equal(result.restingPlayers.length, 0);
   assert.equal(selectedIds.includes('p1'), false);
 }
 
@@ -117,7 +117,7 @@ function match(id, teamA, teamB, minutesAgo) {
   assert.notEqual(selected, previousGroup.join('|'));
 }
 
-// Test 2d: auto rest never blocks the only four players who can form a match.
+// Test 2d: READY players remain eligible even after two consecutive matches.
 {
   const history = [
     match('recent', ['p1', 'p2'], ['p3', 'p4'], 1),
@@ -201,7 +201,7 @@ function match(id, teamA, teamB, minutesAgo) {
   assert.equal(result.previews[0].balancePercent >= 80, true);
 }
 
-// Test 3e: insufficient court capacity is reported when players have waited two rounds.
+// Test 3e: limited court capacity keeps long-wait players prioritized without a hard wait state.
 {
   const history = [
     match('capacity-recent', ['active-1', 'active-2'], ['active-3', 'active-4'], 2),
@@ -216,7 +216,9 @@ function match(id, teamA, teamB, minutesAgo) {
     now
   });
   assert.equal(result.previews.length, 1);
-  assert.equal(result.constraints.unservedWaitLimitPlayers.length, 4);
+  const selected = [...result.previews[0].teamA, ...result.previews[0].teamB].map((item) => item.id);
+  assert.equal(selected.every((id) => id.startsWith('waiting-')), true);
+  assert.deepEqual(result.constraints.unservedWaitLimitPlayers, []);
 }
 
 // Test 3f: if 80% balance is impossible, do not create an unfair automatic preview.

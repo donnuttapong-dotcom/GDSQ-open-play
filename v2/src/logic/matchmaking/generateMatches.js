@@ -2,7 +2,7 @@ export const DEFAULT_MATCHMAKING_RULES = {
   maxConsecutiveGames: 2,
   rotationConsecutiveGameLimit: 2,
   rotationConsecutiveRestLimit: 2,
-  enforceAutoRest: true,
+  enforceAutoRest: false,
   enforceUniquePartners: true,
   separatePreviousWinningTeams: true,
   separatePreviousLosingTeams: true,
@@ -86,6 +86,10 @@ function getLevel(player) {
 
 function getQueueJoinedAt(player) {
   return toTime(player?.queueJoinedAt || player?.queue_joined_at || player?.createdAt || player?.created_at);
+}
+
+export function effectiveWaitStartedAt(player, historyStats) {
+  return historyStats?.lastPlayedAt?.get(playerId(player)) || getQueueJoinedAt(player);
 }
 
 function getMatchesPlayed(player, historyStats) {
@@ -205,17 +209,15 @@ function minutesSinceLastPlayed(player, historyStats, nowMs) {
 function playerPriorityScore(player, historyStats, rules, nowMs) {
   const id = playerId(player);
   const games = getMatchesPlayed(player, historyStats);
-  const waitMinutes = Math.max(0, (nowMs - getQueueJoinedAt(player)) / 60000);
+  const waitStartedAt = effectiveWaitStartedAt(player, historyStats);
+  const waitMinutes = waitStartedAt ? Math.max(0, (nowMs - waitStartedAt) / 60000) : 0;
   const consecutive = countConsecutiveGames(player, historyStats);
-  const rests = countConsecutiveRests(player, historyStats);
   const readyBonus = ['ready', 'checked_in'].includes(normalizeStatus(player)) ? -20 : 0;
   const neverPlayedBonus = games === 0 ? rules.neverPlayedBonus : 0;
   const freshPlayerBonus = !historyStats.lastPlayedAt?.has(id) ? rules.freshPlayerBonus : 0;
   const justPlayedPenalty = minutesSinceLastPlayed(player, historyStats, nowMs) < 12 ? rules.justPlayedPenalty : 0;
-  const mustRestPenalty = consecutive >= rules.rotationConsecutiveGameLimit ? rules.rotationHardPenalty : 0;
-  const mustPlayBonus = rests >= rules.rotationConsecutiveRestLimit ? rules.rotationHardBonus : 0;
 
-  return games * rules.lowGamesWeight + consecutive * rules.consecutivePenalty + justPlayedPenalty + mustRestPenalty + readyBonus - mustPlayBonus - neverPlayedBonus - freshPlayerBonus - waitMinutes * rules.waitMinuteBonus;
+  return games * rules.lowGamesWeight + consecutive * rules.consecutivePenalty + justPlayedPenalty + readyBonus - neverPlayedBonus - freshPlayerBonus - waitMinutes * rules.waitMinuteBonus;
 }
 
 function combinations(list, size) {
@@ -301,19 +303,14 @@ export function generateMatches({ players = [], courts = [], history = [], rules
   const historyStats = buildMatchHistoryStats(history);
   const courtList = courts.length ? courts : [{ id: 'court-1', name: 'Court 1' }];
   const eligiblePlayers = players.filter((player) => player && ['ready', 'checked_in'].includes(normalizeStatus(player)));
-  const autoRestCandidates = mergedRules.enforceAutoRest ? eligiblePlayers.filter((player) => shouldRest(player, historyStats, mergedRules)) : [];
-  const autoRestIds = new Set(autoRestCandidates.map(playerId));
-  const preferredPlayers = eligiblePlayers.filter((player) => !autoRestIds.has(playerId(player)));
-  let availablePlayers = preferredPlayers;
-  let waitedTooLong = [];
-  let waitLimitIds = new Set();
+  const availablePlayers = eligiblePlayers;
   let searchBudget = 1200;
 
   if (eligiblePlayers.length < 4) return {
     previews: [],
-    restingPlayers: autoRestCandidates,
+    restingPlayers: [],
     availablePlayers: eligiblePlayers,
-    autoRestCandidates: autoRestCandidates.map(playerId),
+    autoRestCandidates: [],
     autoRestUsed: [],
     autoRestFallbackUsed: false,
     reason: `Not enough eligible players. Need 4, got ${eligiblePlayers.length}.`
@@ -326,19 +323,11 @@ export function generateMatches({ players = [], courts = [], history = [], rules
     const availableForCourt = availablePlayers.filter((player) => !usedIds.has(playerId(player)) && getLevel(player) >= minLevel && getLevel(player) <= maxLevel);
     if (availableForCourt.length < 4) return [];
 
-    const remainingSlots = Math.min(availableForCourt.length, (courtList.length - courtIndex) * 4);
-    const waitingForCourt = availableForCourt.filter((player) => waitLimitIds.has(playerId(player)));
-    // Ensure every player who has sat out two completed rounds is placed before
-    // the available court capacity runs out.
-    const requiredWaitingPlayers = Math.min(4, Math.max(0, waitingForCourt.length - Math.max(0, remainingSlots - 4)));
     const priorityList = [...availableForCourt]
       .sort((a, b) => playerPriorityScore(a, historyStats, mergedRules, now) - playerPriorityScore(b, historyStats, mergedRules, now));
-    const forcedCandidates = priorityList.filter((player) => waitLimitIds.has(playerId(player)));
-    const shortlist = [...forcedCandidates, ...priorityList.filter((player) => !waitLimitIds.has(playerId(player)))]
-      .slice(0, Math.max(mergedRules.candidateLimit, forcedCandidates.length));
+    const shortlist = priorityList.slice(0, mergedRules.candidateLimit);
 
     const evaluated = combinations(shortlist, 4)
-      .filter((group) => group.filter((player) => waitLimitIds.has(playerId(player))).length >= requiredWaitingPlayers)
       .map((group) => {
         const split = bestTeamSplit(group, historyStats, mergedRules);
         return split ? { group, split, recentGroup: historyStats.recentGroupKeys?.has(groupKey(group)), score: groupScore(group, historyStats, mergedRules, now) + split.score + (historyStats.recentGroupKeys?.has(groupKey(group)) ? mergedRules.recentGroupRepeatPenalty : 0) } : null;
@@ -383,41 +372,22 @@ export function generateMatches({ players = [], courts = [], history = [], rules
     return bestPlan;
   }
 
-  function planWithPlayers(candidatePlayers) {
-    availablePlayers = candidatePlayers;
-    waitedTooLong = availablePlayers.filter((player) => countConsecutiveRests(player, historyStats) >= mergedRules.maxConsecutiveWaitRounds);
-    waitLimitIds = new Set(waitedTooLong.map(playerId));
-    searchBudget = 1200;
-    if (availablePlayers.length < 4) return [];
-    return planCourts(0, new Set(), []);
-  }
-
-  let previews = planWithPlayers(preferredPlayers);
-  let autoRestFallbackUsed = false;
-  if (!previews.length && autoRestCandidates.length) {
-    previews = planWithPlayers(eligiblePlayers);
-    autoRestFallbackUsed = previews.length > 0;
-  }
-  const used = new Set(previews.flatMap((preview) => [...preview.teamA, ...preview.teamB].map(playerId)));
-  const autoRestUsed = autoRestCandidates.filter((player) => used.has(playerId(player)));
-  const restingPlayers = autoRestCandidates.filter((player) => !used.has(playerId(player)));
-
-  const unservedWaitLimitPlayers = waitedTooLong.filter((player) => !used.has(playerId(player)));
+  const previews = planCourts(0, new Set(), []);
   const reason = previews.length
     ? 'ok'
     : 'No court could be assigned without repeating partners or dropping below the 80% balance target.';
   return {
     previews,
-    restingPlayers,
+    restingPlayers: [],
     availablePlayers,
-    autoRestCandidates: autoRestCandidates.map(playerId),
-    autoRestUsed: autoRestUsed.map(playerId),
-    autoRestFallbackUsed,
+    autoRestCandidates: [],
+    autoRestUsed: [],
+    autoRestFallbackUsed: false,
     reason,
     constraints: {
       minBalancePercent: mergedRules.minBalancePercent,
-      waitedTwoRounds: waitedTooLong.map(playerId),
-      unservedWaitLimitPlayers: unservedWaitLimitPlayers.map(playerId)
+      waitedTwoRounds: [],
+      unservedWaitLimitPlayers: []
     }
   };
 }

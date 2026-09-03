@@ -55,7 +55,8 @@ assert.match(openplaySource, /data-next-player="\$\{next\.id\}" data-next-slot="
 assert.doesNotMatch(openplaySource, /data-edit-next|EDIT NEXT/, 'The redundant Edit Next button must be removed');
 assert.match(openplaySource, /nextTeamNames[\s\S]*?levelText\(currentEventLevel\(item\)\)/, 'Up Next summary must show exact current Event Levels');
 assert.match(openplaySource, /A AVG \$\{levelText\(a\)\} · B AVG \$\{levelText\(b\)\} · GAP/, 'Up Next must display both team averages and the Level gap');
-assert.match(openplaySource, /id===selected\|\|\(isReadyForMatch\(player\)&&!busy\.has\(id\)&&!auto\.has\(id\)&&!picked\.has\(id\)\)/, 'Replacement options must exclude active, auto-rested, and duplicate players while retaining the current player');
+assert.match(openplaySource, /id===selected\|\|\(isReadyForMatch\(player\)&&!busy\.has\(id\)&&!picked\.has\(id\)\)/, 'Replacement options must exclude active and duplicate players while retaining every READY player');
+assert.doesNotMatch(openplaySource, /autoRestBlockedIds\(/, 'STANDARD Up Next must not hide READY players behind Auto Rest eligibility');
 assert.match(edgeSource, /createMatchNext/, 'Organizer Edge Function must expose next-match creation');
 assert.match(edgeSource, /updateMatchNext/, 'Organizer Edge Function must expose next-match editing');
 assert.match(edgeSource, /cancelMatchNext/, 'Organizer Edge Function must expose next-match cancellation');
